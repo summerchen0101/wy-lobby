@@ -1,0 +1,124 @@
+kind: pipeline
+type: docker
+name: web-spa
+
+trigger:
+  event:
+    - push
+    - tag
+    - pull_request
+
+steps:
+  # ────────────────────────────────────────────────
+  # 共用：安裝依賴
+  # ────────────────────────────────────────────────
+  - name: install
+    image: node:20-alpine
+    commands:
+      - node --version
+      - npm ci --no-audit --no-fund
+
+  # ────────────────────────────────────────────────
+  # 共用：Lint（PR / push / tag 都跑）
+  # ────────────────────────────────────────────────
+  - name: lint
+    image: node:20-alpine
+    depends_on: [install]
+    commands:
+      - npm run lint
+
+  # ════════════════════════════════════════════════
+  # US：tag us-v* 觸發
+  # ════════════════════════════════════════════════
+  - name: build-us
+    image: node:20-alpine
+    depends_on: [lint]
+    environment:
+      VITE_API_USE_MOCK: "false"
+      VITE_API_BASE:
+        from_secret: vite_api_base_us
+      VITE_WS_URL:
+        from_secret: vite_ws_url_us
+      VITE_USE_SLOT_WEBENTRY: "true"
+      VITE_UNITY_WEBENTRY_URL:
+        from_secret: vite_unity_webentry_us
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
+      VITE_USE_WS_LOBBY_GAMES: "true"
+      VITE_CLIENT_VER: "web-us-${DRONE_TAG}"
+    commands:
+      - npm run build
+      - ls -lah dist/
+    when:
+      event: [tag]
+      ref:
+        - refs/tags/us-v*
+
+  - name: deploy-us
+    image: google/cloud-sdk:alpine
+    depends_on: [build-us]
+    environment:
+      GOOGLE_CREDENTIALS:
+        from_secret: gcp_sa_us
+      BUCKET:
+        from_secret: gcs_bucket_us
+      URL_MAP:
+        from_secret: lb_url_map_us
+      REGION: us
+    commands:
+      - apk add --no-cache jq
+      - echo "$GOOGLE_CREDENTIALS" > /tmp/sa.json
+      - gcloud auth activate-service-account --key-file=/tmp/sa.json
+      - gcloud config set project "$(jq -r .project_id /tmp/sa.json)"
+      - sh ./scripts/drone-deploy.sh
+    when:
+      event: [tag]
+      ref:
+        - refs/tags/us-v*
+
+  # ════════════════════════════════════════════════
+  # TW：tag tw-v* 觸發
+  # ════════════════════════════════════════════════
+  - name: build-tw
+    image: node:20-alpine
+    depends_on: [lint]
+    environment:
+      VITE_API_USE_MOCK: "false"
+      VITE_API_BASE:
+        from_secret: vite_api_base_tw
+      VITE_WS_URL:
+        from_secret: vite_ws_url_tw
+      VITE_USE_SLOT_WEBENTRY: "true"
+      VITE_UNITY_WEBENTRY_URL:
+        from_secret: vite_unity_webentry_tw
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
+      VITE_USE_WS_LOBBY_GAMES: "true"
+      VITE_CLIENT_VER: "web-tw-${DRONE_TAG}"
+    commands:
+      - npm run build
+      - ls -lah dist/
+    when:
+      event: [tag]
+      ref:
+        - refs/tags/tw-v*
+
+  - name: deploy-tw
+    image: google/cloud-sdk:alpine
+    depends_on: [build-tw]
+    environment:
+      GOOGLE_CREDENTIALS:
+        from_secret: gcp_sa_tw
+      BUCKET:
+        from_secret: gcs_bucket_tw
+      URL_MAP:
+        from_secret: lb_url_map_tw
+      REGION: tw
+    commands:
+      - apk add --no-cache jq
+      - echo "$GOOGLE_CREDENTIALS" > /tmp/sa.json
+      - gcloud auth activate-service-account --key-file=/tmp/sa.json
+      - gcloud config set project "$(jq -r .project_id /tmp/sa.json)"
+      - sh ./scripts/drone-deploy.sh
+    when:
+      event: [tag]
+      ref:
+        - refs/tags/tw-v*
