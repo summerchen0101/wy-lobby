@@ -61,8 +61,12 @@ steps:
         from_secret: gcp_sa_us
       BUCKET:
         from_secret: gcs_bucket_us
-      URL_MAP:
-        from_secret: lb_url_map_us
+      CF_API_TOKEN:
+        from_secret: cf_api_token_us
+      CF_ZONE_ID:
+        from_secret: cf_zone_id_us_wynoco
+      SITE_URL:
+        from_secret: site_url_us
       REGION: us
     commands:
       - apk add --no-cache jq
@@ -109,8 +113,12 @@ steps:
         from_secret: gcp_sa_tw
       BUCKET:
         from_secret: gcs_bucket_tw
-      URL_MAP:
-        from_secret: lb_url_map_tw
+      CF_API_TOKEN:
+        from_secret: cf_api_token_tw
+      CF_ZONE_ID:
+        from_secret: cf_zone_id_tw
+      SITE_URL:
+        from_secret: site_url_tw
       REGION: tw
     commands:
       - apk add --no-cache jq
