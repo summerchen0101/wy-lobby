@@ -64,7 +64,7 @@ steps:
       CF_API_TOKEN:
         from_secret: cf_api_token_us
       CF_ZONE_ID:
-        from_secret: cf_zone_id_us_wynoco
+        from_secret: cf_zone_id_us
       SITE_URL:
         from_secret: site_url_us
       REGION: us
