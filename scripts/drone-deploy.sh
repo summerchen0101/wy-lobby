@@ -23,7 +23,7 @@ fi
 GS="gs://${BUCKET}"
 
 echo "==> [${REGION:-?}] Sync hashed assets (immutable, 1y) → $GS"
-gcloud storage rsync -r --delete-unmatched-destination-objects dist/ "$GS" \
+gcloud storage rsync -r dist/ "$GS" \
   --cache-control="public,max-age=31536000,immutable" \
   --exclude='index\.html|sw\.js|manifest\.webmanifest'
 
