@@ -1,4 +1,5 @@
 import { Home } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { buildIframeAllow } from '../lib/gameShell'
 import './GameShellContext.css'
 
@@ -12,6 +13,20 @@ type GameOverlayProps = {
 
 export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const allow = buildIframeAllow(isPayment)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  /** Tear down embedded document before unmount so Unity／WebGL can release sooner. */
+  useEffect(() => {
+    return () => {
+      const el = iframeRef.current
+      if (!el) return
+      try {
+        el.src = 'about:blank'
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [url])
 
   return (
     <div className="game-overlay" role="presentation">
@@ -28,6 +43,7 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
         />
       </button>
       <iframe
+        ref={iframeRef}
         className="game-overlay__frame"
         title={isPayment ? 'payment' : 'game'}
         src={url}
