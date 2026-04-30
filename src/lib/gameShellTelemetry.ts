@@ -1,5 +1,9 @@
 /**
  * DEV-only helpers to correlate lobby shell ↔ Gateway／Unity lifecycle with backend logs.
+ *
+ * Manual baseline (peak memory & leak checks — not covered by `performance.memory` alone):
+ * 1. Chrome Shift+Esc → Task Manager: watch tab / Subframe memory while opening & closing the game (overlay vs new tab).
+ * 2. DevTools → ⋮ → More tools → Performance monitor: JS heap, DOM, GPU over repeated open/close cycles.
  */
 
 type PerformanceWithMemory = Performance & {

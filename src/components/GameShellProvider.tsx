@@ -31,6 +31,7 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
       return
     }
     logGameOverlayOpened(o.url.trim())
+    logPerfMemorySnapshot('[game-shell][dev] heap on overlay_open')
     setOverlay({
       url: o.url,
       widthPercent: o.widthPercent ?? 90,
@@ -41,7 +42,9 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
 
   const close = useCallback(() => {
     logGameOverlayClosed()
-    logPerfMemorySnapshot('[game-shell][dev] heap after overlay_close')
+    logPerfMemorySnapshot(
+      '[game-shell][dev] heap on overlay_close (iframe still mounted)',
+    )
     setOverlay((prev) => {
       if (prev && !prev.isPayment) {
         void refreshLobbyGet()
