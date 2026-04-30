@@ -238,11 +238,46 @@
   margin-top: var(--space-4);
 }
 
+/* Keep min-height in sync with ORDERS_PER_PAGE row count in RedeemPage.tsx */
+.redeem-page__history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.redeem-page__history-head .redeem-page__history-title {
+  flex: 1 1 auto;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .redeem-page__history-title {
   margin: 0 0 var(--space-3);
   font-size: 0.95rem;
   font-weight: 800;
   color: var(--color-text);
+}
+
+.redeem-page__history-body--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* ~4 rows; align with RedeemPage ORDERS_PER_PAGE row padding + one text line */
+  min-height: calc(4 * (2 * var(--space-2) + 1.3rem));
+}
+
+.redeem-page__history-loading {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
 }
 
 .redeem-page__history-list {
@@ -310,11 +345,9 @@
 .redeem-page__history-pager {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
+  justify-content: flex-end;
+  flex-shrink: 0;
+  gap: var(--space-2);
 }
 
 .redeem-page__history-pager-btn {
@@ -338,8 +371,6 @@
 }
 
 .redeem-page__history-pager-link {
-  flex: 1;
-  max-width: 12rem;
   padding: 0;
   border: none;
   background: none;
@@ -347,14 +378,11 @@
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  color: var(--auth-forgot-link);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.redeem-page__history-pager-link:hover {
-  color: var(--auth-forgot-link-hover);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: default;
 }
 
 .redeem-page__new-redeem {

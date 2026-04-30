@@ -202,7 +202,7 @@ export function RedeemPage() {
     () =>
       totalPages <= 1
         ? ""
-        : `Page ${ordersPage + 1} / ${totalPages}`,
+        : `${ordersPage + 1}/${totalPages}`,
     [ordersPage, totalPages],
   );
 
@@ -303,67 +303,81 @@ export function RedeemPage() {
 
       {showRedeemHistoryUi ? (
         <div className="redeem-page__card redeem-page__history-card">
-          <h2 className="redeem-page__history-title">Redemption History:</h2>
-          {ordersError ? (
-            <p className="redeem-page__insufficient-text" role="alert">
-              {ordersError}
-            </p>
-          ) : ordersLoading ? (
-            <p className="redeem-page__history-title">Loading history…</p>
-          ) : (
-            <>
-              <ul
-                className="redeem-page__history-list"
-                aria-label="Redemption history">
-                {ordersRows.map((row, i) => (
-                  <li
-                    key={
-                      row.withdrawOrderUID ||
-                      `${ordersPage}-${row.amount}-${row.withdrawOrderPaymentStatus}-${i}`
-                    }
-                    className="redeem-page__history-row">
-                    <span className="redeem-page__history-icon" aria-hidden>
-                      i
-                    </span>
-                    <span className="redeem-page__history-desc">
-                      {formatWithdrawHistoryFiatAmount(row.amount)} BankTransfer
-                    </span>
-                    <span
-                      className={redeemHistoryStatusClassName(row.statusLabel)}>
-                      {row.statusLabel}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {ordersRows.length === 0 && !ordersError ? (
-                <p className="redeem-page__insufficient-text">
-                  No redemption requests yet.
-                </p>
-              ) : null}
-            </>
-          )}
-          <div className="redeem-page__history-pager">
-            <button
-              type="button"
-              className="redeem-page__history-pager-btn"
-              aria-label="Previous page"
-              disabled={ordersPage <= 0 || ordersLoading}
-              onClick={pagerPrev}>
-              ‹
-            </button>
-            <span className="redeem-page__history-pager-link">{pagerLabel}</span>
-            <button
-              type="button"
-              className="redeem-page__history-pager-btn"
-              aria-label="Next page"
-              disabled={
-                ordersLoading ||
-                ordersPage >= totalPages - 1 ||
-                totalPages <= 1
-              }
-              onClick={pagerNext}>
-              ›
-            </button>
+          <div className="redeem-page__history-head">
+            <h2 className="redeem-page__history-title">Redemption History:</h2>
+            <div className="redeem-page__history-pager">
+              <button
+                type="button"
+                className="redeem-page__history-pager-btn"
+                aria-label="Previous page"
+                disabled={ordersPage <= 0 || ordersLoading}
+                onClick={pagerPrev}>
+                ‹
+              </button>
+              <span className="redeem-page__history-pager-link">
+                {pagerLabel}
+              </span>
+              <button
+                type="button"
+                className="redeem-page__history-pager-btn"
+                aria-label="Next page"
+                disabled={
+                  ordersLoading ||
+                  ordersPage >= totalPages - 1 ||
+                  totalPages <= 1
+                }
+                onClick={pagerNext}>
+                ›
+              </button>
+            </div>
+          </div>
+          <div
+            className={
+              ordersLoading
+                ? "redeem-page__history-body redeem-page__history-body--loading"
+                : "redeem-page__history-body"
+            }>
+            {ordersError ? (
+              <p className="redeem-page__insufficient-text" role="alert">
+                {ordersError}
+              </p>
+            ) : ordersLoading ? (
+              <p className="redeem-page__history-loading">Loading history…</p>
+            ) : (
+              <>
+                <ul
+                  className="redeem-page__history-list"
+                  aria-label="Redemption history">
+                  {ordersRows.map((row, i) => (
+                    <li
+                      key={
+                        row.withdrawOrderUID ||
+                        `${ordersPage}-${row.amount}-${row.withdrawOrderPaymentStatus}-${i}`
+                      }
+                      className="redeem-page__history-row">
+                      <span className="redeem-page__history-icon" aria-hidden>
+                        i
+                      </span>
+                      <span className="redeem-page__history-desc">
+                        {formatWithdrawHistoryFiatAmount(row.amount)}{" "}
+                        BankTransfer
+                      </span>
+                      <span
+                        className={redeemHistoryStatusClassName(
+                          row.statusLabel,
+                        )}>
+                        {row.statusLabel}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {ordersRows.length === 0 && !ordersError ? (
+                  <p className="redeem-page__insufficient-text">
+                    No redemption requests yet.
+                  </p>
+                ) : null}
+              </>
+            )}
           </div>
           <button
             type="button"
