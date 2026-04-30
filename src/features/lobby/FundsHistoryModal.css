@@ -1,0 +1,133 @@
+/* Funds history — shell from AppModal.css */
+.app-modal.funds-history-modal {
+  max-width: 22rem;
+  max-height: min(90dvh, 640px);
+}
+
+.funds-history-modal__info {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.7rem;
+  height: 1.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--crown-gold, #fde201);
+  color: #1a1a1a;
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-style: italic;
+  line-height: 1;
+  cursor: pointer;
+  font-family: Georgia, "Times New Roman", serif;
+  box-shadow: 0 1px 0 color-mix(in srgb, #000000 35%, transparent);
+}
+
+.funds-history-modal__info:hover {
+  background: var(--crown-gold-hover, #ffec4d);
+  filter: brightness(1.02);
+}
+
+.funds-history-modal__info-popover-wrap {
+  max-width: min(18rem, calc(100vw - 2rem));
+}
+
+.funds-history-modal__info-popover-text {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--color-text, #fff);
+}
+
+.funds-history-modal__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.funds-history-modal__list {
+  margin: 0;
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  list-style: none;
+}
+
+.funds-history-modal__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--modal-rule-color, rgb(255 255 255 / 12%));
+}
+
+.funds-history-modal__row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.funds-history-modal__left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  text-align: left;
+}
+
+.funds-history-modal__desc {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text, #fff);
+  line-height: 1.25;
+}
+
+.funds-history-modal__date {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 72%);
+}
+
+.funds-history-modal__amounts {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem 0.5rem;
+}
+
+.funds-history-modal__coin-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.funds-history-modal__coin {
+  display: block;
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
+.funds-history-modal__coin-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text, #fff);
+}
+
+.funds-history-modal__free {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--color-text, #fff);
+}
+
+@media (min-width: 48rem) {
+  .app-modal.funds-history-modal {
+    max-width: min(24rem, calc(100vw - 2 * var(--page-pad-inline)));
+  }
+}

@@ -502,18 +502,3 @@
 .profile-page__privacy:hover {
   color: color-mix(in srgb, var(--crown-locale-green) 78%, #ffffff 22%);
 }
-
-/* profile-page__dialog 外殼與 ::backdrop 在 AppModal.css */
-
-.profile-page__dialog-text {
-  margin: 0 0 var(--space-3);
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: rgb(255 255 255 / 80%);
-}
-
-.profile-page__dialog-close {
-  width: 100%;
-  min-height: 2.4rem;
-  box-sizing: border-box;
-}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { Copy, Crown, Info, Volume2 } from "lucide-react";
 import { HiPencil } from "react-icons/hi2";
 import { useAlert } from "../../components/alert/alertContext";
@@ -15,6 +15,7 @@ import {
 } from "../../realtime/playerAvatarWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { ChangeHeadIconModal } from "./ChangeHeadIconModal";
+import { FundsHistoryModal } from "./FundsHistoryModal";
 import { MyProfileModal } from "./MyProfileModal";
 import {
   effectiveAvatarId,
@@ -45,9 +46,9 @@ export function ProfilePage() {
     HeadIconChoice[] | null
   >(null);
   const [myProfileOpen, setMyProfileOpen] = useState(false);
+  const [fundsHistoryOpen, setFundsHistoryOpen] = useState(false);
   const [avatarImgFailed, setAvatarImgFailed] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
-  const fundsRef = useRef<HTMLDialogElement>(null);
   const soundLabelId = useId();
 
   const betReq = user?.vipCurrentLevelBetExpRequired;
@@ -217,14 +218,6 @@ export function ProfilePage() {
       "mailto:support@example.com?subject=Support%20request";
   }
 
-  function openFunds() {
-    fundsRef.current?.showModal();
-  }
-
-  function closeFunds() {
-    fundsRef.current?.close();
-  }
-
   return (
     <section
       className="profile-page page-container session-page session-page--pattern"
@@ -372,7 +365,7 @@ export function ProfilePage() {
           <button
             type="button"
             className="profile-page__btn-pill"
-            onClick={openFunds}>
+            onClick={() => setFundsHistoryOpen(true)}>
             FUNDS HISTORY
           </button>
           <button
@@ -407,35 +400,10 @@ export function ProfilePage() {
         choices={headIconChoices}
       />
 
-      <dialog
-        ref={fundsRef}
-        className="profile-page__dialog"
-        onClose={closeFunds}
-        aria-labelledby="funds-title">
-        <div className="app-modal__header">
-          <h2 id="funds-title" className="app-modal__title">
-            Funds history
-          </h2>
-          <button
-            type="button"
-            className="app-modal__close"
-            onClick={closeFunds}
-            aria-label="Close">
-            ×
-          </button>
-        </div>
-        <div className="app-modal__body">
-          <p className="profile-page__dialog-text">
-            Transaction history will appear here when connected to the backend.
-          </p>
-          <button
-            type="button"
-            className="btn-crown-primary profile-page__dialog-close"
-            onClick={closeFunds}>
-            OK
-          </button>
-        </div>
-      </dialog>
+      <FundsHistoryModal
+        open={fundsHistoryOpen}
+        onClose={() => setFundsHistoryOpen(false)}
+      />
     </section>
   );
 }

@@ -182,28 +182,3 @@
   color: var(--color-text);
   pointer-events: none;
 }
-
-/* Profile `<dialog>` 外殼與內層重設 */
-.profile-page__dialog {
-  max-width: 20rem;
-  width: calc(100vw - 2 * var(--page-pad-inline));
-  margin: auto;
-  padding: 0;
-  color: var(--color-text);
-  background: var(--modal-panel-bg);
-  border-radius: var(--modal-radius);
-  box-shadow: var(--modal-shadow);
-  border: var(--modal-panel-border);
-  box-sizing: border-box;
-}
-
-.profile-page__dialog::backdrop {
-  background: var(--modal-backdrop-scrim);
-  backdrop-filter: blur(var(--modal-overlay-blur));
-}
-
-@media (min-width: 48rem) {
-  .profile-page__dialog {
-    max-width: min(28rem, calc(100vw - 2 * var(--page-pad-inline)));
-  }
-}
