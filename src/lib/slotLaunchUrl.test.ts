@@ -31,4 +31,19 @@ describe("buildSlotLaunchUrl", () => {
     expect(u).toContain("token=iamkey.test");
     expect(u).toContain("mode=1");
   });
+
+  it("guestDemo 時僅 game_id，不含 mode／amount／vip_lv", () => {
+    const u = buildSlotLaunchUrl({
+      baseUrl: BASE,
+      gameId: 85,
+      mode: 1,
+      amount: 0,
+      vipLevel: 0,
+      guestDemo: true,
+    });
+    expect(u).toContain("game_id=85");
+    expect(u).not.toMatch(/[?&]mode=/);
+    expect(u).not.toMatch(/[?&]amount=/);
+    expect(u).not.toMatch(/[?&]vip_lv=/);
+  });
 });

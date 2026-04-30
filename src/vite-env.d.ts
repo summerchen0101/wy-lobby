@@ -41,6 +41,8 @@ interface ImportMetaEnv {
    * 非 mock 時預設以 WS LOBBY_GET 驅動大廳遊戲列表；設為 `"false"` 可關閉。
    */
   readonly VITE_USE_WS_LOBBY_GAMES?: string;
+  /** Gateway WS：視為 session 失效並觸發登出的回應 code（逗號分隔），預設 401,403 */
+  readonly VITE_WS_SESSION_INVALID_CODES?: string;
   /** 大廳主視覺圖 URL（可覆寫預設 sample 圖） */
   readonly VITE_LOBBY_HERO_IMAGE?: string;
   /** 訪客首頁 hero 圖；未設則沿用 VITE_LOBBY_HERO_IMAGE／預設 */

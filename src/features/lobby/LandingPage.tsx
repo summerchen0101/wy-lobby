@@ -51,7 +51,6 @@ import { useWallet } from "../../wallet/walletContext";
 import {
   FLOATING_CTA_IMAGE,
   GUEST_DEMO_GAMES,
-  GUEST_DEMO_ROW_GAMES,
   GUEST_DEMO_SLOT_IDS,
   GUEST_TOP_GAMES,
   getGuestHeroImage,
@@ -406,7 +405,10 @@ export function LandingPage() {
         demo: pickGuestDemoRowGames(lobbyGames, GUEST_DEMO_SLOT_IDS),
       };
     }
-    return { top: GUEST_TOP_GAMES, demo: GUEST_DEMO_ROW_GAMES };
+    return {
+      top: GUEST_TOP_GAMES,
+      demo: pickGuestDemoRowGames([], GUEST_DEMO_SLOT_IDS),
+    };
   }, [lobbyGames]);
 
   const displayGames = useMemo(() => {
@@ -644,7 +646,8 @@ export function LandingPage() {
         mode: activeWalletToSlotMode(activeWallet),
         amount: amountForActiveWallet(user, activeWallet),
         vipLevel: user?.vipLevel ?? 0,
-        token: user ? (token?.trim() || undefined) : undefined,
+        token: user ? token?.trim() || undefined : undefined,
+        guestDemo: !user,
       });
     } else if (card.launchUrl?.trim()) {
       url = card.launchUrl.trim();
@@ -684,11 +687,7 @@ export function LandingPage() {
           g.thirdPartyLaunch.platform,
           g.thirdPartyLaunch.gameUID,
         )
-      : lobbyGameCardThumbnail(
-          g.id,
-          thumbBase + index,
-          g.thumbnailUrl,
-        );
+      : lobbyGameCardThumbnail(g.id, thumbBase + index, g.thumbnailUrl);
     return (
       <button
         type="button"
@@ -774,15 +773,8 @@ export function LandingPage() {
               </>
             )}
           </h2>
-          {renderGameTrack(
-            guestLobbyRows.top,
-            0,
-            false,
-            lobbyGames !== null
-              ? () => {
-                  openTermsThen("register");
-                }
-              : undefined,
+          {renderGameTrack(guestLobbyRows.top, 0, false, () =>
+            openTermsThen("register"),
           )}
         </section>
 
@@ -921,52 +913,52 @@ export function LandingPage() {
               role="tabpanel"
               aria-labelledby={`lobby-tab-${lobbyFilter}`}>
               <div key={lobbyFilter} className="lobby-games-panel-swap">
-                {lobbyFilter === "all"
-                  ? (() => {
-                      let thumbBase = 0;
-                      return LOBBY_ALL_SUBSECTIONS.map((subId) => {
-                        const games = gamesByFilter[subId];
-                        if (games.length === 0) return null;
-                        const off = thumbBase;
-                        thumbBase += games.length;
-                        const subLabel =
-                          LOBBY_FILTER_TABS.find((t) => t.id === subId)
-                            ?.label ?? subId;
-                        return (
-                          <div key={subId} className="lobby-games-group">
-                            <div className="lobby-games-group-head">
-                              <h3
-                                className="lobby-games-group-title"
-                                id={`lobby-group-${subId}`}>
-                                {subLabel}
-                              </h3>
-                              <button
-                                type="button"
-                                className="lobby-games-group-see-all"
-                                aria-label={`See all in ${subLabel}`}
-                                onClick={() => onSeeAllSubcategory(subId)}>
-                                See All
-                              </button>
-                            </div>
-                            <PaginatedGameTrack
-                              key={`${lobbySearch}\u0000${subId}`}
-                              games={games}
-                              thumbOffset={off}
-                              showTextLabels={false}
-                              gameCard={gameCard}
-                            />
+                {lobbyFilter === "all" ? (
+                  (() => {
+                    let thumbBase = 0;
+                    return LOBBY_ALL_SUBSECTIONS.map((subId) => {
+                      const games = gamesByFilter[subId];
+                      if (games.length === 0) return null;
+                      const off = thumbBase;
+                      thumbBase += games.length;
+                      const subLabel =
+                        LOBBY_FILTER_TABS.find((t) => t.id === subId)?.label ??
+                        subId;
+                      return (
+                        <div key={subId} className="lobby-games-group">
+                          <div className="lobby-games-group-head">
+                            <h3
+                              className="lobby-games-group-title"
+                              id={`lobby-group-${subId}`}>
+                              {subLabel}
+                            </h3>
+                            <button
+                              type="button"
+                              className="lobby-games-group-see-all"
+                              aria-label={`See all in ${subLabel}`}
+                              onClick={() => onSeeAllSubcategory(subId)}>
+                              See All
+                            </button>
                           </div>
-                        );
-                      });
-                    })()
-                  : (
-                      <PaginatedGameGrid
-                        key={`${lobbyFilter}\u0000${lobbySearch}`}
-                        games={gamesByFilter[lobbyFilter]}
-                        thumbOffset={0}
-                        gameCard={gameCard}
-                      />
-                    )}
+                          <PaginatedGameTrack
+                            key={`${lobbySearch}\u0000${subId}`}
+                            games={games}
+                            thumbOffset={off}
+                            showTextLabels={false}
+                            gameCard={gameCard}
+                          />
+                        </div>
+                      );
+                    });
+                  })()
+                ) : (
+                  <PaginatedGameGrid
+                    key={`${lobbyFilter}\u0000${lobbySearch}`}
+                    games={gamesByFilter[lobbyFilter]}
+                    thumbOffset={0}
+                    gameCard={gameCard}
+                  />
+                )}
               </div>
             </div>
           ) : null}

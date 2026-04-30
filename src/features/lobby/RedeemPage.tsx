@@ -208,19 +208,12 @@ export function RedeemPage() {
 
   const cannotRedeem = redeemableAmount < MIN_REDEEM_SC_RAW;
 
-  /** 未達可提領門檻且無任何提領紀錄 → 全頁不足卡（不顯示空白 history 區） */
+  /** 未達門檻且無提領紀錄 → 不顯示 history 區（Insufficient 併於餘額卡） */
   const showInsufficientFullPage =
     initialOrdersFetched &&
     !ordersLoading &&
     cannotRedeem &&
     !hasOrderHistory;
-
-  /** 有紀錄但不可提領 → 仍顯示紀錄，並顯示 Insufficient 提示 */
-  const showInsufficientWithHistory =
-    initialOrdersFetched &&
-    !ordersLoading &&
-    cannotRedeem &&
-    hasOrderHistory;
 
   const showRedeemHistoryUi =
     (mock || gatewayRequestReady) && !showInsufficientFullPage;
@@ -284,20 +277,28 @@ export function RedeemPage() {
           </span>
           <p className="redeem-page__amount">{redeemableDisplay}</p>
         </div>
+
+        {cannotRedeem && initialOrdersFetched && !ordersLoading ? (
+          <div className="redeem-page__insufficient-inline">
+            <div className="redeem-page__insufficient-panel">
+              <h3 className="redeem-page__insufficient-title">Insufficient SC</h3>
+              <p className="redeem-page__insufficient-text">
+                Win a minimum of {MIN_REDEEM_SC_DISPLAY} SC to redeem.
+              </p>
+              <p className="redeem-page__insufficient-accent">Keep playing!</p>
+            </div>
+            {!hasOrderHistory ? (
+              <Link to="/" className="redeem-page__to-lobby">
+                Back to lobby
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {!mock && !gatewayRequestReady ? (
         <div className="redeem-page__card redeem-page__history-card">
           <p className="redeem-page__history-title">Connecting…</p>
-        </div>
-      ) : null}
-
-      {showInsufficientWithHistory ? (
-        <div className="redeem-page__card redeem-page__insufficient-card redeem-page__insufficient-card--with-history">
-          <h3 className="redeem-page__insufficient-title">Insufficient SC</h3>
-          <p className="redeem-page__insufficient-text">
-            Win a minimum of {MIN_REDEEM_SC_DISPLAY} SC to redeem.
-          </p>
         </div>
       ) : null}
 
@@ -390,19 +391,6 @@ export function RedeemPage() {
             onClick={() => setMethodModalOpen(true)}>
             NEW REDEEM
           </button>
-        </div>
-      ) : null}
-
-      {showInsufficientFullPage ? (
-        <div className="redeem-page__insufficient-card">
-          <h3 className="redeem-page__insufficient-title">Insufficient SC</h3>
-          <p className="redeem-page__insufficient-text">
-            Win a minimum of {MIN_REDEEM_SC_DISPLAY} SC to redeem.
-          </p>
-          <p className="redeem-page__insufficient-accent">Keep playing!</p>
-          <Link to="/" className="redeem-page__to-lobby">
-            Back to lobby
-          </Link>
         </div>
       ) : null}
 

@@ -29,7 +29,7 @@ const mockUser: User = {
   balance: 89800,
   currency: "ScPointCurrency",
   /** Mock：顯示為 200 SC（與線上相同，數值為後端萬分之一 raw） */
-  sweepstakesBalance: 200 * SC_POINT_SCALE,
+  sweepstakesBalance: 20 * SC_POINT_SCALE,
   /** 對應 `public/images/head/head3.png`（mock 大廳頭像） */
   avatarId: 3,
 };

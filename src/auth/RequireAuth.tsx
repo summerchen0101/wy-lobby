@@ -1,3 +1,4 @@
+import { FullScreenLoadingOverlay } from '../components/loading/FullScreenLoadingOverlay'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from './useAuth'
 
@@ -6,11 +7,7 @@ export function RequireAuth() {
   const location = useLocation()
 
   if (!ready) {
-    return (
-      <div className="page-container auth-gate" style={{ paddingBlock: '2rem' }}>
-        <p className="auth-gate__text">Loading…</p>
-      </div>
-    )
+    return <FullScreenLoadingOverlay />
   }
 
   if (!token || !user) {

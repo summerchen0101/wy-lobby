@@ -1,6 +1,12 @@
 import { Home } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { buildIframeAllow } from '../lib/gameShell'
+import { createShellQuitMessage } from '../lib/gameShellMessages'
+import { logPerfMemorySnapshot } from '../lib/gameShellTelemetry'
 import './GameShellContext.css'
+
+/** ms — brief delay so embedded Unity can run `Quit()` after shell postMessage before `about:blank`. */
+const IFRAME_TEARDOWN_DELAY_MS = 120
 
 type GameOverlayProps = {
   url: string
@@ -12,6 +18,40 @@ type GameOverlayProps = {
 
 export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const allow = buildIframeAllow(isPayment)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  /** Ask Unity to Quit (postMessage), then tear down iframe so WebGL can release sooner. */
+  useEffect(() => {
+    return () => {
+      const el = iframeRef.current
+      if (!el) return
+      const src = el.src
+      try {
+        const w = el.contentWindow
+        if (w && src && src !== 'about:blank') {
+          let targetOrigin = '*'
+          try {
+            targetOrigin = new URL(src).origin
+          } catch {
+            /* ignore */
+          }
+          w.postMessage(createShellQuitMessage(), targetOrigin)
+        }
+      } catch {
+        /* ignore */
+      }
+      window.setTimeout(() => {
+        try {
+          el.src = 'about:blank'
+        } catch {
+          /* ignore */
+        }
+        logPerfMemorySnapshot(
+          '[game-shell][dev] heap after iframe_teardown (delayed)',
+        )
+      }, IFRAME_TEARDOWN_DELAY_MS)
+    }
+  }, [url])
 
   return (
     <div className="game-overlay" role="presentation">
@@ -28,6 +68,7 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
         />
       </button>
       <iframe
+        ref={iframeRef}
         className="game-overlay__frame"
         title={isPayment ? 'payment' : 'game'}
         src={url}

@@ -1,5 +1,11 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { shouldOpenInNewWindow } from '../lib/gameShell'
+import {
+  logGameOpenedNewTab,
+  logGameOverlayClosed,
+  logGameOverlayOpened,
+  logPerfMemorySnapshot,
+} from '../lib/gameShellTelemetry'
 import { useGatewayLobby } from '../realtime/useGatewayLobby'
 import { GameOverlay } from './GameOverlay'
 import { GameShellContext, type OpenShellOptions } from './game-shell-context'
@@ -19,10 +25,13 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
       return
     }
     if (shouldOpenInNewWindow(o.openInNewWindow)) {
+      logGameOpenedNewTab(o.url)
       const w = window.open(o.url, '_blank', 'noopener,noreferrer')
       if (!w) console.warn('[GameShell] window.open blocked')
       return
     }
+    logGameOverlayOpened(o.url.trim())
+    logPerfMemorySnapshot('[game-shell][dev] heap on overlay_open')
     setOverlay({
       url: o.url,
       widthPercent: o.widthPercent ?? 90,
@@ -32,6 +41,10 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const close = useCallback(() => {
+    logGameOverlayClosed()
+    logPerfMemorySnapshot(
+      '[game-shell][dev] heap on overlay_close (iframe still mounted)',
+    )
     setOverlay((prev) => {
       if (prev && !prev.isPayment) {
         void refreshLobbyGet()

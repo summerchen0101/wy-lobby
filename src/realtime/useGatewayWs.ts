@@ -28,6 +28,8 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     requestTimeoutMs,
     heartbeatIntervalMs,
     reconnect,
+    maxReconnectAttempts,
+    fatalReconnectCloseCodes,
     initialReconnectDelayMs,
     maxReconnectDelayMs,
   } = params
@@ -65,11 +67,13 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
       requestTimeoutMs,
       heartbeatIntervalMs,
       reconnect,
+      maxReconnectAttempts,
+      fatalReconnectCloseCodes,
       initialReconnectDelayMs,
       maxReconnectDelayMs,
       getRequestBasicExtras: () =>
         (getExtrasRef.current?.() ?? {}) as Record<string, unknown>,
-      onState: (s) => onStateRef.current?.(s),
+      onState: (s, m) => onStateRef.current?.(s, m),
       onResponse: (m) => onResponseRef.current?.(m),
       onOpen: (ctx) => onOpenRef.current?.(ctx),
       onSocketError: (e) => onSocketErrorRef.current?.(e),
@@ -86,6 +90,8 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     requestTimeoutMs,
     heartbeatIntervalMs,
     reconnect,
+    maxReconnectAttempts,
+    fatalReconnectCloseCodes,
     initialReconnectDelayMs,
     maxReconnectDelayMs,
   ])

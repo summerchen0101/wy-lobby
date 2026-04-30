@@ -74,6 +74,8 @@
   --modal-overlay-scrim: rgb(0 0 0 / 72%);
   --modal-overlay-blur: 6px;
   --modal-z-index: 5000;
+  /* 全屏載入（高於 modal、低於全域 alert／toast） */
+  --loading-overlay-z-index: 5500;
   /* Toast / global alert 需蓋在一般 modal 之上 */
   --alert-z-index: 6000;
   --modal-radius: 1.1rem;

@@ -27,18 +27,22 @@ export type BuildSlotLaunchUrlInput = {
   token?: string | null
   /** 覆寫 WebEntry base；預設見 env */
   baseUrl?: string
+  /** 未登入試玩：僅帶 `game_id`（與可選 `token`），省略 mode／amount／vip_lv */
+  guestDemo?: boolean
 }
 
 /**
- * 組出 WebEntry 網址：`game_id`、`mode`、`amount`、`vip_lv`、可選 `token`。
+ * 組出 WebEntry 網址：`game_id`、已登入時 `mode`／`amount`／`vip_lv`、可選 `token`。
  */
 export function buildSlotLaunchUrl(p: BuildSlotLaunchUrlInput): string {
   const base = p.baseUrl?.trim() || getUnityWebEntryBase()
   const u = new URL(base)
   u.searchParams.set('game_id', String(Math.max(0, Math.floor(p.gameId))))
-  u.searchParams.set('mode', String(p.mode))
-  u.searchParams.set('amount', String(Math.max(0, Math.floor(p.amount))))
-  u.searchParams.set('vip_lv', String(Math.max(0, Math.floor(p.vipLevel))))
+  if (!p.guestDemo) {
+    u.searchParams.set('mode', String(p.mode))
+    u.searchParams.set('amount', String(Math.max(0, Math.floor(p.amount))))
+    u.searchParams.set('vip_lv', String(Math.max(0, Math.floor(p.vipLevel))))
+  }
   const t = p.token?.trim()
   if (t) u.searchParams.set('token', t)
   return u.toString()

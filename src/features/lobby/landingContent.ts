@@ -23,7 +23,7 @@ export const GAME_ENTRY_BASE = "/images/games/entry";
 
 /** 未登入大廳第二列固定試玩（由 LOBBY_GET 同批清單依 id 對應，缺漏時以 placeholder 顯示卡圖） */
 export const GUEST_DEMO_SLOT_IDS: readonly [number, number, number] = [
-  144, 85, 52,
+  52, 85, 144,
 ];
 
 /** 與 public/images/games/entry 內檔案對齊，依 slot 編號數字排序（不含 entry_slotLoading_L 等）。 */
@@ -152,27 +152,14 @@ export const GUEST_TOP_GAMES: Game[] = [
   },
 ];
 
-/** 未登入首頁 — 第二列（DEMO here） */
-export const GUEST_DEMO_ROW_GAMES: Game[] = [
-  {
-    id: "guest-demo-1",
-    title: "Steam Spin",
+/** 未登入首頁 — 第二列（DEMO here），與 GUEST_DEMO_SLOT_IDS 對齊；無 LOBBY 時佔位。 */
+export const GUEST_DEMO_ROW_GAMES: Game[] = GUEST_DEMO_SLOT_IDS.map(
+  (id) => ({
+    id: String(id),
+    title: `Game ${id}`,
     launchUrl: "",
-    thumbnailUrl: `${G}/penguin-king/103094-cutThumbnailHr-mQKpF.webp`,
-  },
-  {
-    id: "guest-demo-2",
-    title: "Leprechaun Penny",
-    launchUrl: "",
-    thumbnailUrl: `${G}/onseo/1032-cutThumbnailShortHr-hmaJN.webp`,
-  },
-  {
-    id: "guest-demo-3",
-    title: "777 Bonanza",
-    launchUrl: "",
-    thumbnailUrl: `${G}/3-oaks-via-infin/oa_4_wolf_drums-alternate-all-ZKaxJ.webp`,
-  },
-];
+  }),
+);
 
 /** 向後相容：未登入合併列表（僅供需單一清單之邏輯使用） */
 export const GUEST_DEMO_GAMES: Game[] = [
