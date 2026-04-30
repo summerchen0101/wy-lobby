@@ -124,6 +124,9 @@
   align-items: center;
   gap: var(--space-1);
   flex-shrink: 0;
+  /* 高於中欄藥丸（含內層 z-index），避免頭像點擊被誤擋 */
+  position: relative;
+  z-index: 2;
 }
 
 .session-header__logo {
@@ -154,6 +157,7 @@
 a.session-header__avatar {
   text-decoration: none;
   color: inherit;
+  cursor: pointer;
 }
 
 .session-header__avatar--has-image {
@@ -169,6 +173,7 @@ a.session-header__avatar {
   object-fit: cover;
   display: block;
   border-radius: 50%;
+  pointer-events: none;
 }
 
 .session-header__center {
@@ -178,6 +183,8 @@ a.session-header__avatar {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 1;
 }
 
 .session-header__pill {
