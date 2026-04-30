@@ -45,6 +45,8 @@ interface ImportMetaEnv {
   readonly VITE_LOBBY_HERO_IMAGE?: string;
   /** 訪客首頁 hero 圖；未設則沿用 VITE_LOBBY_HERO_IMAGE／預設 */
   readonly VITE_GUEST_HERO_IMAGE?: string;
+  /** Zendesk snippet Widget Key；未設則 ZendeskLoader 不注入腳本 */
+  readonly VITE_ZENDESK_KEY?: string;
   /** 訪客頁聊天 FAB：完整 URL，點擊時新分頁開啟 */
   readonly VITE_SUPPORT_CHAT_URL?: string;
   /** Trustpilot Business Unit ID；未設則不載入 widget */

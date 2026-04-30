@@ -211,6 +211,12 @@ export function ProfilePage() {
         zE("messenger", "open");
         return;
       } catch {
+        /* try classic Web Widget */
+      }
+      try {
+        zE("webWidget", "open");
+        return;
+      } catch {
         /* fall through */
       }
     }
