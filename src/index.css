@@ -75,6 +75,15 @@ html {
   }
 }
 
+/* 窄螢幕：表單文字至少 16px，避免 iOS Safari 聚焦 input 時自動 zoom（須覆寫元件內 font-size） */
+@media (max-width: 47.99rem) {
+  textarea,
+  select,
+  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="image"]) {
+    font-size: max(16px, 1rem) !important;
+  }
+}
+
 body {
   margin: 0;
   min-height: 100%;
