@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import { trustpilotDataLocale, trustpilotReviewLanguages } from '../i18n/trustpilotLocale'
 import './TrustpilotSection.css'
 
 declare global {
@@ -36,6 +38,7 @@ function loadTrustpilotScript(): Promise<void> {
 }
 
 export function TrustpilotSection({ businessUnitId }: Props) {
+  const { t, i18n } = useTranslation('common')
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -52,22 +55,25 @@ export function TrustpilotSection({ businessUnitId }: Props) {
     return () => {
       cancelled = true
     }
-  }, [businessUnitId])
+  }, [businessUnitId, i18n.language])
+
+  const tpLocale = trustpilotDataLocale(i18n.language)
+  const reviewLangs = trustpilotReviewLanguages(i18n.language)
 
   return (
-    <section className="trustpilot-section" aria-label="Reviews">
+    <section className="trustpilot-section" aria-label={t('trustpilotSectionAria')}>
       <div className="trustpilot-section__inner">
         <div
           ref={ref}
           className="trustpilot-widget"
-          data-locale="en-US"
+          data-locale={tpLocale}
           data-template-id="53aa8912dec7e10d38f59f36"
           data-businessunit-id={businessUnitId}
           data-style-height="140px"
           data-style-width="100%"
           data-theme="dark"
           data-stars="5"
-          data-review-languages="en"
+          data-review-languages={reviewLangs}
         />
       </div>
     </section>

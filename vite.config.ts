@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "node",
       include: ["src/**/*.test.ts"],
+      setupFiles: ["./src/test/vitest-setup.ts"],
     },
     server: {
       host: true,

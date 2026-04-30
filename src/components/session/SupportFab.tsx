@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { supportChatUrl } from '../../lib/env'
 import './SupportChatFab.css'
 
@@ -7,6 +8,7 @@ export type SupportFabProps = {
 }
 
 export function SupportFab({ placement = 'session' }: SupportFabProps) {
+  const { t } = useTranslation('common')
   return (
     <button
       type="button"
@@ -14,7 +16,7 @@ export function SupportFab({ placement = 'session' }: SupportFabProps) {
         'support-chat-fab' +
         (placement === 'guest' ? ' support-chat-fab--guest' : ' support-chat-fab--session')
       }
-      aria-label="Chat support"
+      aria-label={t('chatSupportAria')}
       onClick={() => {
         const u = supportChatUrl()
         if (u) window.open(u, '_blank', 'noopener,noreferrer')

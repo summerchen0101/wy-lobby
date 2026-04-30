@@ -1,21 +1,24 @@
 import type { ActiveWallet } from "./walletContext";
 import type { User } from "../lib/api/types";
+import { getActiveLocale } from "../i18n/getActiveLocale";
 
-/** Header pill: compact thousands for large balances (en-US). */
+/** Header pill: compact thousands for large balances（依目前語系格式化）。 */
 export function formatWalletPillAmount(n: number | undefined): string {
   if (n === undefined) return "—";
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat(getActiveLocale(), {
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 
 /**
- * Sweeps Coins 畫面值：小數第 3 位起無條件捨去（向零截斷），至多顯示兩位（en-US 千分位）。
+ * Sweeps Coins 畫面值：小數第 3 位起無條件捨去（向零截斷），至多顯示兩位（依目前語系千分位）。
  * Header SC 與 {@link formatScFromRaw} 共用。
  */
 export function formatWalletScAmountForDisplay(n: number | undefined): string {
   if (n === undefined) return "—";
   if (!Number.isFinite(n)) return "—";
   const truncatedTowardZero = Math.trunc(n * 100) / 100;
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(getActiveLocale(), {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(truncatedTowardZero);
@@ -46,7 +49,7 @@ function formatScTruncHundredthsBigInt(totalHundredths: bigint): string {
   if (totalHundredths < 0n) return "—";
   const intPart = totalHundredths / 100n;
   const frac = Number(totalHundredths % 100n);
-  const intFmt = intPart.toLocaleString("en-US");
+  const intFmt = intPart.toLocaleString(getActiveLocale());
   if (frac === 0) return intFmt;
   const fracFmt = String(frac).padStart(2, "0").replace(/0+$/, "");
   return `${intFmt}.${fracFmt}`;

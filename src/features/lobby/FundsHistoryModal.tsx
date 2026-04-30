@@ -19,7 +19,7 @@ export type FundsHistoryRow = {
 };
 
 /** Placeholder until wallet ledger API exists */
-export const MOCK_FUNDS_HISTORY_ROWS: FundsHistoryRow[] = [
+const MOCK_FUNDS_HISTORY_ROWS: FundsHistoryRow[] = [
   {
     id: "1",
     description: "Mission0 Reward",

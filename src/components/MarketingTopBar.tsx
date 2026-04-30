@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import './MarketingTopBar.css'
 
@@ -11,6 +12,7 @@ type Props = {
 }
 
 export function MarketingTopBar({ primary, secondary }: Props) {
+  const { t } = useTranslation('common')
   return (
     <header className="marketing-top-bar">
       <Link to="/login" className="marketing-top-bar__brand">
@@ -22,7 +24,7 @@ export function MarketingTopBar({ primary, secondary }: Props) {
           height={40}
           decoding="async"
         />
-        <span className="marketing-top-bar__title">Wynoco</span>
+        <span className="marketing-top-bar__title">{t('brandName')}</span>
       </Link>
       <div className="marketing-top-bar__actions">
         <Link to={primary.to} className="btn-crown-primary">

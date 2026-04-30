@@ -21,10 +21,12 @@ import { ShopPage } from './features/shop/ShopPage'
 import { WalletProvider } from './wallet/WalletProvider'
 import { AlertProvider } from './components/alert/AlertProvider'
 import { GatewayLobbyProvider } from './realtime/GatewayLobbyProvider'
+import { LocaleHtmlSync } from './i18n/LocaleHtmlSync'
 
 export default function App() {
   return (
     <BrowserRouter>
+      <LocaleHtmlSync />
       <AuthProvider>
         <WalletProvider>
           <AlertProvider>
