@@ -24,7 +24,11 @@ import {
   GATEWAY_API_WITHDRAW_SUCCESS_PUSH,
 } from "./gatewayApi";
 import { decodeLobbyJackpotDisplayTriple } from "./jackpotLobbyWire";
-import type { GatewayWsRequestFn } from "./gatewayWs";
+import type {
+  GatewayWsConnectionState,
+  GatewayWsRequestFn,
+  GatewayWsStateMeta,
+} from "./gatewayWs";
 import { isGatewaySuccessCode } from "./gatewayWire";
 import { hexPreview } from "./bytesHexPreview";
 import {
@@ -47,6 +51,7 @@ import { decodeWithdrawSuccessPushBytes } from "./withdrawLobbyWire";
 import type { WithdrawSuccessPushListener } from "./gatewayLobbyContext";
 import type { ActiveWallet } from "../wallet/walletContext";
 import { wireUInt64Field } from "./wireUint64";
+import { LobbyHydrationGate } from "./LobbyHydrationGate";
 
 const LOBBY_GET_POLL_MS = 15_000;
 
@@ -80,6 +85,9 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     (import.meta.env.DEV && import.meta.env.VITE_DEV_LOBBY_GET !== "false") ||
     wsLobbyEnabled;
 
+  /** 會經 Gateway WS 發送首轮 LOBBY_GET 的情境（含訪客、dev LOBBY_GET probe） */
+  const gateActive = gatewayWsEnabled && shouldRunLobbyGetOnOpen;
+
   const [lobbyGames, setLobbyGames] = useState<Game[] | null>(null);
   const [lobbyLoading, setLobbyLoading] = useState(false);
   const [lobbyError, setLobbyError] = useState<string | null>(null);
@@ -88,6 +96,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   >(null);
   const [lobbyGet, setLobbyGet] = useState<LobbyGetDecoded | null>(null);
   const [gatewayRequestReady, setGatewayRequestReady] = useState(false);
+  /** 首轮 onOpen LOBBY_GET 是否已落定（與輪詢 refresh 無關）；無閘門時視為 done */
+  const [lobbyWsBootstrapDone, setLobbyWsBootstrapDone] = useState(
+    () => !gateActive,
+  );
 
   const requestRef = useRef<GatewayWsRequestFn | null>(null);
   /** header 切換 GC/SC 時用上一則 JP 封包依目前錢包重解，不必等 push */
@@ -102,6 +114,15 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   );
   const sessionTokenRef = useRef("");
   const hadTokenRef = useRef(Boolean(token?.trim()));
+
+  useEffect(() => {
+    if (!gateActive) setLobbyWsBootstrapDone(true);
+  }, [gateActive]);
+
+  useEffect(() => {
+    if (!gateActive) return;
+    setLobbyWsBootstrapDone(false);
+  }, [gateActive, token]);
 
   useEffect(() => {
     sessionTokenRef.current = token?.trim() ?? "";
@@ -128,7 +149,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   );
 
   const runLobbyGetRequest = useCallback(
-    async (request: GatewayWsRequestFn) => {
+    async (
+      request: GatewayWsRequestFn,
+      options?: { bootstrap?: boolean },
+    ) => {
       if (wsLobbyEnabled) setLobbyLoading(true);
       try {
         const r = await request({
@@ -207,6 +231,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         }
       } finally {
         if (wsLobbyEnabled) setLobbyLoading(false);
+        if (options?.bootstrap) setLobbyWsBootstrapDone(true);
       }
     },
     [logout, mergeUser, setActiveWallet, wsLobbyEnabled],
@@ -220,11 +245,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   }, [runLobbyGetRequest, shouldRunLobbyGetOnOpen]);
 
   useEffect(() => {
-    if (
-      !gatewayWsEnabled ||
-      !gatewayRequestReady ||
-      !shouldRunLobbyGetOnOpen
-    ) {
+    if (!gatewayWsEnabled || !gatewayRequestReady || !shouldRunLobbyGetOnOpen) {
       return;
     }
 
@@ -310,13 +331,19 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     wsToken: token?.trim() ?? "",
     clientVer: import.meta.env.VITE_CLIENT_VER?.trim() || undefined,
     getRequestBasicExtras,
-    onState: (s) => {
+    onState: (s: GatewayWsConnectionState, meta?: GatewayWsStateMeta) => {
       if (s !== "open") {
         setGatewayRequestReady(false);
+        if (gateActive) {
+          const skipBootstrapReset =
+            s === "closed" && meta?.shutdownReason === "client_close";
+          if (!skipBootstrapReset) setLobbyWsBootstrapDone(false);
+        }
       }
       if (import.meta.env.DEV) {
         console.info("[gateway-ws][dev] state:", s, {
           wsUrl: getGatewayWsUrlForDevLog({ token: token ?? "" }),
+          shutdownReason: meta?.shutdownReason,
         });
       }
     },
@@ -373,7 +400,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       setGatewayRequestReady(true);
 
       if (shouldRunLobbyGetOnOpen) {
-        await runLobbyGetRequest(request);
+        await runLobbyGetRequest(request, { bootstrap: true });
       }
 
       try {
@@ -427,6 +454,9 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     },
     onSocketError: (ev) => {
       console.warn("[gateway-ws] WebSocket error:", ev);
+      if (gateActive) {
+        setLobbyWsBootstrapDone(true);
+      }
       if (wsLobbyEnabled) {
         setLobbyLoading(false);
         setLobbyError((prev) => prev ?? "WebSocket connection error");
@@ -440,14 +470,13 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         console.warn("[gateway-ws][dev] non-success code:", msg);
       }
       const codeStr = String(msg.code ?? "");
-      if (
-        sessionTokenRef.current &&
-        isGatewaySessionInvalidCode(codeStr)
-      ) {
+      if (sessionTokenRef.current && isGatewaySessionInvalidCode(codeStr)) {
         logout();
       }
     },
   });
+
+  const needsLobbyHydrationOverlay = gateActive && !lobbyWsBootstrapDone;
 
   const value = useMemo<GatewayLobbyContextValue>(
     () => ({
@@ -461,6 +490,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       refreshLobbyGet,
       subscribePaymentFinish,
       subscribeWithdrawSuccessPush,
+      needsLobbyHydrationOverlay,
     }),
     [
       gatewayRequestReady,
@@ -472,12 +502,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       refreshLobbyGet,
       subscribePaymentFinish,
       subscribeWithdrawSuccessPush,
+      needsLobbyHydrationOverlay,
     ],
   );
 
   return (
     <GatewayLobbyContext.Provider value={value}>
       {children}
+      <LobbyHydrationGate />
     </GatewayLobbyContext.Provider>
   );
 }

@@ -13,6 +13,11 @@ import { getGatewayWsUrl } from '../lib/env'
 
 export type GatewayWsConnectionState = 'idle' | 'connecting' | 'open' | 'closed'
 
+/** 僅在 `state === 'closed'` 時有意義；區分主動關閉與傳輸層斷線（供上層忽略 stale `closed`）。 */
+export type GatewayWsStateMeta = {
+  shutdownReason?: 'client_close' | 'transport'
+}
+
 export type GatewayWsResponseObject = ReturnType<typeof gatewayResponseToObject>
 
 export type GatewayWsRequestPayload = {
@@ -50,7 +55,7 @@ export type GatewayWsOptions = {
   maxReconnectDelayMs?: number
   /** 併入每則 Request 的 RequestBasic（如 token、userID）；`request()` 會再帶 timestamp、requestID */
   getRequestBasicExtras?: () => Record<string, unknown>
-  onState?: (s: GatewayWsConnectionState) => void
+  onState?: (s: GatewayWsConnectionState, meta?: GatewayWsStateMeta) => void
   onResponse?: (msg: GatewayWsResponseObject) => void
   /** 連線成功（open）後呼叫；可在此發 LOBBY_GET 等 */
   onOpen?: (ctx: { request: GatewayWsRequestFn }) => void
@@ -134,9 +139,12 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     pending.clear()
   }
 
-  function setState(next: GatewayWsConnectionState) {
+  function setState(
+    next: GatewayWsConnectionState,
+    meta?: GatewayWsStateMeta,
+  ) {
     state = next
-    options.onState?.(next)
+    options.onState?.(next, meta)
   }
 
   function clearHeartbeat() {
@@ -393,7 +401,9 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     socket.onclose = () => {
       clearHeartbeat()
       rejectAllPending(new Error('[gateway-ws] socket closed'))
-      setState('closed')
+      setState('closed', {
+        shutdownReason: closedByUser ? 'client_close' : 'transport',
+      })
       ws = null
       if (closedByUser || !reconnect) return
       const delay = Math.min(maxDelay, initialDelay * 2 ** attempt)
@@ -435,7 +445,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       rejectAllPending(new Error('[gateway-ws] closed by client'))
       ws?.close()
       ws = null
-      setState('closed')
+      setState('closed', { shutdownReason: 'client_close' })
     },
   }
 }

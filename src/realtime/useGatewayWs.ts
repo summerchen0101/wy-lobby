@@ -69,7 +69,7 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
       maxReconnectDelayMs,
       getRequestBasicExtras: () =>
         (getExtrasRef.current?.() ?? {}) as Record<string, unknown>,
-      onState: (s) => onStateRef.current?.(s),
+      onState: (s, m) => onStateRef.current?.(s, m),
       onResponse: (m) => onResponseRef.current?.(m),
       onOpen: (ctx) => onOpenRef.current?.(ctx),
       onSocketError: (e) => onSocketErrorRef.current?.(e),
