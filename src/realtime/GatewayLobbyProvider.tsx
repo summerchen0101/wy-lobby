@@ -48,6 +48,8 @@ import type { WithdrawSuccessPushListener } from "./gatewayLobbyContext";
 import type { ActiveWallet } from "../wallet/walletContext";
 import { wireUInt64Field } from "./wireUint64";
 
+const LOBBY_GET_POLL_MS = 15_000;
+
 function devGatewayWsProbeEnabled(): boolean {
   if (!import.meta.env.DEV) return false;
   return import.meta.env.VITE_DEV_GATEWAY_WS !== "false";
@@ -186,6 +188,39 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     if (!request) return;
     await runLobbyGetRequest(request);
   }, [runLobbyGetRequest, shouldRunLobbyGetOnOpen]);
+
+  useEffect(() => {
+    if (
+      !gatewayWsEnabled ||
+      !token?.trim() ||
+      !gatewayRequestReady ||
+      !shouldRunLobbyGetOnOpen
+    ) {
+      return;
+    }
+
+    const tick = () => {
+      if (document.visibilityState !== "visible") return;
+      void refreshLobbyGet();
+    };
+
+    const id = window.setInterval(tick, LOBBY_GET_POLL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refreshLobbyGet();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [
+    gatewayRequestReady,
+    gatewayWsEnabled,
+    refreshLobbyGet,
+    shouldRunLobbyGetOnOpen,
+    token,
+  ]);
 
   const getRequestBasicExtras = useCallback((): Record<string, unknown> => {
     const uid = user?.id;

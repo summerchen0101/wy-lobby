@@ -74,6 +74,7 @@ export function RedeemPage() {
     requestRef,
     lobbyGet,
     gatewayRequestReady,
+    refreshLobbyGet,
     subscribeWithdrawSuccessPush,
   } = useGatewayLobby();
 
@@ -185,8 +186,9 @@ export function RedeemPage() {
       return;
     }
     if (!gatewayRequestReady) return;
+    await refreshLobbyGet();
     await fetchOrders(0);
-  }, [mock, gatewayRequestReady, fetchOrders]);
+  }, [mock, gatewayRequestReady, fetchOrders, refreshLobbyGet]);
 
   const pagerPrev = useCallback(() => {
     setOrdersPage((p) => Math.max(0, p - 1));

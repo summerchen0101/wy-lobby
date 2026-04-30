@@ -25,11 +25,10 @@ export function formatWalletScAmountForDisplay(n: number | undefined): string {
 export const SC_POINT_SCALE = 10000;
 
 /** 可提領下限：畫面上的整數 SC。 */
-export const MIN_REDEEM_SC_DISPLAY = 50;
+export const MIN_REDEEM_SC_DISPLAY = 0;
 
 /** 可提領下限：後端原始值（= MIN_REDEEM_SC_DISPLAY × SC_POINT_SCALE）。 */
-export const MIN_REDEEM_SC_RAW =
-  MIN_REDEEM_SC_DISPLAY * SC_POINT_SCALE;
+export const MIN_REDEEM_SC_RAW = MIN_REDEEM_SC_DISPLAY * SC_POINT_SCALE;
 
 /** 將後端原始 SC（萬分之一）換成畫面上的 SC 數值（可含小數）。 */
 export function scRawToDisplay(raw: number): number {

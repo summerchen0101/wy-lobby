@@ -70,11 +70,9 @@ function parseWithdrawDisplayToWire(amountStr: string): bigint | null {
 }
 
 function RedeemCashAppForm({
-  amount,
   busy,
   onSubmit,
 }: {
-  amount: string;
   busy: boolean;
   onSubmit: (appAccount: string) => Promise<void>;
 }) {
@@ -88,14 +86,6 @@ function RedeemCashAppForm({
 
   return (
     <form className="redeem-form-page__form" onSubmit={handleSubmit}>
-      <label className="redeem-form-page__label">AMOUNT TO REDEEM*</label>
-      <input
-        className="redeem-form-page__input"
-        value={amount}
-        readOnly
-        aria-readonly
-      />
-
       <label
         className="redeem-form-page__label"
         htmlFor="redeem-modal-cashapp-account">
@@ -124,11 +114,9 @@ function RedeemCashAppForm({
 }
 
 function RedeemAchForm({
-  amount,
   busy,
   onSubmit,
 }: {
-  amount: string;
   busy: boolean;
   onSubmit: (accountNumber: string, routingNumber: string) => Promise<void>;
 }) {
@@ -143,14 +131,6 @@ function RedeemAchForm({
 
   return (
     <form className="redeem-form-page__form" onSubmit={handleSubmit}>
-      <label className="redeem-form-page__label">AMOUNT TO REDEEM*</label>
-      <input
-        className="redeem-form-page__input"
-        value={amount}
-        readOnly
-        aria-readonly
-      />
-
       <label
         className="redeem-form-page__label"
         htmlFor="redeem-modal-ach-acct">
@@ -194,11 +174,9 @@ function RedeemAchForm({
 }
 
 function RedeemCreditCardForm({
-  amount,
   busy,
   onSubmit,
 }: {
-  amount: string;
   busy: boolean;
   onSubmit: (cardNumber: string, cardValidCode: string) => Promise<void>;
 }) {
@@ -213,14 +191,6 @@ function RedeemCreditCardForm({
 
   return (
     <form className="redeem-form-page__form" onSubmit={handleSubmit}>
-      <label className="redeem-form-page__label">AMOUNT TO REDEEM*</label>
-      <input
-        className="redeem-form-page__input"
-        value={amount}
-        readOnly
-        aria-readonly
-      />
-
       <label className="redeem-form-page__label" htmlFor="redeem-modal-cc-num">
         Choose CardNumber*
       </label>
@@ -260,11 +230,9 @@ function RedeemCreditCardForm({
 }
 
 function RedeemPayPalForm({
-  amount,
   busy,
   onSubmit,
 }: {
-  amount: string;
   busy: boolean;
   onSubmit: (paypalEmail: string) => Promise<void>;
 }) {
@@ -278,14 +246,6 @@ function RedeemPayPalForm({
 
   return (
     <form className="redeem-form-page__form" onSubmit={handleSubmit}>
-      <label className="redeem-form-page__label">AMOUNT TO REDEEM*</label>
-      <input
-        className="redeem-form-page__input"
-        value={amount}
-        readOnly
-        aria-readonly
-      />
-
       <label
         className="redeem-form-page__label"
         htmlFor="redeem-modal-paypal-email">
@@ -376,7 +336,6 @@ export function RedeemMethodModal({
 
   const [step, setStep] = useState<Step>("pick");
   const [pickAmount, setPickAmount] = useState("");
-  const [committedAmount, setCommittedAmount] = useState("");
   const [selectedMethod, setSelectedMethod] = useState<RedeemMethodSlug | null>(
     null,
   );
@@ -388,7 +347,6 @@ export function RedeemMethodModal({
     if (!open) return;
     setStep("pick");
     setPickAmount("");
-    setCommittedAmount("");
     setSelectedMethod(null);
     setSubmitBusy(false);
     setSuccessOrderUid("");
@@ -504,7 +462,6 @@ export function RedeemMethodModal({
         document.getElementById(amountId)?.focus();
         return;
       }
-      setCommittedAmount(raw);
       setSelectedMethod(method);
       setStep("form");
     },
@@ -544,17 +501,15 @@ export function RedeemMethodModal({
 
   const formBranch = useMemo(() => {
     if (step !== "form" || !selectedMethod) return null;
-    const amount = committedAmount;
     switch (selectedMethod) {
       case "cashapp":
         return (
           <RedeemCashAppForm
-            amount={amount}
             busy={submitBusy}
             onSubmit={async (appAccount) =>
               submitWithdrawOrder({
                 method: "cashapp",
-                amountStr: committedAmount,
+                amountStr: pickAmount,
                 appAccount,
               })
             }
@@ -563,12 +518,11 @@ export function RedeemMethodModal({
       case "ach":
         return (
           <RedeemAchForm
-            amount={amount}
             busy={submitBusy}
             onSubmit={async (accountNumber, routingNumber) =>
               submitWithdrawOrder({
                 method: "ach",
-                amountStr: committedAmount,
+                amountStr: pickAmount,
                 accountNumber,
                 routingNumber,
               })
@@ -578,12 +532,11 @@ export function RedeemMethodModal({
       case "credit-card":
         return (
           <RedeemCreditCardForm
-            amount={amount}
             busy={submitBusy}
             onSubmit={async (cardNumber, cardValidCode) =>
               submitWithdrawOrder({
                 method: "credit-card",
-                amountStr: committedAmount,
+                amountStr: pickAmount,
                 cardNumber,
                 cardValidCode,
               })
@@ -593,12 +546,11 @@ export function RedeemMethodModal({
       case "paypal":
         return (
           <RedeemPayPalForm
-            amount={amount}
             busy={submitBusy}
             onSubmit={async (paypalEmail) =>
               submitWithdrawOrder({
                 method: "paypal",
-                amountStr: committedAmount,
+                amountStr: pickAmount,
                 paypalEmail,
               })
             }
@@ -607,7 +559,7 @@ export function RedeemMethodModal({
       default:
         return null;
     }
-  }, [step, selectedMethod, committedAmount, submitBusy, submitWithdrawOrder]);
+  }, [step, selectedMethod, pickAmount, submitBusy, submitWithdrawOrder]);
 
   const titleText =
     step === "pick"
@@ -657,7 +609,7 @@ export function RedeemMethodModal({
               amountDisplay={successAmountDisplay}
               onBackToLobby={onClose}
             />
-          ) : step === "pick" ? (
+          ) : (
             <>
               <label className="redeem-method-modal__label" htmlFor={amountId}>
                 AMOUNT TO REDEEM*
@@ -672,25 +624,30 @@ export function RedeemMethodModal({
                 aria-required
                 value={pickAmount}
                 onChange={(e) => setPickAmount(e.target.value)}
+                disabled={step === "form" && submitBusy}
               />
 
-              <p className="redeem-method-modal__label redeem-method-modal__label--spaced">
-                REDEEM TO:
-              </p>
-              <div className="redeem-method-modal__methods" role="group">
-                {REDEEM_METHOD_SLUGS.map((slug) => (
-                  <button
-                    key={slug}
-                    type="button"
-                    className="redeem-method-modal__method-btn"
-                    onClick={() => trySelectMethod(slug)}>
-                    {METHOD_LABEL[slug]}
-                  </button>
-                ))}
-              </div>
+              {step === "pick" ? (
+                <>
+                  <p className="redeem-method-modal__label redeem-method-modal__label--spaced">
+                    REDEEM TO:
+                  </p>
+                  <div className="redeem-method-modal__methods" role="group">
+                    {REDEEM_METHOD_SLUGS.map((slug) => (
+                      <button
+                        key={slug}
+                        type="button"
+                        className="redeem-method-modal__method-btn"
+                        onClick={() => trySelectMethod(slug)}>
+                        {METHOD_LABEL[slug]}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                formBranch
+              )}
             </>
-          ) : (
-            formBranch
           )}
         </div>
       </div>
