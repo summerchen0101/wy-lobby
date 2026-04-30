@@ -647,6 +647,7 @@ export function LandingPage() {
         amount: amountForActiveWallet(user, activeWallet),
         vipLevel: user?.vipLevel ?? 0,
         token: user ? token?.trim() || undefined : undefined,
+        guestDemo: !user,
       });
     } else if (card.launchUrl?.trim()) {
       url = card.launchUrl.trim();
