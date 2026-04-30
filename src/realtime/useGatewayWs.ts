@@ -28,6 +28,8 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     requestTimeoutMs,
     heartbeatIntervalMs,
     reconnect,
+    maxReconnectAttempts,
+    fatalReconnectCloseCodes,
     initialReconnectDelayMs,
     maxReconnectDelayMs,
   } = params
@@ -65,6 +67,8 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
       requestTimeoutMs,
       heartbeatIntervalMs,
       reconnect,
+      maxReconnectAttempts,
+      fatalReconnectCloseCodes,
       initialReconnectDelayMs,
       maxReconnectDelayMs,
       getRequestBasicExtras: () =>
@@ -86,6 +90,8 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     requestTimeoutMs,
     heartbeatIntervalMs,
     reconnect,
+    maxReconnectAttempts,
+    fatalReconnectCloseCodes,
     initialReconnectDelayMs,
     maxReconnectDelayMs,
   ])

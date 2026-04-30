@@ -15,7 +15,14 @@ export type GatewayWsConnectionState = 'idle' | 'connecting' | 'open' | 'closed'
 
 /** 僅在 `state === 'closed'` 時有意義；區分主動關閉與傳輸層斷線（供上層忽略 stale `closed`）。 */
 export type GatewayWsStateMeta = {
-  shutdownReason?: 'client_close' | 'transport'
+  shutdownReason?:
+    | 'client_close'
+    | 'transport'
+    | 'reconnect_exhausted'
+    | 'auth_rejected'
+  closeCode?: number
+  closeReason?: string
+  wasClean?: boolean
 }
 
 export type GatewayWsResponseObject = ReturnType<typeof gatewayResponseToObject>
@@ -51,6 +58,13 @@ export type GatewayWsOptions = {
   heartbeatIntervalMs?: number
   /** 斷線後自動重連；預設 true */
   reconnect?: boolean
+  /**
+   * 未成功 `open` 前，累計 `onclose` 後最多再排程幾次重連（不含第一次 `connectNow`）。
+   * 未設定時不限制（維持舊行為）。
+   */
+  maxReconnectAttempts?: number
+  /** 僅握手／傳輸層：此類 WebSocket `CloseEvent.code` 視為不可重連（如後端以自訂 code 拒絕 token） */
+  fatalReconnectCloseCodes?: readonly number[]
   initialReconnectDelayMs?: number
   maxReconnectDelayMs?: number
   /** 併入每則 Request 的 RequestBasic（如 token、userID）；`request()` 會再帶 timestamp、requestID */
@@ -130,6 +144,9 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   const defaultClientVer = options.clientVer?.trim() || 'web-alpha'
   const skipInitialPing = options.skipInitialPing === true
   const pairUnmatchedSuccessToSinglePending = options.pairUnmatchedSuccessToSinglePending === true
+  const fatalReconnectCodes = options.fatalReconnectCloseCodes ?? []
+  const fatalReconnectSet = new Set(fatalReconnectCodes)
+  const maxReconnectAttempts = options.maxReconnectAttempts
 
   function rejectAllPending(reason: Error) {
     for (const [, entry] of pending) {
@@ -398,14 +415,34 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       options.onSocketError?.(ev)
     }
 
-    socket.onclose = () => {
+    socket.onclose = (ev: CloseEvent) => {
       clearHeartbeat()
       rejectAllPending(new Error('[gateway-ws] socket closed'))
+
+      let shutdownReason: NonNullable<GatewayWsStateMeta['shutdownReason']> =
+        closedByUser ? 'client_close' : 'transport'
+      if (!closedByUser && fatalReconnectSet.has(ev.code)) {
+        shutdownReason = 'auth_rejected'
+      } else if (
+        !closedByUser &&
+        maxReconnectAttempts != null &&
+        attempt >= maxReconnectAttempts
+      ) {
+        shutdownReason = 'reconnect_exhausted'
+      }
+
       setState('closed', {
-        shutdownReason: closedByUser ? 'client_close' : 'transport',
+        shutdownReason,
+        closeCode: ev.code,
+        closeReason: ev.reason,
+        wasClean: ev.wasClean,
       })
       ws = null
       if (closedByUser || !reconnect) return
+      if (fatalReconnectSet.has(ev.code)) return
+      if (maxReconnectAttempts != null && attempt >= maxReconnectAttempts) {
+        return
+      }
       const delay = Math.min(maxDelay, initialDelay * 2 ** attempt)
       attempt += 1
       reconnectTimer = setTimeout(() => {

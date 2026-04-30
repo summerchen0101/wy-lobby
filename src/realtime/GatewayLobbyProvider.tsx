@@ -75,6 +75,26 @@ function devGatewayWsProbeEnabled(): boolean {
   return import.meta.env.VITE_DEV_GATEWAY_WS !== "false";
 }
 
+/** 握手屢敗後最多再排程幾次重連；見 `gatewayWs` 之 `maxReconnectAttempts`。 */
+function wsMaxHandshakeReconnectAttemptsFromEnv(): number {
+  const raw = (import.meta.env.VITE_WS_MAX_HANDSHAKE_ATTEMPTS ?? "6").trim();
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 6;
+  return Math.floor(n);
+}
+
+/** 逗號分隔之 `CloseEvent.code`；空則僅依重試上限判定。 */
+function wsAuthFailureCloseCodesFromEnv(): readonly number[] {
+  const raw = (import.meta.env.VITE_WS_AUTH_FAILURE_CLOSE_CODES ?? "").trim();
+  if (!raw) return [];
+  const out: number[] = [];
+  for (const part of raw.split(",")) {
+    const n = Number(part.trim());
+    if (Number.isFinite(n)) out.push(n);
+  }
+  return out;
+}
+
 export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const { token, user, mergeUser, logout } = useAuth();
   const { setActiveWallet, activeWallet } = useWallet();
@@ -87,6 +107,15 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
   /** 會經 Gateway WS 發送首轮 LOBBY_GET 的情境（含訪客、dev LOBBY_GET probe） */
   const gateActive = gatewayWsEnabled && shouldRunLobbyGetOnOpen;
+
+  const wsMaxReconnectAttempts = useMemo(
+    () => wsMaxHandshakeReconnectAttemptsFromEnv(),
+    [],
+  );
+  const wsFatalReconnectCloseCodes = useMemo(
+    () => wsAuthFailureCloseCodesFromEnv(),
+    [],
+  );
 
   const [lobbyGames, setLobbyGames] = useState<Game[] | null>(null);
   const [lobbyLoading, setLobbyLoading] = useState(false);
@@ -114,6 +143,12 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   );
   const sessionTokenRef = useRef("");
   const hadTokenRef = useRef(Boolean(token?.trim()));
+  /** 避免 `reconnect_exhausted` / `auth_rejected` 連續觸發多次 alert + logout */
+  const wsHandshakeLogoutLockRef = useRef(false);
+
+  useEffect(() => {
+    if (!token?.trim()) wsHandshakeLogoutLockRef.current = false;
+  }, [token]);
 
   useEffect(() => {
     if (!gateActive) setLobbyWsBootstrapDone(true);
@@ -330,13 +365,18 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     enabled: gatewayWsEnabled,
     wsToken: token?.trim() ?? "",
     clientVer: import.meta.env.VITE_CLIENT_VER?.trim() || undefined,
+    maxReconnectAttempts: wsMaxReconnectAttempts,
+    fatalReconnectCloseCodes: wsFatalReconnectCloseCodes,
     getRequestBasicExtras,
     onState: (s: GatewayWsConnectionState, meta?: GatewayWsStateMeta) => {
       if (s !== "open") {
         setGatewayRequestReady(false);
         if (gateActive) {
           const skipBootstrapReset =
-            s === "closed" && meta?.shutdownReason === "client_close";
+            s === "closed" &&
+            (meta?.shutdownReason === "client_close" ||
+              meta?.shutdownReason === "reconnect_exhausted" ||
+              meta?.shutdownReason === "auth_rejected");
           if (!skipBootstrapReset) setLobbyWsBootstrapDone(false);
         }
       }
@@ -344,7 +384,21 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         console.info("[gateway-ws][dev] state:", s, {
           wsUrl: getGatewayWsUrlForDevLog({ token: token ?? "" }),
           shutdownReason: meta?.shutdownReason,
+          closeCode: meta?.closeCode,
         });
+      }
+      if (
+        s === "closed" &&
+        token?.trim() &&
+        gatewayWsEnabled &&
+        (meta?.shutdownReason === "reconnect_exhausted" ||
+          meta?.shutdownReason === "auth_rejected")
+      ) {
+        if (wsHandshakeLogoutLockRef.current) return;
+        wsHandshakeLogoutLockRef.current = true;
+        if (gateActive) setLobbyWsBootstrapDone(true);
+        window.alert("Please log in again.");
+        logout();
       }
     },
     onResponse: (msg) => {
