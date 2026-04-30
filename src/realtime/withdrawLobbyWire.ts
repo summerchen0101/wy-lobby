@@ -233,7 +233,8 @@ export function decodeCreateWithdrawOrderResponseBytes(
 export type WithdrawSuccessPushWire = {
   userID?: string;
   nickname: string;
-  actualAmount: number;
+  /** Proto `actualAmount` string：整數 SC 原始單位（與 Lobby bag 一致，見 {@link SC_POINT_SCALE}）。 */
+  actualAmountWire: string;
 };
 
 export function decodeWithdrawSuccessPushBytes(
@@ -252,18 +253,23 @@ export function decodeWithdrawSuccessPushBytes(
       uidRaw !== undefined && uidRaw !== null ? String(uidRaw) : undefined;
     const nick = String(o.nickname ?? "").trim();
     const amtRaw = o.actualAmount;
-    const amtStr =
+    let amtStr =
       typeof amtRaw === "string"
         ? amtRaw.trim()
         : amtRaw !== undefined && amtRaw !== null
           ? String(amtRaw)
           : "";
-    const n = Number(amtStr);
-    if (!Number.isFinite(n)) return null;
+    amtStr = amtStr.replace(/,/g, "");
+    if (!/^\d+$/.test(amtStr)) return null;
+    try {
+      void BigInt(amtStr);
+    } catch {
+      return null;
+    }
     return {
       userID,
       nickname: nick || "Someone",
-      actualAmount: n,
+      actualAmountWire: amtStr,
     };
   } catch {
     return null;

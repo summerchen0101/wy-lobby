@@ -42,6 +42,35 @@ export function formatScFromRaw(raw: number | undefined): string {
   return formatWalletScAmountForDisplay(scRawToDisplay(raw));
 }
 
+/** 對齊 {@link formatScFromRaw} 的舍入：`trunc(raw × 100 / SC_POINT_SCALE)` 再格式化（非負數 raw）。 */
+function formatScTruncHundredthsBigInt(totalHundredths: bigint): string {
+  if (totalHundredths < 0n) return "—";
+  const intPart = totalHundredths / 100n;
+  const frac = Number(totalHundredths % 100n);
+  const intFmt = intPart.toLocaleString("en-US");
+  if (frac === 0) return intFmt;
+  const fracFmt = String(frac).padStart(2, "0").replace(/0+$/, "");
+  return `${intFmt}.${fracFmt}`;
+}
+
+/**
+ * megaman.WithdrawSuccessPush.actualAmount：`string` 整數後端原始 SC（萬分之一）。
+ * 以 BigInt 解析，避免超大整數經 JS `number` 失真。
+ */
+export function formatScFromRawWireInteger(wireRaw: string): string {
+  const t = String(wireRaw ?? "")
+    .trim()
+    .replace(/,/g, "");
+  if (!/^\d+$/.test(t)) return "—";
+  try {
+    const rawBig = BigInt(t);
+    const hundredthsRaw = rawBig / 100n;
+    return formatScTruncHundredthsBigInt(hundredthsRaw);
+  } catch {
+    return "—";
+  }
+}
+
 /**
  * List withdraw orders：`amount` 為法幣顯示數值（不經 {@link SC_POINT_SCALE}）。
  */

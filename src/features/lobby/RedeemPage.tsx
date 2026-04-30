@@ -6,6 +6,7 @@ import { CURRENCY_ICON_SC } from "../../lib/currencyIcons";
 import { isMockMode } from "../../lib/env";
 import {
   formatScFromRaw,
+  formatScFromRawWireInteger,
   formatWithdrawHistoryFiatAmount,
   MIN_REDEEM_SC_DISPLAY,
   MIN_REDEEM_SC_RAW,
@@ -82,7 +83,7 @@ export function RedeemPage() {
   useEffect(() => {
     return subscribeWithdrawSuccessPush((p) => {
       setPillExtras((prev) => {
-        const line = `${p.nickname} redeemed ${formatScFromRaw(p.actualAmount)} SC`;
+        const line = `${p.nickname} redeemed ${formatScFromRawWireInteger(p.actualAmountWire)} SC`;
         return [line, ...prev].slice(0, 24);
       });
     });

@@ -257,7 +257,7 @@ export function decodeGatewayResponseDataForDevLog(
             kind: "WITHDRAW_SUCCESS_PUSH",
             userID: p.userID,
             nickname: p.nickname,
-            actualAmount: p.actualAmount,
+            actualAmountWire: p.actualAmountWire,
           };
         }
         return fallbackHex(raw, new Error("WithdrawSuccessPush decode failed"));
