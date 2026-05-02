@@ -27,6 +27,10 @@ type Props = {
 
 const DEMO_REFERRAL_URL = 'https://www.wncogames.com?referrercode=demo'
 
+const WS_WAIT_SLOW_MS = 16_000
+
+type LoadPhase = 'idle' | 'ws_wait' | 'fetch' | 'ready'
+
 function parseCnt(v: string | number | undefined): number {
   if (v === undefined || v === null) return 0
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0
@@ -55,7 +59,9 @@ export function InviteFriendsModal({ open, onClose }: Props) {
   const titleId = useId()
 
   const [referralInfo, setReferralInfo] = useState<GetReferralInfoRespDecoded | null>(null)
-  const [infoLoading, setInfoLoading] = useState(false)
+  const [loadPhase, setLoadPhase] = useState<LoadPhase>('idle')
+  const [wsConnectSlow, setWsConnectSlow] = useState(false)
+  const [retryNonce, setRetryNonce] = useState(0)
   const [claiming, setClaiming] = useState(false)
 
   const wsOk = !isMockMode() && isWsLobbyGamesEnabled()
@@ -96,29 +102,53 @@ export function InviteFriendsModal({ open, onClose }: Props) {
   )
 
   useEffect(() => {
+    if (open) return
+    setReferralInfo(null)
+    setLoadPhase('idle')
+    setWsConnectSlow(false)
+    setRetryNonce(0)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    if (!wsOk || gatewayRequestReady || loadPhase !== 'ws_wait') {
+      return
+    }
+    const id = window.setTimeout(() => setWsConnectSlow(true), WS_WAIT_SLOW_MS)
+    return () => window.clearTimeout(id)
+  }, [open, wsOk, gatewayRequestReady, loadPhase, retryNonce])
+
+  useEffect(() => {
     if (!open) return
     if (!wsOk) {
       setReferralInfo(null)
-      setInfoLoading(false)
+      setLoadPhase('ready')
+      setWsConnectSlow(false)
       return
     }
     if (!gatewayRequestReady) {
-      setInfoLoading(true)
+      setLoadPhase('ws_wait')
       return
     }
     let cancelled = false
-    setInfoLoading(true)
+    setLoadPhase('fetch')
+    setWsConnectSlow(false)
     void (async () => {
       try {
         await fetchReferralInfo()
       } finally {
-        if (!cancelled) setInfoLoading(false)
+        if (!cancelled) setLoadPhase('ready')
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [open, wsOk, gatewayRequestReady, fetchReferralInfo])
+  }, [open, wsOk, gatewayRequestReady, fetchReferralInfo, retryNonce])
+
+  const onRetryLoad = useCallback(() => {
+    setWsConnectSlow(false)
+    setRetryNonce((n) => n + 1)
+  }, [])
 
   const rewards = referralInfo?.referralInfo?.rewards
   const gcDisplay = referralGcDisplayAmount(rewards)
@@ -134,20 +164,28 @@ export function InviteFriendsModal({ open, onClose }: Props) {
     : DEMO_REFERRAL_URL
 
   const gcLabel =
-    wsOk && !infoLoading
+    wsOk && loadPhase === 'ready'
       ? gcDisplay !== null
         ? `${formatCompactInt(gcDisplay)} +`
         : '—'
       : '400K +'
   const scLabel =
-    wsOk && !infoLoading ? (scDisplay !== null ? String(scDisplay) : '—') : '20'
+    wsOk && loadPhase === 'ready' ? (scDisplay !== null ? String(scDisplay) : '—') : '20'
 
-  const linkPillText = infoLoading
-    ? 'Loading…'
-    : referralUrl.trim() || (wsOk ? 'Link unavailable' : referralUrl)
+  const linkPillText =
+    loadPhase === 'ws_wait' || (loadPhase === 'idle' && wsOk)
+      ? 'Connecting…'
+      : loadPhase === 'fetch'
+        ? 'Loading referral…'
+        : referralUrl.trim() || (wsOk ? 'Link unavailable' : referralUrl)
 
   const claimDisabled =
-    claiming || !wsOk || !gatewayRequestReady || infoLoading
+    claiming ||
+    !wsOk ||
+    !gatewayRequestReady ||
+    loadPhase === 'ws_wait' ||
+    loadPhase === 'fetch' ||
+    (loadPhase === 'idle' && wsOk)
 
   const copyUrl = useCallback(() => {
     const url = referralUrl.trim()
@@ -310,6 +348,16 @@ export function InviteFriendsModal({ open, onClose }: Props) {
               />
             </button>
           </div>
+          {wsOk && loadPhase === 'ws_wait' && wsConnectSlow ? (
+            <div className="invite-friends-modal__retry-wrap">
+              <p className="invite-friends-modal__ws-slow">
+                Connection is taking longer than usual. Check your network, then try again.
+              </p>
+              <button type="button" className="invite-friends-modal__retry" onClick={onRetryLoad}>
+                Retry
+              </button>
+            </div>
+          ) : null}
 
           <div className="invite-friends-modal__actions">
             <button type="button" className="invite-friends-modal__btn-invite" onClick={onInvite}>
