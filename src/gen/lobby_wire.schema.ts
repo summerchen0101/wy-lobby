@@ -1171,6 +1171,72 @@ export default {
               "id": 1
             }
           }
+        },
+        "StringValue": {
+          "fields": {
+            "value": {
+              "type": "string",
+              "id": 1
+            }
+          }
+        },
+        "ReferralReward": {
+          "fields": {
+            "walletType": {
+              "type": "WalletType",
+              "id": 1
+            },
+            "amount": {
+              "type": "int64",
+              "id": 2
+            }
+          }
+        },
+        "ReferralInfo": {
+          "fields": {
+            "rewards": {
+              "rule": "repeated",
+              "type": "ReferralReward",
+              "id": 1
+            },
+            "DepositThreshold": {
+              "type": "string",
+              "id": 2
+            },
+            "CurrencyCode": {
+              "type": "string",
+              "id": 3
+            }
+          }
+        },
+        "GetReferralInfoResp": {
+          "fields": {
+            "referralInfo": {
+              "type": "ReferralInfo",
+              "id": 1
+            },
+            "myReferrerCode": {
+              "type": "StringValue",
+              "id": 2
+            },
+            "registerReferredCnt": {
+              "type": "int64",
+              "id": 3
+            },
+            "qualifiedReferredCnt": {
+              "type": "int64",
+              "id": 4
+            }
+          }
+        },
+        "ClaimReferralRewardResp": {
+          "fields": {
+            "rewards": {
+              "rule": "repeated",
+              "type": "ReferralReward",
+              "id": 1
+            }
+          }
         }
       }
     }

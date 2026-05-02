@@ -99,6 +99,15 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
     }
   }, [open])
 
+  useEffect(() => {
+    if (!open) return
+    const fromQuery =
+      searchParams.get('referrercode')?.trim() ||
+      searchParams.get('referrerCode')?.trim() ||
+      ''
+    if (fromQuery) setReferral(fromQuery)
+  }, [open, searchParams])
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)

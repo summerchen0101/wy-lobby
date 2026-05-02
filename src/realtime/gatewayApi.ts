@@ -43,3 +43,8 @@ export const GATEWAY_API_JACKPOT_INFO_PUSH = 1043
 
 /** 伺服器推播：其他玩家提現成功輪播；body 為 megaman.WithdrawSuccessPush */
 export const GATEWAY_API_WITHDRAW_SUCCESS_PUSH = 1048
+
+/** 取得推廣好友活動資訊；body 空；回應 megaman.GetReferralInfoResp */
+export const GATEWAY_API_GET_REFERRAL_INFO = 540
+/** 領取推廣獎勵；body 空；回應 megaman.ClaimReferralRewardResp */
+export const GATEWAY_API_CLAIM_REFERRAL_REWARD = 541

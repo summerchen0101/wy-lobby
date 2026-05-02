@@ -24,6 +24,27 @@ export function floatingCtaPath(): string {
   return v || "/profile";
 }
 
+/**
+ * 邀請連結用的站台基底（不含尾隨 `/`、不含 query）。
+ * - 有 `VITE_REFERRAL_LANDING_URL` 時優先。
+ * - 否則在瀏覽器內為 `window.location.origin`；非瀏覽器環境為空字串。
+ */
+export function referralLandingBaseUrl(): string {
+  const fromEnv = import.meta.env.VITE_REFERRAL_LANDING_URL?.trim();
+  if (fromEnv) return fromEnv.replace(/\/+$/, "");
+  if (typeof window === "undefined") return "";
+  return window.location.origin.replace(/\/+$/, "");
+}
+
+/** 組裝 `?referrercode=` 邀請網址（規格：專案根目錄 docs/referral.md）。 */
+export function buildReferralInviteUrl(myReferrerCode: string): string {
+  const code = myReferrerCode.trim();
+  if (!code) return "";
+  const base = referralLandingBaseUrl();
+  if (!base) return "";
+  return `${base}/?referrercode=${encodeURIComponent(code)}`;
+}
+
 const DEFAULT_WS_BASE = "wss://app-us-alpha.ffglobaltech.com/ws";
 
 /**

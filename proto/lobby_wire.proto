@@ -509,3 +509,31 @@ message CreateWithdrawOrderReq {
 message CreateWithdrawOrderResp {
   string withdrawOrderUID = 1;
 }
+
+// --- Referral — 對齊 proto/megaman/activity.proto；Gateway GetReferralInfo=540, ClaimReferralReward=541 ---
+// google.protobuf.StringValue 二進位相容（field 1 = value）
+message StringValue {
+  string value = 1;
+}
+
+message ReferralReward {
+  WalletType walletType = 1;
+  int64 amount = 2;
+}
+
+message ReferralInfo {
+  repeated ReferralReward rewards = 1;
+  string DepositThreshold = 2;
+  string CurrencyCode = 3;
+}
+
+message GetReferralInfoResp {
+  ReferralInfo referralInfo = 1;
+  StringValue myReferrerCode = 2;
+  int64 registerReferredCnt = 3;
+  int64 qualifiedReferredCnt = 4;
+}
+
+message ClaimReferralRewardResp {
+  repeated ReferralReward rewards = 1;
+}

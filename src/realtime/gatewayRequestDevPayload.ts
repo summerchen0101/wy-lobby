@@ -1,7 +1,9 @@
 import { hexPreview } from './bytesHexPreview'
 import {
   GATEWAY_API_BUY_PRODUCT,
+  GATEWAY_API_CLAIM_REFERRAL_REWARD,
   GATEWAY_API_CREATE_WITHDRAW_ORDER,
+  GATEWAY_API_GET_REFERRAL_INFO,
   GATEWAY_API_LIST_PRODUCTS,
   GATEWAY_API_LIST_WITHDRAW_ORDERS,
   GATEWAY_API_LOBBY_GET,
@@ -121,6 +123,17 @@ export function decodeGatewayRequestDataForDevLog(
       return decodeCreateWithdrawOrderRequestForDevLog(raw)
     } catch (e) {
       return fallbackHex(raw, e)
+    }
+  }
+
+  if (
+    apiType === GATEWAY_API_GET_REFERRAL_INFO ||
+    apiType === GATEWAY_API_CLAIM_REFERRAL_REWARD
+  ) {
+    if (empty) return {}
+    return {
+      unexpectedBytes: raw.byteLength,
+      hexPreview: hexPreview(raw, HEX_MAX),
     }
   }
 
