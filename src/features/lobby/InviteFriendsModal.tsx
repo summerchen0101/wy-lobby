@@ -1,9 +1,23 @@
-import { useCallback, useEffect, useId } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Copy } from 'lucide-react'
 import { InfoPopover } from '../../components/InfoPopover'
 import { useAlert } from '../../components/alert/alertContext'
+import { buildReferralInviteUrl, isMockMode, isWsLobbyGamesEnabled } from '../../lib/env'
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from '../../lib/currencyIcons'
+import {
+  GATEWAY_API_CLAIM_REFERRAL_REWARD,
+  GATEWAY_API_GET_REFERRAL_INFO,
+} from '../../realtime/gatewayApi'
+import { useGatewayLobby } from '../../realtime/useGatewayLobby'
+import {
+  decodeClaimReferralRewardRespBytes,
+  decodeGetReferralInfoRespBytes,
+  formatReferralRewardAmountsForMessage,
+  referralGcDisplayAmount,
+  referralScDisplayAmount,
+  type GetReferralInfoRespDecoded,
+} from '../../realtime/referralLobbyWire'
 import './InviteFriendsModal.css'
 
 type Props = {
@@ -11,29 +25,138 @@ type Props = {
   onClose: () => void
 }
 
-/** Placeholder until referral API; copy/share use this value */
-function getReferralUrl() {
-  if (typeof window === 'undefined') {
-    return 'https://www.wncogames.com?referrercode=demo'
+const DEMO_REFERRAL_URL = 'https://www.wncogames.com?referrercode=demo'
+
+function parseCnt(v: string | number | undefined): number {
+  if (v === undefined || v === null) return 0
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0
+  const n = Number(v.trim())
+  return Number.isFinite(n) ? n : 0
+}
+
+/** Compact label for GC-style whole amounts (e.g. 400K). */
+function formatCompactInt(n: number): string {
+  if (n >= 1_000_000) {
+    const x = n / 1_000_000
+    const s = (Math.round(x * 10) / 10).toString()
+    return `${s.replace(/\.0$/, '')}M`
   }
-  return `https://www.wncogames.com?referrercode=demo`
+  if (n >= 1000) {
+    const x = n / 1000
+    const s = (Math.round(x * 10) / 10).toString()
+    return `${s.replace(/\.0$/, '')}K`
+  }
+  return String(n)
 }
 
 export function InviteFriendsModal({ open, onClose }: Props) {
   const { show } = useAlert()
-  const friendsRegistered = 0
-  const friendsQualified = 0
+  const { requestRef, gatewayRequestReady, refreshLobbyGet } = useGatewayLobby()
   const titleId = useId()
 
-  const referralUrl = getReferralUrl()
+  const [referralInfo, setReferralInfo] = useState<GetReferralInfoRespDecoded | null>(null)
+  const [infoLoading, setInfoLoading] = useState(false)
+  const [claiming, setClaiming] = useState(false)
+
+  const wsOk = !isMockMode() && isWsLobbyGamesEnabled()
+
+  const fetchReferralInfo = useCallback(
+    async (options?: { quiet?: boolean }) => {
+      const req = requestRef.current
+      if (!req) return false
+      try {
+        const r = await req({
+          type: GATEWAY_API_GET_REFERRAL_INFO,
+          data: new Uint8Array(0),
+          debugLabel: 'GET_REFERRAL_INFO',
+        })
+        if (String(r.code) !== '200' || !(r.data instanceof Uint8Array)) {
+          const errMsg = (r as { errMessage?: string }).errMessage?.trim()
+          if (!options?.quiet) {
+            show(errMsg || 'Could not load referral info', { variant: 'error' })
+          }
+          setReferralInfo(null)
+          return false
+        }
+        if (r.data.byteLength === 0) {
+          setReferralInfo(null)
+          return true
+        }
+        setReferralInfo(decodeGetReferralInfoRespBytes(r.data))
+        return true
+      } catch {
+        if (!options?.quiet) {
+          show('Could not load referral info', { variant: 'error' })
+        }
+        setReferralInfo(null)
+        return false
+      }
+    },
+    [requestRef, show],
+  )
+
+  useEffect(() => {
+    if (!open) return
+    if (!wsOk) {
+      setReferralInfo(null)
+      setInfoLoading(false)
+      return
+    }
+    if (!gatewayRequestReady) {
+      setInfoLoading(true)
+      return
+    }
+    let cancelled = false
+    setInfoLoading(true)
+    void (async () => {
+      try {
+        await fetchReferralInfo()
+      } finally {
+        if (!cancelled) setInfoLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open, wsOk, gatewayRequestReady, fetchReferralInfo])
+
+  const rewards = referralInfo?.referralInfo?.rewards
+  const gcDisplay = referralGcDisplayAmount(rewards)
+  const scDisplay = referralScDisplayAmount(rewards)
+  const friendsRegistered = wsOk ? parseCnt(referralInfo?.registerReferredCnt) : 0
+  const friendsQualified = wsOk ? parseCnt(referralInfo?.qualifiedReferredCnt) : 0
+
+  const referralCode = referralInfo?.myReferrerCode?.value?.trim() ?? ''
+  const referralUrl = wsOk
+    ? referralCode
+      ? buildReferralInviteUrl(referralCode)
+      : ''
+    : DEMO_REFERRAL_URL
+
+  const gcLabel =
+    wsOk && !infoLoading
+      ? gcDisplay !== null
+        ? `${formatCompactInt(gcDisplay)} +`
+        : '—'
+      : '400K +'
+  const scLabel =
+    wsOk && !infoLoading ? (scDisplay !== null ? String(scDisplay) : '—') : '20'
+
+  const linkPillText = infoLoading
+    ? 'Loading…'
+    : referralUrl.trim() || (wsOk ? 'Link unavailable' : referralUrl)
+
+  const claimDisabled =
+    claiming || !wsOk || !gatewayRequestReady || infoLoading
 
   const copyUrl = useCallback(() => {
-    if (!referralUrl.trim()) {
+    const url = referralUrl.trim()
+    if (!url) {
       show('Link unavailable', { variant: 'error' })
       return
     }
     return navigator.clipboard
-      .writeText(referralUrl)
+      .writeText(url)
       .then(() => {
         show('Link copied', { variant: 'success' })
       })
@@ -43,9 +166,14 @@ export function InviteFriendsModal({ open, onClose }: Props) {
   }, [referralUrl, show])
 
   const onInvite = useCallback(() => {
+    const url = referralUrl.trim()
+    if (!url) {
+      show('Link unavailable', { variant: 'error' })
+      return
+    }
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       void navigator
-        .share({ title: 'Join me', text: 'Play with my referral link', url: referralUrl })
+        .share({ title: 'Join me', text: 'Play with my referral link', url })
         .catch((err) => {
           if (err instanceof Error && err.name === 'AbortError') return
           void copyUrl()
@@ -54,6 +182,39 @@ export function InviteFriendsModal({ open, onClose }: Props) {
     }
     void copyUrl()
   }, [copyUrl, referralUrl])
+
+  const onClaimRewards = useCallback(async () => {
+    const req = requestRef.current
+    if (!req || claiming || claimDisabled) return
+    setClaiming(true)
+    try {
+      const r = await req({
+        type: GATEWAY_API_CLAIM_REFERRAL_REWARD,
+        data: new Uint8Array(0),
+        debugLabel: 'CLAIM_REFERRAL_REWARD',
+      })
+      if (String(r.code) !== '200' || !(r.data instanceof Uint8Array)) {
+        const errMsg = (r as { errMessage?: string }).errMessage?.trim()
+        show(errMsg || 'Could not claim rewards', { variant: 'error' })
+        return
+      }
+      const { rewards: claimed } = decodeClaimReferralRewardRespBytes(r.data)
+      show(formatReferralRewardAmountsForMessage(claimed), { variant: 'success' })
+      await refreshLobbyGet()
+      void fetchReferralInfo({ quiet: true })
+    } catch {
+      show('Could not claim rewards', { variant: 'error' })
+    } finally {
+      setClaiming(false)
+    }
+  }, [
+    requestRef,
+    claiming,
+    claimDisabled,
+    show,
+    refreshLobbyGet,
+    fetchReferralInfo,
+  ])
 
   useEffect(() => {
     if (!open) return
@@ -115,9 +276,9 @@ export function InviteFriendsModal({ open, onClose }: Props) {
           <p className="invite-friends-modal__reward-head">Invite Friends and Get</p>
           <div className="invite-friends-modal__reward-row">
             <img className="invite-friends-modal__coin" src={CURRENCY_ICON_GC} alt="" width={22} height={22} />
-            <span>400K +</span>
+            <span>{gcLabel}</span>
             <img className="invite-friends-modal__coin" src={CURRENCY_ICON_SC} alt="" width={22} height={22} />
-            <span>20</span>
+            <span>{scLabel}</span>
           </div>
           <p className="invite-friends-modal__reward-sub">For Each Friend that Qualified!</p>
 
@@ -134,7 +295,7 @@ export function InviteFriendsModal({ open, onClose }: Props) {
               onClick={copyUrl}
               aria-label="Copy referral link"
             >
-              <span title={referralUrl}>{referralUrl}</span>
+              <span title={referralUrl || undefined}>{linkPillText}</span>
             </button>
             <button
               type="button"
@@ -157,11 +318,10 @@ export function InviteFriendsModal({ open, onClose }: Props) {
             <button
               type="button"
               className="invite-friends-modal__btn-claim"
-              onClick={() => {
-                /* claim rewards: wire when API exists */
-              }}
+              disabled={claimDisabled}
+              onClick={() => void onClaimRewards()}
             >
-              CLAIM REWARDS
+              {claiming ? 'CLAIMING…' : 'CLAIM REWARDS'}
             </button>
           </div>
 

@@ -1,6 +1,8 @@
 import {
   GATEWAY_API_BUY_PRODUCT,
+  GATEWAY_API_CLAIM_REFERRAL_REWARD,
   GATEWAY_API_CREATE_WITHDRAW_ORDER,
+  GATEWAY_API_GET_REFERRAL_INFO,
   GATEWAY_API_GET_THIRD_PARTY_GAME_INFO,
   GATEWAY_API_GET_JACKPOT_INFO,
   GATEWAY_API_JACKPOT_INFO_PUSH,
@@ -35,6 +37,10 @@ import {
   decodeGetThirdPartyGameInfoResponseBytes,
   decodeListPlayerAvatarsResponseBytes,
 } from "./playerAvatarWire";
+import {
+  decodeClaimReferralRewardRespBytes,
+  decodeGetReferralInfoRespBytes,
+} from "./referralLobbyWire";
 import {
   decodeCreateWithdrawOrderResponseBytes,
   decodeListWithdrawOrdersResponseBytes,
@@ -261,6 +267,31 @@ export function decodeGatewayResponseDataForDevLog(
           };
         }
         return fallbackHex(raw, new Error("WithdrawSuccessPush decode failed"));
+      } catch (e) {
+        return fallbackHex(raw, e);
+      }
+    }
+    if (type === GATEWAY_API_GET_REFERRAL_INFO) {
+      try {
+        const d = decodeGetReferralInfoRespBytes(raw);
+        return {
+          kind: "GET_REFERRAL_INFO",
+          registerReferredCnt: d.registerReferredCnt,
+          qualifiedReferredCnt: d.qualifiedReferredCnt,
+          hasCode: Boolean(d.myReferrerCode?.value?.trim()),
+          rewardCount: d.referralInfo?.rewards?.length ?? 0,
+        };
+      } catch (e) {
+        return fallbackHex(raw, e);
+      }
+    }
+    if (type === GATEWAY_API_CLAIM_REFERRAL_REWARD) {
+      try {
+        const { rewards } = decodeClaimReferralRewardRespBytes(raw);
+        return {
+          kind: "CLAIM_REFERRAL_REWARD",
+          rewardCount: rewards?.length ?? 0,
+        };
       } catch (e) {
         return fallbackHex(raw, e);
       }
