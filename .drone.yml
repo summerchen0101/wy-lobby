@@ -40,7 +40,7 @@ steps:
       VITE_USE_SLOT_WEBENTRY: "true"
       VITE_UNITY_WEBENTRY_URL: https://unityweb-alpha.ffglobaltech.com/0000/WebGL_Build_WebEntry/index.html
       VITE_USE_WS_LOBBY_GAMES: "true"
-      VITE_OPEN_GAMES_IN_NEW_WINDOW: "true"
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_THIRD_PARTY_GAME_THUMB_BASE: https://nas01.ffglobaltech.com
       VITE_CLIENT_VER: "web-alpha-${DRONE_COMMIT_SHA:0:8}"
     commands:
