@@ -1,10 +1,13 @@
 /** Debug NDJSON ingest + local ring buffer (iPhone cannot reach 127.0.0.1 on dev machine). */
 // #region agent log
 const SESSION_ID = 'df0ef9'
-const INGEST_URL =
-  'http://127.0.0.1:7694/ingest/2a6ad6f6-2323-4c1b-9e95-f3066b39fbee'
 const STORAGE_KEY = 'agent_debug_df0ef9'
 const RING_MAX = 100
+
+function ingestUrl(): string | undefined {
+  const raw = import.meta.env.VITE_AGENT_DEBUG_INGEST_URL?.trim()
+  return raw || undefined
+}
 
 export type AgentDebugPayload = {
   hypothesisId: string
@@ -12,6 +15,24 @@ export type AgentDebugPayload = {
   message: string
   data?: Record<string, unknown>
   runId?: string
+}
+
+/** POST JSON only when `VITE_AGENT_DEBUG_INGEST_URL` is set (avoids stray localhost fetch noise). */
+export function agentDebugPostJson(body: Record<string, unknown>): void {
+  const url = ingestUrl()
+  if (!url) return
+  const sid =
+    typeof body.sessionId === 'string' && body.sessionId
+      ? body.sessionId
+      : 'unknown'
+  void fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': sid,
+    },
+    body: JSON.stringify(body),
+  }).catch(() => {})
 }
 
 /** Strip token from URLs before logging. */
@@ -31,14 +52,7 @@ export function agentDebugLog(p: AgentDebugPayload): void {
     timestamp: Date.now(),
     ...p,
   }
-  void fetch(INGEST_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': SESSION_ID,
-    },
-    body: JSON.stringify(body),
-  }).catch(() => {})
+  agentDebugPostJson(body)
   try {
     const prev = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]') as unknown
     const arr = Array.isArray(prev) ? prev : []

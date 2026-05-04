@@ -30,6 +30,7 @@ import type {
   GatewayWsStateMeta,
 } from "./gatewayWs";
 import { isGatewaySuccessCode } from "./gatewayWire";
+import { agentDebugPostJson } from "../debug/agentDebugIngest";
 import { hexPreview } from "./bytesHexPreview";
 import {
   decodeLobbyGetResponseBytes,
@@ -558,6 +559,19 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     },
     onSocketError: (ev) => {
       console.warn("[gateway-ws] WebSocket error:", ev);
+      // #region agent log
+      agentDebugPostJson({
+        sessionId: "b5f9ce",
+        location: "GatewayLobbyProvider.tsx:onSocketError",
+        message: "lobby_shows_ws_error_banner",
+        data: {
+          hypothesisId: "E",
+          navigatorOnLine:
+            typeof navigator !== "undefined" ? navigator.onLine : null,
+        },
+        timestamp: Date.now(),
+      });
+      // #endregion
       if (gateActive) {
         setLobbyWsBootstrapDone(true);
       }

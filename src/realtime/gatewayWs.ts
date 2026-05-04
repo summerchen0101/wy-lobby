@@ -10,6 +10,7 @@ import {
   logGatewayRequestOut,
 } from './gatewayWsTrace'
 import { getGatewayWsUrl } from '../lib/env'
+import { agentDebugPostJson } from '../debug/agentDebugIngest'
 
 export type GatewayWsConnectionState = 'idle' | 'connecting' | 'open' | 'closed'
 
@@ -387,6 +388,32 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       return
     }
 
+    // #region agent log
+    ;(() => {
+      try {
+        const u = new URL(url)
+        agentDebugPostJson({
+          sessionId: 'b5f9ce',
+          location: 'gatewayWs.ts:connectNow',
+          message: 'ws_connect_attempt',
+          data: {
+            hypothesisId: 'B',
+            attempt,
+            handshakeTimeoutMs,
+            reconnect,
+            wsProto: u.protocol,
+            wsOrigin: u.origin,
+            pathname: u.pathname,
+            tokenLen: (u.searchParams.get('token') ?? '').length,
+          },
+          timestamp: Date.now(),
+        })
+      } catch {
+        /* ignore invalid url shape for log */
+      }
+    })()
+    // #endregion
+
     setState('connecting')
     clearHandshakeWatch()
     const socket = new WebSocket(url)
@@ -396,6 +423,20 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     if (handshakeTimeoutMs > 0) {
       handshakeWatchTimer = setTimeout(() => {
         handshakeWatchTimer = null
+        // #region agent log
+        agentDebugPostJson({
+          sessionId: 'b5f9ce',
+          location: 'gatewayWs.ts:handshakeTimeout',
+          message: 'ws_handshake_timeout_fire',
+          data: {
+            hypothesisId: 'D',
+            handshakeTimeoutMs,
+            socketState: socket.readyState,
+            sameSocket: ws === socket,
+          },
+          timestamp: Date.now(),
+        })
+        // #endregion
         closeConnectingSocketIfStale(socket)
       }, handshakeTimeoutMs)
     }
@@ -408,6 +449,15 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
         sendPing()
       }
       startHeartbeat()
+      // #region agent log
+      agentDebugPostJson({
+        sessionId: 'b5f9ce',
+        location: 'gatewayWs.ts:onopen',
+        message: 'ws_open_ok',
+        data: { hypothesisId: 'A', attempt },
+        timestamp: Date.now(),
+      })
+      // #endregion
       options.onOpen?.({ request })
     }
 
@@ -441,10 +491,36 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     }
 
     socket.onerror = (ev) => {
+      // #region agent log
+      agentDebugPostJson({
+        sessionId: 'b5f9ce',
+        location: 'gatewayWs.ts:onerror',
+        message: 'ws_socket_error',
+        data: {
+          hypothesisId: 'A',
+          readyStateAtError: socket.readyState,
+        },
+        timestamp: Date.now(),
+      })
+      // #endregion
       options.onSocketError?.(ev)
     }
 
     socket.onclose = (ev: CloseEvent) => {
+      // #region agent log
+      agentDebugPostJson({
+        sessionId: 'b5f9ce',
+        location: 'gatewayWs.ts:onclose',
+        message: 'ws_close',
+        data: {
+          hypothesisId: 'C',
+          code: ev.code,
+          reason: String(ev.reason ?? '').slice(0, 200),
+          wasClean: ev.wasClean,
+        },
+        timestamp: Date.now(),
+      })
+      // #endregion
       clearHandshakeWatch()
       clearHeartbeat()
       rejectAllPending(new Error('[gateway-ws] socket closed'))
