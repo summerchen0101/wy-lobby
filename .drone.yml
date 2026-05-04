@@ -1,0 +1,181 @@
+kind: pipeline
+type: docker
+name: web-spa
+
+trigger:
+  event:
+    - push
+    - tag
+    - pull_request
+
+steps:
+  # ────────────────────────────────────────────────
+  # 共用：安裝依賴
+  # ────────────────────────────────────────────────
+  - name: install
+    image: node:20-alpine
+    commands:
+      - node --version
+      - npm ci --no-audit --no-fund
+
+  # ────────────────────────────────────────────────
+  # 共用：Lint（PR / push / tag 都跑）
+  # ────────────────────────────────────────────────
+  - name: lint
+    image: node:20-alpine
+    depends_on: [install]
+    commands:
+      - npm run lint
+
+  # ════════════════════════════════════════════════
+  # Alpha：push to branch dev 觸發 → 部署到內網 NAS
+  # ════════════════════════════════════════════════
+  - name: build-alpha
+    image: node:20-alpine
+    depends_on: [lint]
+    environment:
+      VITE_API_USE_MOCK: "false"
+      VITE_API_BASE: https://apis-us-alpha.ffglobaltech.com
+      VITE_WS_URL: wss://app-us-alpha.ffglobaltech.com/ws
+      VITE_USE_SLOT_WEBENTRY: "true"
+      VITE_UNITY_WEBENTRY_URL: https://unityweb-alpha.ffglobaltech.com/0000/WebGL_Build_WebEntry/index.html
+      VITE_USE_WS_LOBBY_GAMES: "true"
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
+      VITE_THIRD_PARTY_GAME_THUMB_BASE: https://nas01.ffglobaltech.com
+      VITE_CLIENT_VER: "web-alpha-${DRONE_COMMIT_SHA:0:8}"
+    commands:
+      - npm run build
+      - ls -lah dist/
+    when:
+      event: [push]
+      branch: [dev]
+
+  - name: deploy-nas-alpha
+    image: alpine:3
+    depends_on: [build-alpha]
+    environment:
+      NAS_SSH_KEY:
+        from_secret: nas_ssh_key
+      NAS_HOST:
+        from_secret: nas_host
+      NAS_USER:
+        from_secret: nas_user
+      NAS_PATH:
+        from_secret: nas_path_alpha
+    commands:
+      - apk add --no-cache openssh-client rsync
+      - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+      - printf '%s\n' "$NAS_SSH_KEY" > ~/.ssh/id_ed25519
+      - chmod 600 ~/.ssh/id_ed25519
+      - ssh-keyscan -H "$NAS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - >
+        rsync -av --delete
+        -e "ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes"
+        dist/ "$NAS_USER@$NAS_HOST:$NAS_PATH/"
+    when:
+      event: [push]
+      branch: [dev]
+
+  # ════════════════════════════════════════════════
+  # US：tag us-v* 觸發
+  # ════════════════════════════════════════════════
+  - name: build-us
+    image: node:20-alpine
+    depends_on: [lint]
+    environment:
+      VITE_API_USE_MOCK: "false"
+      VITE_API_BASE:
+        from_secret: vite_api_base_us
+      VITE_WS_URL:
+        from_secret: vite_ws_url_us
+      VITE_USE_SLOT_WEBENTRY: "true"
+      VITE_UNITY_WEBENTRY_URL:
+        from_secret: vite_unity_webentry_us
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
+      VITE_USE_WS_LOBBY_GAMES: "true"
+      VITE_CLIENT_VER: "web-us-${DRONE_TAG}"
+    commands:
+      - npm run build
+      - ls -lah dist/
+    when:
+      event: [tag]
+      ref:
+        - refs/tags/us-v*
+
+  - name: deploy-us
+    image: google/cloud-sdk:alpine
+    depends_on: [build-us]
+    environment:
+      GOOGLE_CREDENTIALS:
+        from_secret: gcp_sa_us
+      BUCKET:
+        from_secret: gcs_bucket_us
+      CF_API_TOKEN:
+        from_secret: cf_api_token_us
+      CF_ZONE_ID:
+        from_secret: cf_zone_id_us
+      SITE_URL:
+        from_secret: site_url_us
+      REGION: us
+    commands:
+      - apk add --no-cache jq
+      - echo "$GOOGLE_CREDENTIALS" > /tmp/sa.json
+      - gcloud auth activate-service-account --key-file=/tmp/sa.json
+      - gcloud config set project "$(jq -r .project_id /tmp/sa.json)"
+      - sh ./scripts/drone-deploy.sh
+    when:
+      event: [tag]
+      ref:
+        - refs/tags/us-v*
+
+  # ════════════════════════════════════════════════
+  # TW：tag tw-v* 觸發
+  # ════════════════════════════════════════════════
+  - name: build-tw
+    image: node:20-alpine
+    depends_on: [lint]
+    environment:
+      VITE_API_USE_MOCK: "false"
+      VITE_API_BASE:
+        from_secret: vite_api_base_tw
+      VITE_WS_URL:
+        from_secret: vite_ws_url_tw
+      VITE_USE_SLOT_WEBENTRY: "true"
+      VITE_UNITY_WEBENTRY_URL:
+        from_secret: vite_unity_webentry_tw
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
+      VITE_USE_WS_LOBBY_GAMES: "true"
+      VITE_CLIENT_VER: "web-tw-${DRONE_TAG}"
+    commands:
+      - npm run build
+      - ls -lah dist/
+    when:
+      event: [tag]
+      ref:
+        - refs/tags/tw-v*
+
+  - name: deploy-tw
+    image: google/cloud-sdk:alpine
+    depends_on: [build-tw]
+    environment:
+      GOOGLE_CREDENTIALS:
+        from_secret: gcp_sa_tw
+      BUCKET:
+        from_secret: gcs_bucket_tw
+      CF_API_TOKEN:
+        from_secret: cf_api_token_tw
+      CF_ZONE_ID:
+        from_secret: cf_zone_id_tw
+      SITE_URL:
+        from_secret: site_url_tw
+      REGION: tw
+    commands:
+      - apk add --no-cache jq
+      - echo "$GOOGLE_CREDENTIALS" > /tmp/sa.json
+      - gcloud auth activate-service-account --key-file=/tmp/sa.json
+      - gcloud config set project "$(jq -r .project_id /tmp/sa.json)"
+      - sh ./scripts/drone-deploy.sh
+    when:
+      event: [tag]
+      ref:
+        - refs/tags/tw-v*
