@@ -58,6 +58,7 @@ import type { WithdrawSuccessPushListener } from "./gatewayLobbyContext";
 import type { ActiveWallet } from "../wallet/walletContext";
 import { wireUInt64Field } from "./wireUint64";
 import { LobbyHydrationGate } from "./LobbyHydrationGate";
+import { getAlertApi } from "../components/alert/alertImperative";
 
 const LOBBY_GET_POLL_MS = 15_000;
 
@@ -442,8 +443,12 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           if (wsHandshakeAuthLockRef.current) return;
           wsHandshakeAuthLockRef.current = true;
           if (gateActive) setLobbyWsBootstrapDone(true);
-          window.alert("Please log in again.");
-          logout();
+          const api = getAlertApi();
+          if (api) {
+            api.showBlockingAlert("Please log in again.", { onConfirm: logout });
+          } else {
+            logout();
+          }
           return;
         }
         if (meta?.shutdownReason === "reconnect_exhausted") {
@@ -455,7 +460,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           if (wsLobbyEnabled) {
             setLobbyError(msg);
           } else {
-            window.alert(msg);
+            getAlertApi()?.show(msg, { variant: "error", durationMs: 5000 });
           }
         }
       }
@@ -474,8 +479,12 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           text = messageForUserKickReason(decoded?.reason);
         }
         if (gateActive) setLobbyWsBootstrapDone(true);
-        window.alert(text);
-        logout();
+        const api = getAlertApi();
+        if (api) {
+          api.showBlockingAlert(text, { onConfirm: logout });
+        } else {
+          logout();
+        }
         return;
       }
       if (

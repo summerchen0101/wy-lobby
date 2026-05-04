@@ -48,3 +48,64 @@
   border-color: color-mix(in srgb, #f44 50%, transparent);
   background: color-mix(in srgb, #2a0e0e 35%, var(--color-elevated));
 }
+
+/* 阻擋式「確定」對話框：高於 toast，全螢幕擋点击；行為對齊原生 alert */
+.alert-blocking-overlay {
+  z-index: calc(var(--alert-z-index, 6000) + 200);
+}
+
+.alert-blocking-modal {
+  max-width: min(26rem, 100%);
+}
+
+.alert-blocking-modal__body {
+  padding: var(--space-5, 1.35rem);
+}
+
+.alert-blocking-modal__message {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: rgb(255 255 255 / 92%);
+}
+
+.alert-blocking-modal__actions {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-5, 1.35rem);
+}
+
+.alert-blocking-modal__ok {
+  min-width: 11rem;
+  padding: 0.65rem 1.75rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--crown-button-primary-gradient);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 4px 0 var(--crown-gold-shadow),
+    inset 0 1px 0 rgb(0 0 0 / 16%);
+}
+
+.alert-blocking-modal__ok:hover {
+  filter: brightness(1.08);
+}
+
+.alert-blocking__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
