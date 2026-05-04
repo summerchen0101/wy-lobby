@@ -30,6 +30,7 @@ import type {
   GatewayWsStateMeta,
 } from "./gatewayWs";
 import { isGatewaySuccessCode } from "./gatewayWire";
+import { agentDebugPostJson } from "../debug/agentDebugIngest";
 import { hexPreview } from "./bytesHexPreview";
 import {
   decodeLobbyGetResponseBytes,
@@ -559,24 +560,17 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     onSocketError: (ev) => {
       console.warn("[gateway-ws] WebSocket error:", ev);
       // #region agent log
-      fetch("http://127.0.0.1:7694/ingest/2a6ad6f6-2323-4c1b-9e95-f3066b39fbee", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "b5f9ce",
+      agentDebugPostJson({
+        sessionId: "b5f9ce",
+        location: "GatewayLobbyProvider.tsx:onSocketError",
+        message: "lobby_shows_ws_error_banner",
+        data: {
+          hypothesisId: "E",
+          navigatorOnLine:
+            typeof navigator !== "undefined" ? navigator.onLine : null,
         },
-        body: JSON.stringify({
-          sessionId: "b5f9ce",
-          location: "GatewayLobbyProvider.tsx:onSocketError",
-          message: "lobby_shows_ws_error_banner",
-          data: {
-            hypothesisId: "E",
-            navigatorOnLine:
-              typeof navigator !== "undefined" ? navigator.onLine : null,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+        timestamp: Date.now(),
+      });
       // #endregion
       if (gateActive) {
         setLobbyWsBootstrapDone(true);
