@@ -70,6 +70,7 @@ steps:
       - ssh-keyscan -H "$NAS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
       - >
         rsync -rltv --delete
+        --exclude='@eaDir' --exclude='#recycle' --exclude='@tmp'
         -e "ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes"
         dist/ "$NAS_USER@$NAS_HOST:$NAS_PATH/"
     when:
