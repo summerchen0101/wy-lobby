@@ -95,6 +95,14 @@ function wsAuthFailureCloseCodesFromEnv(): readonly number[] {
   return out;
 }
 
+/** 連線後若未在 N ms 內 open 則放棄此次握手；0 關閉。預設 15000。 */
+function wsHandshakeTimeoutMsFromEnv(): number {
+  const raw = (import.meta.env.VITE_WS_HANDSHAKE_TIMEOUT_MS ?? "15000").trim();
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 15_000;
+  return Math.floor(n);
+}
+
 export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const { token, user, mergeUser, logout } = useAuth();
   const { setActiveWallet, activeWallet } = useWallet();
@@ -114,6 +122,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   );
   const wsFatalReconnectCloseCodes = useMemo(
     () => wsAuthFailureCloseCodesFromEnv(),
+    [],
+  );
+  const wsHandshakeTimeoutMs = useMemo(
+    () => wsHandshakeTimeoutMsFromEnv(),
     [],
   );
 
@@ -143,11 +155,17 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   );
   const sessionTokenRef = useRef("");
   const hadTokenRef = useRef(Boolean(token?.trim()));
-  /** 避免 `reconnect_exhausted` / `auth_rejected` 連續觸發多次 alert + logout */
-  const wsHandshakeLogoutLockRef = useRef(false);
+  /** 避免 `auth_rejected` 連續觸發多次 alert + logout */
+  const wsHandshakeAuthLockRef = useRef(false);
+  /** 同一次連線週期內 `reconnect_exhausted` 只通知一次 */
+  const wsReconnectExhaustedNotifiedRef = useRef(false);
+  /** 上一則 `closed` 的 meta（供 `connecting` 判斷是否為重試，避免全螢幕閘門反覆打開） */
+  const lastWsClosedMetaRef = useRef<GatewayWsStateMeta | undefined>(undefined);
 
   useEffect(() => {
-    if (!token?.trim()) wsHandshakeLogoutLockRef.current = false;
+    wsHandshakeAuthLockRef.current = false;
+    wsReconnectExhaustedNotifiedRef.current = false;
+    lastWsClosedMetaRef.current = undefined;
   }, [token]);
 
   useEffect(() => {
@@ -157,6 +175,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!gateActive) return;
     setLobbyWsBootstrapDone(false);
+    lastWsClosedMetaRef.current = undefined;
   }, [gateActive, token]);
 
   useEffect(() => {
@@ -367,8 +386,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     clientVer: import.meta.env.VITE_CLIENT_VER?.trim() || undefined,
     maxReconnectAttempts: wsMaxReconnectAttempts,
     fatalReconnectCloseCodes: wsFatalReconnectCloseCodes,
+    handshakeTimeoutMs: wsHandshakeTimeoutMs,
     getRequestBasicExtras,
     onState: (s: GatewayWsConnectionState, meta?: GatewayWsStateMeta) => {
+      if (s === "open") {
+        wsReconnectExhaustedNotifiedRef.current = false;
+        lastWsClosedMetaRef.current = undefined;
+      }
+
       if (s !== "open") {
         setGatewayRequestReady(false);
         if (gateActive) {
@@ -376,10 +401,21 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             s === "closed" &&
             (meta?.shutdownReason === "client_close" ||
               meta?.shutdownReason === "reconnect_exhausted" ||
-              meta?.shutdownReason === "auth_rejected");
-          if (!skipBootstrapReset) setLobbyWsBootstrapDone(false);
+              meta?.shutdownReason === "auth_rejected" ||
+              meta?.shutdownReason === "transport");
+          const skipConnectingBootstrapBlock =
+            s === "connecting" &&
+            lastWsClosedMetaRef.current?.shutdownReason === "transport";
+          if (!skipBootstrapReset && !skipConnectingBootstrapBlock) {
+            setLobbyWsBootstrapDone(false);
+          }
         }
       }
+
+      if (s === "closed") {
+        lastWsClosedMetaRef.current = meta;
+      }
+
       if (import.meta.env.DEV) {
         console.info("[gateway-ws][dev] state:", s, {
           wsUrl: getGatewayWsUrlForDevLog({ token: token ?? "" }),
@@ -387,18 +423,32 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           closeCode: meta?.closeCode,
         });
       }
+
       if (
         s === "closed" &&
         token?.trim() &&
-        gatewayWsEnabled &&
-        (meta?.shutdownReason === "reconnect_exhausted" ||
-          meta?.shutdownReason === "auth_rejected")
+        gatewayWsEnabled
       ) {
-        if (wsHandshakeLogoutLockRef.current) return;
-        wsHandshakeLogoutLockRef.current = true;
-        if (gateActive) setLobbyWsBootstrapDone(true);
-        window.alert("Please log in again.");
-        logout();
+        if (meta?.shutdownReason === "auth_rejected") {
+          if (wsHandshakeAuthLockRef.current) return;
+          wsHandshakeAuthLockRef.current = true;
+          if (gateActive) setLobbyWsBootstrapDone(true);
+          window.alert("Please log in again.");
+          logout();
+          return;
+        }
+        if (meta?.shutdownReason === "reconnect_exhausted") {
+          if (wsReconnectExhaustedNotifiedRef.current) return;
+          wsReconnectExhaustedNotifiedRef.current = true;
+          if (gateActive) setLobbyWsBootstrapDone(true);
+          const msg =
+            "Could not connect to the game server. Check your network and try again.";
+          if (wsLobbyEnabled) {
+            setLobbyError(msg);
+          } else {
+            window.alert(msg);
+          }
+        }
       }
     },
     onResponse: (msg) => {

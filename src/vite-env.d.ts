@@ -43,6 +43,12 @@ interface ImportMetaEnv {
   readonly VITE_USE_WS_LOBBY_GAMES?: string;
   /** Gateway WS：視為 session 失效並觸發登出的回應 code（逗號分隔），預設 401,403 */
   readonly VITE_WS_SESSION_INVALID_CODES?: string;
+  /** 握手失敗後最多幾次重連（不含首次）；預設 6 */
+  readonly VITE_WS_MAX_HANDSHAKE_ATTEMPTS?: string;
+  /** 視為拒絕憑證的 WebSocket CloseEvent.code（逗號分隔）；空則僅依重試上限與業務 code */
+  readonly VITE_WS_AUTH_FAILURE_CLOSE_CODES?: string;
+  /** 連線後若未在此毫秒內 open 則放棄此次嘗試；0 關閉；預設 15000 */
+  readonly VITE_WS_HANDSHAKE_TIMEOUT_MS?: string;
   /** 大廳主視覺圖 URL（可覆寫預設 sample 圖） */
   readonly VITE_LOBBY_HERO_IMAGE?: string;
   /** 訪客首頁 hero 圖；未設則沿用 VITE_LOBBY_HERO_IMAGE／預設 */
