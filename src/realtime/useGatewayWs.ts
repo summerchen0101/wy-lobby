@@ -32,6 +32,7 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     fatalReconnectCloseCodes,
     initialReconnectDelayMs,
     maxReconnectDelayMs,
+    handshakeTimeoutMs,
   } = params
 
   const onStateRef = useRef(onState)
@@ -71,6 +72,7 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
       fatalReconnectCloseCodes,
       initialReconnectDelayMs,
       maxReconnectDelayMs,
+      handshakeTimeoutMs,
       getRequestBasicExtras: () =>
         (getExtrasRef.current?.() ?? {}) as Record<string, unknown>,
       onState: (s, m) => onStateRef.current?.(s, m),
@@ -94,5 +96,6 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     fatalReconnectCloseCodes,
     initialReconnectDelayMs,
     maxReconnectDelayMs,
+    handshakeTimeoutMs,
   ])
 }

@@ -67,6 +67,11 @@ export type GatewayWsOptions = {
   fatalReconnectCloseCodes?: readonly number[]
   initialReconnectDelayMs?: number
   maxReconnectDelayMs?: number
+  /**
+   * 自送出 WebSocket 連線後，若超過此毫秒仍未 `open` 則 `close()` 觸發 `onclose`（可銜接重試）。
+   * <=0 或未設定時不啟用（避免變更舊行為）；建議 10_000–20_000。
+   */
+  handshakeTimeoutMs?: number
   /** 併入每則 Request 的 RequestBasic（如 token、userID）；`request()` 會再帶 timestamp、requestID */
   getRequestBasicExtras?: () => Record<string, unknown>
   onState?: (s: GatewayWsConnectionState, meta?: GatewayWsStateMeta) => void
@@ -132,6 +137,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   let state: GatewayWsConnectionState = 'idle'
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let handshakeWatchTimer: ReturnType<typeof setTimeout> | null = null
   let closedByUser = false
   let attempt = 0
   const pending = new Map<string, PendingEntry>()
@@ -147,6 +153,14 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   const fatalReconnectCodes = options.fatalReconnectCloseCodes ?? []
   const fatalReconnectSet = new Set(fatalReconnectCodes)
   const maxReconnectAttempts = options.maxReconnectAttempts
+  const handshakeTimeoutMs = options.handshakeTimeoutMs ?? 0
+
+  function clearHandshakeWatch() {
+    if (handshakeWatchTimer !== null) {
+      clearTimeout(handshakeWatchTimer)
+      handshakeWatchTimer = null
+    }
+  }
 
   function rejectAllPending(reason: Error) {
     for (const [, entry] of pending) {
@@ -175,6 +189,12 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     if (reconnectTimer !== null) {
       clearTimeout(reconnectTimer)
       reconnectTimer = null
+    }
+  }
+
+  function closeConnectingSocketIfStale(socket: WebSocket) {
+    if (ws === socket && socket.readyState === WebSocket.CONNECTING) {
+      socket.close()
     }
   }
 
@@ -368,11 +388,20 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     }
 
     setState('connecting')
+    clearHandshakeWatch()
     const socket = new WebSocket(url)
     ws = socket
     socket.binaryType = 'arraybuffer'
 
+    if (handshakeTimeoutMs > 0) {
+      handshakeWatchTimer = setTimeout(() => {
+        handshakeWatchTimer = null
+        closeConnectingSocketIfStale(socket)
+      }, handshakeTimeoutMs)
+    }
+
     socket.onopen = () => {
+      clearHandshakeWatch()
       attempt = 0
       setState('open')
       if (!skipInitialPing) {
@@ -416,6 +445,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     }
 
     socket.onclose = (ev: CloseEvent) => {
+      clearHandshakeWatch()
       clearHeartbeat()
       rejectAllPending(new Error('[gateway-ws] socket closed'))
 
@@ -477,6 +507,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
 
     close: () => {
       closedByUser = true
+      clearHandshakeWatch()
       clearHeartbeat()
       clearReconnect()
       rejectAllPending(new Error('[gateway-ws] closed by client'))
