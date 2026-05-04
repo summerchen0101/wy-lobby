@@ -8,9 +8,17 @@ export type ShowAlertOptions = {
   durationMs?: number
 }
 
-export type AlertContextValue = {
-  show: (message: string, options?: ShowAlertOptions) => void
+export type ShowBlockingAlertOptions = {
+  /** Runs after the user dismisses the dialog (native `alert` parity). */
+  onConfirm?: () => void
 }
+
+export type AlertImperativeApi = {
+  show: (message: string, options?: ShowAlertOptions) => void
+  showBlockingAlert: (message: string, options?: ShowBlockingAlertOptions) => void
+}
+
+export type AlertContextValue = AlertImperativeApi
 
 export const AlertContext = createContext<AlertContextValue | null>(null)
 

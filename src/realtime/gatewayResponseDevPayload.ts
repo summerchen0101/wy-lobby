@@ -15,6 +15,7 @@ import {
   GATEWAY_API_SEND_MESSAGE_PUSH,
   GATEWAY_API_SERVER_LOGIN,
   GATEWAY_API_SLOT_JACKPOT_PUSH,
+  GATEWAY_API_USER_KICK_BEFORE,
   GATEWAY_API_UPDATE_PLAYER_AVATAR,
   GATEWAY_API_WALLET_USE,
   GATEWAY_API_WITHDRAW_SUCCESS_PUSH,
@@ -46,6 +47,7 @@ import {
   decodeListWithdrawOrdersResponseBytes,
   decodeWithdrawSuccessPushBytes,
 } from "./withdrawLobbyWire";
+import { decodeUserKickBeforeReasonBytes } from "./userKickWire";
 
 const HEX_MAX = 48;
 
@@ -85,6 +87,20 @@ export function decodeGatewayResponseDataForDevLog(
     return {
       kind: "SERVER_LOGIN",
       unexpectedBytes: raw.byteLength,
+      hexPreview: hexPreview(raw, HEX_MAX),
+    };
+  }
+  if (type === GATEWAY_API_USER_KICK_BEFORE) {
+    if (empty) {
+      return { kind: "USER_KICK_BEFORE", note: "empty body" };
+    }
+    const decoded = decodeUserKickBeforeReasonBytes(raw);
+    if (decoded) {
+      return { kind: "USER_KICK_BEFORE", reason: decoded.reason };
+    }
+    return {
+      kind: "USER_KICK_BEFORE",
+      decodeNote: "failed",
       hexPreview: hexPreview(raw, HEX_MAX),
     };
   }

@@ -98,6 +98,24 @@ export default {
               "id": 6
             }
           }
+        },
+        "UserKickBeforeReason": {
+          "fields": {
+            "reason": {
+              "type": "Reason",
+              "id": 1
+            }
+          },
+          "nested": {
+            "Reason": {
+              "values": {
+                "Default": 0,
+                "DuplicateConn": 1,
+                "GameIsClose": 2,
+                "AccountStatusDeleted": 3
+              }
+            }
+          }
         }
       }
     }
