@@ -36,3 +36,14 @@ message Response {
   bytes data = 5;
   uint64 gameID = 6;
 }
+
+// 與 proto/gateway/gateway.proto UserKickBeforeReason 一致；ApiType USER_KICK_BEFORE(2) 之 data。
+message UserKickBeforeReason {
+  enum Reason {
+    Default = 0;
+    DuplicateConn = 1;
+    GameIsClose = 2;
+    AccountStatusDeleted = 3;
+  }
+  Reason reason = 1;
+}

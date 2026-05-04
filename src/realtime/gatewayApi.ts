@@ -4,6 +4,8 @@
  */
 
 export const GATEWAY_API_PING_PONG = 0
+/** 伺服器主動推播：同帳號重複連線／遊戲關閉／帳號刪除等；`data` 為 gateway.UserKickBeforeReason */
+export const GATEWAY_API_USER_KICK_BEFORE = 2
 /** 連線後伺服器登入；對應 ApiType ServerLogin / SERVER_LOGIN；`data` 為空 */
 export const GATEWAY_API_SERVER_LOGIN = 4
 export const GATEWAY_API_LOBBY_GET = 11

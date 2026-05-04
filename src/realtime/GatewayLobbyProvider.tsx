@@ -21,6 +21,7 @@ import {
   GATEWAY_API_SEND_MESSAGE_PUSH,
   GATEWAY_API_SERVER_LOGIN,
   GATEWAY_API_SLOT_JACKPOT_PUSH,
+  GATEWAY_API_USER_KICK_BEFORE,
   GATEWAY_API_WITHDRAW_SUCCESS_PUSH,
 } from "./gatewayApi";
 import { decodeLobbyJackpotDisplayTriple } from "./jackpotLobbyWire";
@@ -48,6 +49,10 @@ import {
   tryDecodeSendMessagePushToPaymentPush,
   userPatchFromPaymentPush,
 } from "./shopLobbyWire";
+import {
+  decodeUserKickBeforeReasonBytes,
+  messageForUserKickReason,
+} from "./userKickWire";
 import { decodeWithdrawSuccessPushBytes } from "./withdrawLobbyWire";
 import type { WithdrawSuccessPushListener } from "./gatewayLobbyContext";
 import type { ActiveWallet } from "../wallet/walletContext";
@@ -158,6 +163,8 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const hadTokenRef = useRef(Boolean(token?.trim()));
   /** 避免 `auth_rejected` 連續觸發多次 alert + logout */
   const wsHandshakeAuthLockRef = useRef(false);
+  /** 避免 `USER_KICK_BEFORE` 連續觸發多次 alert + logout */
+  const userKickLockRef = useRef(false);
   /** 同一次連線週期內 `reconnect_exhausted` 只通知一次 */
   const wsReconnectExhaustedNotifiedRef = useRef(false);
   /** 上一則 `closed` 的 meta（供 `connecting` 判斷是否為重試，避免全螢幕閘門反覆打開） */
@@ -165,6 +172,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     wsHandshakeAuthLockRef.current = false;
+    userKickLockRef.current = false;
     wsReconnectExhaustedNotifiedRef.current = false;
     lastWsClosedMetaRef.current = undefined;
   }, [token]);
@@ -457,6 +465,19 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       if (!isGatewaySuccessCode(codeStr)) return;
       const t = Number(msg.type);
       const raw = msg.data;
+      if (t === GATEWAY_API_USER_KICK_BEFORE) {
+        if (userKickLockRef.current) return;
+        userKickLockRef.current = true;
+        let text = messageForUserKickReason(0);
+        if (raw instanceof Uint8Array && raw.byteLength > 0) {
+          const decoded = decodeUserKickBeforeReasonBytes(raw);
+          text = messageForUserKickReason(decoded?.reason);
+        }
+        if (gateActive) setLobbyWsBootstrapDone(true);
+        window.alert(text);
+        logout();
+        return;
+      }
       if (
         t === GATEWAY_API_SLOT_JACKPOT_PUSH ||
         t === GATEWAY_API_JACKPOT_INFO_PUSH ||
