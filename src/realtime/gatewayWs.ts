@@ -387,6 +387,39 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       return
     }
 
+    // #region agent log
+    ;(() => {
+      try {
+        const u = new URL(url)
+        fetch('http://127.0.0.1:7694/ingest/2a6ad6f6-2323-4c1b-9e95-f3066b39fbee', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Debug-Session-Id': 'b5f9ce',
+          },
+          body: JSON.stringify({
+            sessionId: 'b5f9ce',
+            location: 'gatewayWs.ts:connectNow',
+            message: 'ws_connect_attempt',
+            data: {
+              hypothesisId: 'B',
+              attempt,
+              handshakeTimeoutMs,
+              reconnect,
+              wsProto: u.protocol,
+              wsOrigin: u.origin,
+              pathname: u.pathname,
+              tokenLen: (u.searchParams.get('token') ?? '').length,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {})
+      } catch {
+        /* ignore invalid url shape for log */
+      }
+    })()
+    // #endregion
+
     setState('connecting')
     clearHandshakeWatch()
     const socket = new WebSocket(url)
@@ -396,6 +429,27 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     if (handshakeTimeoutMs > 0) {
       handshakeWatchTimer = setTimeout(() => {
         handshakeWatchTimer = null
+        // #region agent log
+        fetch('http://127.0.0.1:7694/ingest/2a6ad6f6-2323-4c1b-9e95-f3066b39fbee', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Debug-Session-Id': 'b5f9ce',
+          },
+          body: JSON.stringify({
+            sessionId: 'b5f9ce',
+            location: 'gatewayWs.ts:handshakeTimeout',
+            message: 'ws_handshake_timeout_fire',
+            data: {
+              hypothesisId: 'D',
+              handshakeTimeoutMs,
+              socketState: socket.readyState,
+              sameSocket: ws === socket,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {})
+        // #endregion
         closeConnectingSocketIfStale(socket)
       }, handshakeTimeoutMs)
     }
@@ -408,6 +462,22 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
         sendPing()
       }
       startHeartbeat()
+      // #region agent log
+      fetch('http://127.0.0.1:7694/ingest/2a6ad6f6-2323-4c1b-9e95-f3066b39fbee', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Debug-Session-Id': 'b5f9ce',
+        },
+        body: JSON.stringify({
+          sessionId: 'b5f9ce',
+          location: 'gatewayWs.ts:onopen',
+          message: 'ws_open_ok',
+          data: { hypothesisId: 'A', attempt },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {})
+      // #endregion
       options.onOpen?.({ request })
     }
 
@@ -441,10 +511,50 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     }
 
     socket.onerror = (ev) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7694/ingest/2a6ad6f6-2323-4c1b-9e95-f3066b39fbee', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Debug-Session-Id': 'b5f9ce',
+        },
+        body: JSON.stringify({
+          sessionId: 'b5f9ce',
+          location: 'gatewayWs.ts:onerror',
+          message: 'ws_socket_error',
+          data: {
+            hypothesisId: 'A',
+            readyStateAtError: socket.readyState,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {})
+      // #endregion
       options.onSocketError?.(ev)
     }
 
     socket.onclose = (ev: CloseEvent) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7694/ingest/2a6ad6f6-2323-4c1b-9e95-f3066b39fbee', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Debug-Session-Id': 'b5f9ce',
+        },
+        body: JSON.stringify({
+          sessionId: 'b5f9ce',
+          location: 'gatewayWs.ts:onclose',
+          message: 'ws_close',
+          data: {
+            hypothesisId: 'C',
+            code: ev.code,
+            reason: String(ev.reason ?? '').slice(0, 200),
+            wasClean: ev.wasClean,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {})
+      // #endregion
       clearHandshakeWatch()
       clearHeartbeat()
       rejectAllPending(new Error('[gateway-ws] socket closed'))
