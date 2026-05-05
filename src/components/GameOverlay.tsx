@@ -4,8 +4,7 @@ import {
   agentDebugLog,
   agentDebugUrlPreview,
 } from '../debug/agentDebugIngest'
-import { buildIframeAllow } from '../lib/gameShell'
-import { createShellQuitMessage } from '../lib/gameShellMessages'
+import { buildIframeAllow, postQuitToGameIframe } from '../lib/gameShell'
 import { logPerfMemorySnapshot } from '../lib/gameShellTelemetry'
 import './GameShellContext.css'
 
@@ -50,21 +49,7 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
     return () => {
       const el = iframeRef.current
       if (!el) return
-      const src = el.src
-      try {
-        const w = el.contentWindow
-        if (w && src && src !== 'about:blank') {
-          let targetOrigin = '*'
-          try {
-            targetOrigin = new URL(src).origin
-          } catch {
-            /* ignore */
-          }
-          w.postMessage(createShellQuitMessage(), targetOrigin)
-        }
-      } catch {
-        /* ignore */
-      }
+      postQuitToGameIframe(el)
       window.setTimeout(() => {
         try {
           el.src = 'about:blank'
@@ -83,7 +68,10 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
       <button
         type="button"
         className="game-overlay__close"
-        onClick={onClose}
+        onClick={() => {
+          postQuitToGameIframe(iframeRef.current)
+          onClose()
+        }}
         aria-label="Return to lobby"
       >
         <Home

@@ -1,9 +1,13 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   agentDebugLog,
   agentDebugUrlPreview,
 } from '../debug/agentDebugIngest'
-import { shouldOpenInNewWindow } from '../lib/gameShell'
+import {
+  buildGamePopoutPathQuery,
+  shouldOpenInNewWindow,
+} from '../lib/gameShell'
+import { GAME_SHELL_POPOUT_CLOSED_TYPE } from '../lib/gameShellMessages'
 import {
   logGameOpenedNewTab,
   logGameOverlayClosed,
@@ -23,22 +27,49 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
     isPayment: boolean
   } | null>(null)
 
+  useEffect(() => {
+    const origin = window.location.origin
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== origin) return
+      const d = event.data
+      if (
+        d &&
+        typeof d === 'object' &&
+        (d as { type?: string }).type === GAME_SHELL_POPOUT_CLOSED_TYPE
+      ) {
+        void refreshLobbyGet()
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [refreshLobbyGet])
+
   const open = useCallback((o: OpenShellOptions) => {
     if (!o.url) {
       console.warn('[GameShell] empty url')
       return
     }
     if (shouldOpenInNewWindow(o.openInNewWindow)) {
+      const trimmed = o.url.trim()
       // #region agent log
       agentDebugLog({
         hypothesisId: 'A',
         location: 'GameShellProvider.tsx:open',
         message: 'shell_open_new_tab',
-        data: { path: agentDebugUrlPreview(o.url.trim()) },
+        data: { path: agentDebugUrlPreview(trimmed) },
       })
       // #endregion
-      logGameOpenedNewTab(o.url)
-      const w = window.open(o.url, '_blank', 'noopener,noreferrer')
+      logGameOpenedNewTab(trimmed)
+      const q = buildGamePopoutPathQuery(trimmed)
+      if (!q) {
+        console.warn('[GameShell] invalid or unsupported game URL for popout')
+        return
+      }
+      const shellUrl = new URL(
+        `/game-popout?${q}`,
+        window.location.href,
+      ).toString()
+      const w = window.open(shellUrl, '_blank')
       if (!w) console.warn('[GameShell] window.open blocked')
       return
     }
