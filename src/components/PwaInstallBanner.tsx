@@ -29,10 +29,13 @@ function writeSessionDismissed() {
 export function PwaInstallBanner() {
   const { pathname } = useLocation()
   const pathnameRef = useRef(pathname)
-  pathnameRef.current = pathname
 
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [dismissed, setDismissed] = useState(readSessionDismissed)
+
+  useEffect(() => {
+    pathnameRef.current = pathname
+  }, [pathname])
 
   useEffect(() => {
     if (isStandalonePWA()) return
