@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
+  agentDebugLog,
+  agentDebugUrlPreview,
+} from '../debug/agentDebugIngest'
+import {
   buildGamePopoutPathQuery,
   shouldOpenInNewWindow,
 } from '../lib/gameShell'
@@ -47,6 +51,14 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
     }
     if (shouldOpenInNewWindow(o.openInNewWindow)) {
       const trimmed = o.url.trim()
+      // #region agent log
+      agentDebugLog({
+        hypothesisId: 'A',
+        location: 'GameShellProvider.tsx:open',
+        message: 'shell_open_new_tab',
+        data: { path: agentDebugUrlPreview(trimmed) },
+      })
+      // #endregion
       logGameOpenedNewTab(trimmed)
       const q = buildGamePopoutPathQuery(trimmed)
       if (!q) {
@@ -61,6 +73,17 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
       if (!w) console.warn('[GameShell] window.open blocked')
       return
     }
+    // #region agent log
+    agentDebugLog({
+      hypothesisId: 'A',
+      location: 'GameShellProvider.tsx:open',
+      message: 'shell_overlay_open',
+      data: {
+        path: agentDebugUrlPreview(o.url.trim()),
+        isPayment: !!o.isPayment,
+      },
+    })
+    // #endregion
     logGameOverlayOpened(o.url.trim())
     logPerfMemorySnapshot('[game-shell][dev] heap on overlay_open')
     setOverlay({
@@ -72,6 +95,14 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const close = useCallback(() => {
+    // #region agent log
+    agentDebugLog({
+      hypothesisId: 'A',
+      location: 'GameShellProvider.tsx:close',
+      message: 'shell_close_clicked',
+      data: {},
+    })
+    // #endregion
     logGameOverlayClosed()
     logPerfMemorySnapshot(
       '[game-shell][dev] heap on overlay_close (iframe still mounted)',
