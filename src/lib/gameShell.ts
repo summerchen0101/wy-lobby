@@ -3,6 +3,26 @@ import { createShellQuitMessage } from './gameShellMessages'
 
 const GAME_POPOUT_STORAGE_PREFIX = 'ffgt:gamePopout:v1:'
 
+/**
+ * 供 localStorage handoff 用的短 id。`crypto.randomUUID` 在非安全內容（例：實機區網
+ * HTTP）或舊 UA 可能不存在，故需後援。
+ */
+export function randomPopoutHandoffId(): string {
+  const c = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined
+  if (c && typeof c.randomUUID === 'function') {
+    return c.randomUUID()
+  }
+  if (c && typeof c.getRandomValues === 'function') {
+    const bytes = new Uint8Array(16)
+    c.getRandomValues(bytes)
+    bytes[6] = (bytes[6] & 0x0f) | 0x40
+    bytes[8] = (bytes[8] & 0x3f) | 0x80
+    const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+  }
+  return `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 14)}`
+}
+
 /** 僅允許 http(s)，供遊戲 iframe／新分頁外殼辨識可載入之外部網址。 */
 export function parseSafeHttpGameUrl(raw: string): string | null {
   const t = raw.trim()
@@ -27,7 +47,7 @@ export function gamePopoutStorageKey(id: string): string {
 export function storeGamePopoutUrl(gameUrl: string): string | null {
   const safe = parseSafeHttpGameUrl(gameUrl)
   if (!safe) return null
-  const id = crypto.randomUUID()
+  const id = randomPopoutHandoffId()
   try {
     localStorage.setItem(gamePopoutStorageKey(id), safe)
   } catch {

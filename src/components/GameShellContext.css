@@ -53,3 +53,33 @@
   height: var(--icon-rwd-lg);
   pointer-events: none;
 }
+
+/* game-popout: CTA when autoplay fullscreen is blocked (needs user gesture) */
+.game-popout-fullscreen-cta {
+  position: fixed;
+  top: max(var(--space-5), var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10002;
+  margin: 0;
+  padding: 0;
+}
+
+.game-popout-fullscreen-cta__btn {
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: linear-gradient(155deg, #3d3d42 0%, #1c1c1f 45%, #0e0e10 100%);
+  color: #f4f4f5;
+  font: inherit;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.1) inset;
+}
+
+.game-popout-fullscreen-cta__btn:hover {
+  background: linear-gradient(155deg, #4a4a4f 0%, #232326 45%, #121214 100%);
+  color: #fff;
+}

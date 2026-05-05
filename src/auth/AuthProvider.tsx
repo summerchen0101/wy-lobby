@@ -2,11 +2,9 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { agentDebugLog } from "../debug/agentDebugIngest";
 import { useNavigate } from "react-router-dom";
 import {
   completeSignUp,
@@ -88,23 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => getInitialToken());
   const [user, setUser] = useState<User | null>(() => getInitialUser());
   const [ready, setReady] = useState(initialReadyState);
-  const prevTokenRef = useRef<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    const prev = prevTokenRef.current;
-    prevTokenRef.current = token;
-    if (prev === undefined) return;
-    if (prev && !token) {
-      // #region agent log
-      agentDebugLog({
-        hypothesisId: "C",
-        location: "AuthProvider.tsx:token",
-        message: "token_cleared",
-        data: { hadRefresh: Boolean(getInitialRefresh()) },
-      });
-      // #endregion
-    }
-  }, [token]);
 
   const setSessionFromAuth = useCallback(
     (res: {
