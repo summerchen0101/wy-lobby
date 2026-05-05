@@ -1,3 +1,16 @@
+/*
+ * iOS Safari：宿主文件需可被手勢捲動才易收起網址列。
+ * fixed 全層若攔截 hit-test，捲動只會發生在 iframe 內，對宿主無效；
+ * --ios 模式將殼設為 pointer-events: none，僅 iframe／按鈕保留 auto，並在底部留空讓穿透區能捲動 body。
+ */
+html.game-fullscreen-host,
+body.game-fullscreen-host {
+  min-height: calc(100dvh + max(140px, 18dvh));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .game-overlay {
   position: fixed;
   inset: 0;
@@ -6,14 +19,130 @@
   display: block;
 }
 
+/* iOS Safari 頁內：穿透殼層其餘區域以便捲動 document */
+.game-overlay--ios-scroll-host {
+  pointer-events: none;
+  /*
+   * 底部留空區不覆蓋 iframe，觸控會命中其下可捲動的 body；
+   * gutter 過小不易操作，過大略影響遊戲可視區。
+   */
+  --game-ios-bottom-gutter: clamp(3.25rem, 11dvh, 5rem);
+}
+
+.game-overlay--ios-scroll-host .game-overlay__close,
+.game-overlay--ios-scroll-host .game-overlay__ios-hint,
+.game-overlay--ios-scroll-host .game-overlay__frame {
+  pointer-events: auto;
+}
+
 .game-overlay__frame {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-height: 100dvh;
+  left: var(--game-vv-left, 0);
+  top: var(--game-vv-top, 0);
+  width: var(--game-visible-w, 100%);
+  height: var(--game-visible-h, 100dvh);
+  max-height: none;
   border: 0;
   display: block;
+}
+
+/*
+ * iOS：用 top + bottom 撐滿 fixed 殼（layout 底部對齊），避免僅 vv.height(px) 與橫／直屏版面不一致，
+ * 出現大片黑底只擠上半部。`--game-ios-bottom-gutter`：捲動帶或可動態設為 0（見 useGameVisualViewport）。
+ */
+.game-overlay--ios-scroll-host .game-overlay__frame {
+  /* height: auto; */
+  bottom: var(--game-ios-bottom-gutter);
+}
+
+@keyframes game-overlay-ios-hint-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.game-overlay__ios-hint {
+  position: absolute;
+  top: calc(max(var(--space-5), var(--safe-top)) + 44px + var(--space-2));
+  left: max(var(--space-4), var(--safe-left));
+  right: max(var(--space-4), var(--safe-right));
+  z-index: 10002;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: 10px;
+  background: rgba(12, 16, 22, 0.88);
+  color: rgba(244, 244, 245, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
+  font-size: var(--text-small);
+  line-height: 1.45;
+  max-width: 22rem;
+  pointer-events: auto;
+  animation: game-overlay-ios-hint-enter 0.35s ease-out;
+}
+
+.game-overlay__ios-hint--leaving {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.45s ease,
+    visibility 0s linear 0.45s;
+}
+
+.game-overlay__ios-hint-text {
+  margin: 0;
+  flex: 1;
+}
+
+.game-overlay__ios-hint-actions {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.game-overlay__ios-hint-dismiss {
+  align-self: center;
+  flex-shrink: 0;
+  margin: calc(-1 * var(--space-1));
+  padding: var(--space-2) var(--space-3);
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fafafa;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.game-overlay__ios-hint-dismiss:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.game-overlay__ios-hint-dismiss:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-overlay__ios-hint {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .game-overlay__ios-hint--leaving {
+    transition: none;
+  }
 }
 
 .game-overlay__close {

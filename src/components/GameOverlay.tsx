@@ -1,15 +1,26 @@
 import { Home } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   agentDebugLog,
   agentDebugUrlPreview,
 } from '../debug/agentDebugIngest'
+import { useGameVisualViewport } from '../hooks/useGameVisualViewport'
 import { buildIframeAllow, postQuitToGameIframe } from '../lib/gameShell'
+import {
+  dismissIosGameScrollHintPermanently,
+  hasDismissedIosGameScrollHint,
+  shouldUseIosGameViewportWorkarounds,
+} from '../lib/iosGameFullscreen'
 import { logPerfMemorySnapshot } from '../lib/gameShellTelemetry'
 import './GameShellContext.css'
 
 /** ms — brief delay so embedded Unity can run `Quit()` after shell postMessage before `about:blank`. */
 const IFRAME_TEARDOWN_DELAY_MS = 120
+
+/** iOS Safari 自動淡出提示後再卸載，需略長於 `--leaving` transition */
+const IOS_HINT_LEAVE_MS = 480
+const IOS_HINT_AUTO_LEAVE_MS = 11_500
 
 type GameOverlayProps = {
   url: string
@@ -20,39 +31,86 @@ type GameOverlayProps = {
 }
 
 export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
+  const { t } = useTranslation('common')
   const allow = buildIframeAllow(isPayment)
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  /** 取消 stale teardown（Strict Mode dev 會先 unmount 再 mount，未定時清空會誤設 about:blank） */
+  const iframeTeardownTimerRef = useRef<number | undefined>(undefined)
+
+  useGameVisualViewport(rootRef, {
+    adaptIosBottomGutter: shouldUseIosGameViewportWorkarounds(),
+  })
 
   useEffect(() => {
-    // #region agent log
+    const doc = document.documentElement
+    if (!shouldUseIosGameViewportWorkarounds()) return
+    doc.classList.add('game-fullscreen-host')
+    document.body.classList.add('game-fullscreen-host')
+    return () => {
+      doc.classList.remove('game-fullscreen-host')
+      document.body.classList.remove('game-fullscreen-host')
+    }
+  }, [])
+
+  const initialIosHint =
+    shouldUseIosGameViewportWorkarounds() && !hasDismissedIosGameScrollHint()
+
+  const [iosHintOn, setIosHintOn] = useState(initialIosHint)
+  const [iosHintLeaving, setIosHintLeaving] = useState(false)
+
+  useEffect(() => {
+    if (!iosHintOn || iosHintLeaving) return
+    const tId = window.setTimeout(() => {
+      setIosHintLeaving(true)
+    }, IOS_HINT_AUTO_LEAVE_MS)
+    return () => window.clearTimeout(tId)
+  }, [iosHintOn, iosHintLeaving])
+
+  useEffect(() => {
+    if (!iosHintLeaving || !iosHintOn) return
+    const tId = window.setTimeout(() => {
+      setIosHintOn(false)
+      setIosHintLeaving(false)
+    }, IOS_HINT_LEAVE_MS)
+    return () => window.clearTimeout(tId)
+  }, [iosHintLeaving, iosHintOn])
+
+  useEffect(() => {
     agentDebugLog({
       hypothesisId: 'A',
       location: 'GameOverlay.tsx:mount',
       message: 'overlay_mounted',
       data: { path: agentDebugUrlPreview(url), isPayment },
     })
-    // #endregion
     return () => {
-      // #region agent log
       agentDebugLog({
         hypothesisId: 'A',
         location: 'GameOverlay.tsx:unmount',
         message: 'overlay_unmount_cleanup_start',
         data: { path: agentDebugUrlPreview(url) },
       })
-      // #endregion
     }
   }, [url, isPayment])
 
   /** Ask Unity to Quit (postMessage), then tear down iframe so WebGL can release sooner. */
   useEffect(() => {
+    const prevTimer = iframeTeardownTimerRef.current
+    if (prevTimer !== undefined) {
+      window.clearTimeout(prevTimer)
+      iframeTeardownTimerRef.current = undefined
+    }
+
+    const iframeEl = iframeRef.current
+
     return () => {
-      const el = iframeRef.current
-      if (!el) return
-      postQuitToGameIframe(el)
-      window.setTimeout(() => {
+      if (!iframeEl) return
+      postQuitToGameIframe(iframeEl)
+
+      iframeTeardownTimerRef.current = window.setTimeout(() => {
+        iframeTeardownTimerRef.current = undefined
         try {
-          el.src = 'about:blank'
+          iframeEl.src = 'about:blank'
         } catch {
           /* ignore */
         }
@@ -63,8 +121,17 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
     }
   }, [url])
 
+  const dismissIosHint = () => {
+    dismissIosGameScrollHintPermanently()
+    setIosHintLeaving(true)
+  }
+
+  const iosScrollHostClass = shouldUseIosGameViewportWorkarounds()
+    ? 'game-overlay game-overlay--ios-scroll-host'
+    : 'game-overlay'
+
   return (
-    <div className="game-overlay" role="presentation">
+    <div ref={rootRef} className={iosScrollHostClass} role="presentation">
       <button
         type="button"
         className="game-overlay__close"
@@ -80,6 +147,26 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
           aria-hidden
         />
       </button>
+      {iosHintOn ? (
+        <aside
+          className={`game-overlay__ios-hint${iosHintLeaving ? ' game-overlay__ios-hint--leaving' : ''}`}
+          role="note"
+          aria-live="polite"
+        >
+          <p className="game-overlay__ios-hint-text">
+            {t('gameIosScrollHint')}
+          </p>
+          <div className="game-overlay__ios-hint-actions">
+            <button
+              type="button"
+              className="game-overlay__ios-hint-dismiss"
+              onClick={dismissIosHint}
+            >
+              {t('gameIosScrollHintDismiss')}
+            </button>
+          </div>
+        </aside>
+      ) : null}
       <iframe
         ref={iframeRef}
         className="game-overlay__frame"
@@ -88,24 +175,20 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
         referrerPolicy="strict-origin-when-cross-origin"
         allow={allow}
         onLoad={() => {
-          // #region agent log
           agentDebugLog({
             hypothesisId: 'D',
             location: 'GameOverlay.tsx:iframe',
             message: 'iframe_load_event',
             data: { path: agentDebugUrlPreview(url) },
           })
-          // #endregion
         }}
         onError={() => {
-          // #region agent log
           agentDebugLog({
             hypothesisId: 'D',
             location: 'GameOverlay.tsx:iframe',
             message: 'iframe_error_ua',
             data: { path: agentDebugUrlPreview(url) },
           })
-          // #endregion
         }}
       />
     </div>
