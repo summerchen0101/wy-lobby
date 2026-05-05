@@ -25,6 +25,7 @@ import {
   headIconChoicesFromServerRows,
   type HeadIconChoice,
 } from "./profileAvatarChoices";
+import { openZendeskOrFallback } from "../../lib/zendeskSupport";
 import { useProfileAvatarId } from "./profileAvatarStorage";
 import "./ProfilePage.css";
 import "./SessionPageDecor.css";
@@ -33,8 +34,6 @@ const SOUND_KEY = "wynoco_profile_sound_on";
 const RANK_MAX = 500;
 /** Placeholder until rank API exists */
 const RANK_PCT = 0;
-
-type ZendeskWindow = Window & { zE?: (a: string, b: string) => void };
 
 export function ProfilePage() {
   const { show } = useAlert();
@@ -205,23 +204,7 @@ export function ProfilePage() {
   }
 
   function onSupport() {
-    const zE = (window as ZendeskWindow).zE;
-    if (typeof zE === "function") {
-      try {
-        zE("messenger", "open");
-        return;
-      } catch {
-        /* try classic Web Widget */
-      }
-      try {
-        zE("webWidget", "open");
-        return;
-      } catch {
-        /* fall through */
-      }
-    }
-    window.location.href =
-      "mailto:support@example.com?subject=Support%20request";
+    openZendeskOrFallback();
   }
 
   return (
