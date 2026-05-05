@@ -38,7 +38,7 @@ steps:
       VITE_API_BASE: https://apis-us-alpha.ffglobaltech.com
       VITE_WS_URL: wss://app-us-alpha.ffglobaltech.com/ws
       VITE_USE_SLOT_WEBENTRY: "true"
-      VITE_UNITY_WEBENTRY_URL: https://unityweb-alpha.ffglobaltech.com/0000/WebGL_Build_WebEntry/index.html
+      VITE_UNITY_WEBENTRY_URL: https://unityweb-alpha.ffglobaltech.com/0000/WebGL_Build_Alpha/index.html
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "true"
       VITE_THIRD_PARTY_GAME_THUMB_BASE: https://nas01.ffglobaltech.com
@@ -93,9 +93,9 @@ steps:
       VITE_USE_SLOT_WEBENTRY: "true"
       VITE_UNITY_WEBENTRY_URL:
         from_secret: vite_unity_webentry_us
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "true"
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_CLIENT_VER: "web-us-${DRONE_TAG}"
-      VITE_OPEN_GAMES_IN_NEW_WINDOW: "true"
       VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
     commands:
       - npm run build
