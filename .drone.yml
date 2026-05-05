@@ -95,6 +95,7 @@ steps:
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_CLIENT_VER: "web-us-${DRONE_TAG}"
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "true"
     commands:
       - npm run build
       - ls -lah dist/
@@ -147,6 +148,7 @@ steps:
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_CLIENT_VER: "web-tw-${DRONE_TAG}"
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
     commands:
       - npm run build
       - ls -lah dist/
