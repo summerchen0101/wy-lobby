@@ -6,7 +6,6 @@ import {
   agentDebugUrlPreview,
 } from '../debug/agentDebugIngest'
 import { useGameVisualViewport } from '../hooks/useGameVisualViewport'
-import { useLandscapeOrientation } from '../hooks/useLandscapeOrientation'
 import { buildIframeAllow, postQuitToGameIframe } from '../lib/gameShell'
 import {
   dismissIosGameScrollHintPermanently,
@@ -39,46 +38,26 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   /** 取消 stale teardown（Strict Mode dev 會先 unmount 再 mount，未定時清空會誤設 about:blank） */
   const iframeTeardownTimerRef = useRef<number | undefined>(undefined)
 
-  const isLandscape = useLandscapeOrientation()
-  /** iOS 分頁內：僅橫向才啟用「宿主捲動收合網址列」與底部穿透 gutter，避免直↔橫切換後捲動失效。 */
-  const iosLandscapeScrollMode =
-    shouldUseIosGameViewportWorkarounds() && isLandscape
-
   useGameVisualViewport(rootRef, {
-    adaptIosBottomGutter: iosLandscapeScrollMode,
+    adaptIosBottomGutter: shouldUseIosGameViewportWorkarounds(),
   })
 
   useEffect(() => {
     const doc = document.documentElement
-    const body = document.body
-    if (!iosLandscapeScrollMode) {
-      doc.classList.remove('game-fullscreen-host')
-      body.classList.remove('game-fullscreen-host')
-      return
-    }
+    if (!shouldUseIosGameViewportWorkarounds()) return
     doc.classList.add('game-fullscreen-host')
-    body.classList.add('game-fullscreen-host')
+    document.body.classList.add('game-fullscreen-host')
     return () => {
       doc.classList.remove('game-fullscreen-host')
-      body.classList.remove('game-fullscreen-host')
+      document.body.classList.remove('game-fullscreen-host')
     }
-  }, [iosLandscapeScrollMode])
+  }, [])
 
   const initialIosHint =
-    iosLandscapeScrollMode && !hasDismissedIosGameScrollHint()
+    shouldUseIosGameViewportWorkarounds() && !hasDismissedIosGameScrollHint()
 
   const [iosHintOn, setIosHintOn] = useState(initialIosHint)
   const [iosHintLeaving, setIosHintLeaving] = useState(false)
-
-  useEffect(() => {
-    if (!shouldUseIosGameViewportWorkarounds()) return
-    if (!iosLandscapeScrollMode) {
-      setIosHintOn(false)
-      setIosHintLeaving(false)
-      return
-    }
-    if (!hasDismissedIosGameScrollHint()) setIosHintOn(true)
-  }, [iosLandscapeScrollMode])
 
   useEffect(() => {
     if (!iosHintOn || iosHintLeaving) return
@@ -147,7 +126,7 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
     setIosHintLeaving(true)
   }
 
-  const iosScrollHostClass = iosLandscapeScrollMode
+  const iosScrollHostClass = shouldUseIosGameViewportWorkarounds()
     ? 'game-overlay game-overlay--ios-scroll-host'
     : 'game-overlay'
 
