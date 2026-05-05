@@ -94,7 +94,7 @@ steps:
       VITE_UNITY_WEBENTRY_URL: "https://luklokcasino.com/unityweb"
       # VITE_UNITY_WEBENTRY_URL:
       #   from_secret: vite_unity_webentry_us
-      VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "true"
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_CLIENT_VER: "web-us-${DRONE_TAG}"
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "true"
