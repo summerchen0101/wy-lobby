@@ -2,13 +2,27 @@
  * iOS Safari：宿主文件需可被手勢捲動才易收起網址列。
  * fixed 全層若攔截 hit-test，捲動只會發生在 iframe 內，對宿主無效；
  * --ios 模式將殼設為 pointer-events: none，僅 iframe／按鈕保留 auto，並在底部留空讓穿透區能捲動 body。
+ *
+ * 僅讓 html 擔任垂直捲動容器：html 與 body 同設 overflow-y:auto 時 WebKit 易出現「內層」捲動，
+ * window.scrollTo 只推內層、無法觸發收合網址列；body 改為 overflow-y:visible 避免雙層。
  */
-html.game-fullscreen-host,
-body.game-fullscreen-host {
-  min-height: calc(100dvh + max(140px, 18dvh));
+html.game-fullscreen-host {
+  height: auto;
+  min-height: max(200vh, calc(100dvh + 1px));
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+body.game-fullscreen-host {
+  min-height: max(200vh, calc(100dvh + 1px));
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+/* 遊戲開啟時避免大廳 #root 內可捲區變成實際捲動目標（與收合網址列搶捲動） */
+html.game-fullscreen-host #root {
+  overflow: hidden;
 }
 
 .game-overlay {
@@ -29,10 +43,50 @@ body.game-fullscreen-host {
   --game-ios-bottom-gutter: clamp(3.25rem, 11dvh, 5rem);
 }
 
+/* 橫屏加大底部捲動帶，較易在 iframe 外觸發父層捲動 */
+@media (orientation: landscape) {
+  .game-overlay--ios-scroll-host {
+    --game-ios-bottom-gutter: clamp(3.75rem, 14dvh, 6.5rem);
+  }
+}
+
 .game-overlay--ios-scroll-host .game-overlay__close,
 .game-overlay--ios-scroll-host .game-overlay__ios-hint,
 .game-overlay--ios-scroll-host .game-overlay__frame {
   pointer-events: auto;
+}
+
+/* scroll nudge 期間讓觸控穿透宿主，避免捲動落在 iframe 內（見 useGameVisualViewport） */
+.game-overlay--parent-scroll-nudge .game-overlay__frame {
+  pointer-events: none !important;
+}
+
+/* 橫屏左右窄條：上滑可觸發父文件 scrollTo（見 useGameVisualViewport） */
+.game-overlay__ios-scroll-edge {
+  display: none;
+  position: fixed;
+  /* 略過頂部關閉鈕與提示列，避免擋住操作 */
+  top: 30vh;
+  bottom: 0;
+  width: clamp(18px, 4.5vw, 28px);
+  z-index: 10003;
+  pointer-events: auto;
+  touch-action: none;
+  background: transparent;
+}
+
+@media (orientation: landscape) {
+  .game-overlay--ios-scroll-host .game-overlay__ios-scroll-edge {
+    display: block;
+  }
+}
+
+.game-overlay__ios-scroll-edge--left {
+  left: 0;
+}
+
+.game-overlay__ios-scroll-edge--right {
+  right: 0;
 }
 
 .game-overlay__frame {
@@ -42,7 +96,6 @@ body.game-fullscreen-host {
   width: var(--game-visible-w, 100%);
   height: var(--game-visible-h, 100dvh);
   max-height: none;
-  border: 0;
   display: block;
 }
 

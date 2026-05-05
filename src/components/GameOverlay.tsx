@@ -35,11 +35,17 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const allow = buildIframeAllow(isPayment)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+  const iosScrollEdgeLeftRef = useRef<HTMLDivElement>(null)
+  const iosScrollEdgeRightRef = useRef<HTMLDivElement>(null)
   /** 取消 stale teardown（Strict Mode dev 會先 unmount 再 mount，未定時清空會誤設 about:blank） */
   const iframeTeardownTimerRef = useRef<number | undefined>(undefined)
 
+  const iosWorkarounds = shouldUseIosGameViewportWorkarounds()
   useGameVisualViewport(rootRef, {
-    adaptIosBottomGutter: shouldUseIosGameViewportWorkarounds(),
+    adaptIosBottomGutter: iosWorkarounds,
+    iosScrollEdgeLeftRef: iosWorkarounds ? iosScrollEdgeLeftRef : undefined,
+    iosScrollEdgeRightRef: iosWorkarounds ? iosScrollEdgeRightRef : undefined,
+    blurTargetRef: iosWorkarounds ? iframeRef : undefined,
   })
 
   useEffect(() => {
@@ -126,12 +132,26 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
     setIosHintLeaving(true)
   }
 
-  const iosScrollHostClass = shouldUseIosGameViewportWorkarounds()
+  const iosScrollHostClass = iosWorkarounds
     ? 'game-overlay game-overlay--ios-scroll-host'
     : 'game-overlay'
 
   return (
     <div ref={rootRef} className={iosScrollHostClass} role="presentation">
+      {iosWorkarounds ? (
+        <>
+          <div
+            ref={iosScrollEdgeLeftRef}
+            className="game-overlay__ios-scroll-edge game-overlay__ios-scroll-edge--left"
+            aria-hidden
+          />
+          <div
+            ref={iosScrollEdgeRightRef}
+            className="game-overlay__ios-scroll-edge game-overlay__ios-scroll-edge--right"
+            aria-hidden
+          />
+        </>
+      ) : null}
       <button
         type="button"
         className="game-overlay__close"
