@@ -25,6 +25,11 @@ const EventsRedirect = lazy(() =>
     default: m.EventsRedirect,
   })),
 );
+const GamePopoutPage = lazy(() =>
+  import("./features/lobby/GamePopoutPage").then((m) => ({
+    default: m.GamePopoutPage,
+  })),
+);
 const PromoPage = lazy(() =>
   import("./features/lobby/PromoPage").then((m) => ({ default: m.PromoPage })),
 );
@@ -64,6 +69,10 @@ export default function App() {
                     <Suspense fallback={<FullScreenLoadingOverlay />}>
                       <Routes>
                         <Route path="/" element={<LandingPage />} />
+                        <Route
+                          path="/game-popout"
+                          element={<GamePopoutPage />}
+                        />
                         <Route path="/login" element={<LoginRedirect />} />
                         <Route
                           path="/register"
