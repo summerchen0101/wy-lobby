@@ -1,5 +1,9 @@
 import { useEffect } from "react";
 import i18n from "../i18n/i18n";
+import {
+  ensureZendeskMessengerCloseRehides,
+  hideZendeskEmbed,
+} from "../lib/zendeskSupport";
 
 const SNIPPET_ID = "ze-snippet";
 
@@ -28,6 +32,12 @@ function applyZendeskLocale(lng: string) {
   }
 }
 
+function initZendeskAfterSnippetReady(lng: string): void {
+  applyZendeskLocale(lng);
+  hideZendeskEmbed();
+  ensureZendeskMessengerCloseRehides();
+}
+
 /**
  * 若設定 `VITE_ZENDESK_KEY`，動態載入 Zendesk snippet（見 docs/profile Support）。
  * 未設定時不載入任何第三方腳本。語系隨 i18n `languageChanged` 更新（Messaging / Classic API 擇一可用）。
@@ -37,16 +47,18 @@ export function ZendeskLoader() {
     const key = import.meta.env.VITE_ZENDESK_KEY?.trim();
     if (!key || typeof document === "undefined") return;
     if (document.getElementById(SNIPPET_ID)) {
-      applyZendeskLocale(i18n.language);
+      initZendeskAfterSnippetReady(i18n.language);
       return;
     }
     const script = document.createElement("script");
     script.id = SNIPPET_ID;
     script.src = `https://static.zdassets.com/ekr/snippet.js?key=${encodeURIComponent(key)}`;
     script.async = true;
-    script.addEventListener("load", () => applyZendeskLocale(i18n.language), {
-      once: true,
-    });
+    script.addEventListener(
+      "load",
+      () => initZendeskAfterSnippetReady(i18n.language),
+      { once: true },
+    );
     document.body.appendChild(script);
   }, []);
 
