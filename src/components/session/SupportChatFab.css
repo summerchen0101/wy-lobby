@@ -22,6 +22,7 @@
   transition:
     transform 0.08s ease,
     filter 0.15s ease;
+  touch-action: manipulation;
 }
 
 .support-chat-fab:hover {
