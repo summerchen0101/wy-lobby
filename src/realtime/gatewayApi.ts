@@ -4,7 +4,13 @@
  */
 
 export const GATEWAY_API_PING_PONG = 0
-/** 伺服器主動推播：同帳號重複連線／遊戲關閉／帳號刪除等；`data` 為 gateway.UserKickBeforeReason */
+/**
+ * Gateway `ApiType` **USER_KICK_BEFORE** (`UserKickBefore` = 2) — 伺服器主動推送，非 Request/Response 配對請求。
+ * `data` 為 `gateway.UserKickBeforeReason`：`reason` enum 對應 C#/Rust —
+ * Default(0)、DuplicateConn 重複登入(1)、GameIsClose 遊戲關閉(2)、AccountStatusDeleted 帳號已刪(3)。
+ * **`data` 為空長度時客戶端約定為不執行踢人**（不切登入、不彈窗）。
+ * 有 payload 時：收到後應清空本機會話並導回首頁／登入流程（被踢端提示；接替登入的那一條不應收到此推播）。
+ */
 export const GATEWAY_API_USER_KICK_BEFORE = 2
 /** 連線後伺服器登入；對應 ApiType ServerLogin / SERVER_LOGIN；`data` 為空 */
 export const GATEWAY_API_SERVER_LOGIN = 4

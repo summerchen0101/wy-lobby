@@ -442,6 +442,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     }
 
     socket.onopen = () => {
+      if (ws !== socket) return
       clearHandshakeWatch()
       attempt = 0
       setState('open')
@@ -462,6 +463,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     }
 
     socket.onmessage = (ev) => {
+      if (ws !== socket) return
       const d = ev.data
       if (d instanceof ArrayBuffer) {
         handleIncomingArrayBuffer(d)
@@ -470,6 +472,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       if (typeof Blob !== 'undefined' && d instanceof Blob) {
         void d.arrayBuffer().then(
           (ab) => {
+            if (ws !== socket) return
             handleIncomingArrayBuffer(ab)
           },
           (e) => {
@@ -491,6 +494,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     }
 
     socket.onerror = (ev) => {
+      if (ws !== socket) return
       // #region agent log
       agentDebugPostJson({
         sessionId: 'b5f9ce',
@@ -507,6 +511,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     }
 
     socket.onclose = (ev: CloseEvent) => {
+      if (ws !== socket) return
       // #region agent log
       agentDebugPostJson({
         sessionId: 'b5f9ce',

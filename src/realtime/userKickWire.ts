@@ -48,14 +48,19 @@ const REASON_NAME_TO_NUM: Record<string, 0 | 1 | 2 | 3> = {
   AccountStatusDeleted: 3,
 };
 
+/** 對應 `UserKickBeforeReason.Reason`，與伺服器 Proto / C# 一致 */
+export const USER_KICK_REASON_DEFAULT = 0;
+/** 對應 `DuplicateConn` — 另一裝置／重複連線接替 */
+export const USER_KICK_REASON_DUPLICATE_CONN = 1;
+
 /**
- * 依 UserKickBeforeReason.reason 產生使用者可讀英文訊息（與其他 gateway alert 風格一致）。
+ * `UserKickBeforeReason.reason`（數字或列舉字串）轉為 0–3；未知或無欄位則為 NaN。
  */
-export function messageForUserKickReason(
+export function userKickReasonOrdinal(
   reason: string | number | undefined,
-): string {
+): number {
   if (reason === undefined) {
-    return "Please log in again.";
+    return NaN;
   }
 
   let n: number;
@@ -72,6 +77,34 @@ export function messageForUserKickReason(
   } else {
     n = NaN;
   }
+
+  return n;
+}
+
+/**
+ * 「接替連線」上短暫時間內常錯發的無害 kick：無欄位/解不出(ordinal NaN)、Default(0)、DuplicateConn(1)。
+ * GameIsClose、AccountDeleted 仍一律照實提示。
+ */
+export function userKickLikelyStaleSurvivorConnNoise(ordinal: number): boolean {
+  return (
+    Number.isNaN(ordinal) ||
+    ordinal === USER_KICK_REASON_DEFAULT ||
+    ordinal === USER_KICK_REASON_DUPLICATE_CONN
+  );
+}
+
+/**
+ * 依 `gateway.UserKickBeforeReason.reason` 產生使用者可讀英文訊息（與其他 gateway alert 風格一致）。
+ * Reason：Default | DuplicateConn | GameIsClose | AccountStatusDeleted（與伺服器 Proto / C# 枚舉一致）。
+ */
+export function messageForUserKickReason(
+  reason: string | number | undefined,
+): string {
+  if (reason === undefined) {
+    return "Please log in again.";
+  }
+
+  const n = userKickReasonOrdinal(reason);
 
   switch (n) {
     case 0:
