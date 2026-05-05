@@ -3,6 +3,7 @@ import i18n from "../i18n/i18n";
 import {
   ensureZendeskMessengerCloseRehides,
   hideZendeskEmbed,
+  zendeskSnippetScriptUrl,
 } from "../lib/zendeskSupport";
 
 const SNIPPET_ID = "ze-snippet";
@@ -52,8 +53,9 @@ export function ZendeskLoader() {
     }
     const script = document.createElement("script");
     script.id = SNIPPET_ID;
-    script.src = `https://static.zdassets.com/ekr/snippet.js?key=${encodeURIComponent(key)}`;
+    script.src = zendeskSnippetScriptUrl(key);
     script.async = true;
+    script.fetchPriority = "high";
     script.addEventListener(
       "load",
       () => initZendeskAfterSnippetReady(i18n.language),

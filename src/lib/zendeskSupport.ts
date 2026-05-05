@@ -1,5 +1,10 @@
 import { supportChatUrl } from "./env";
 
+/** Embeddable `snippet.js` URL for Messaging / Classic Zendesk widgets. */
+export function zendeskSnippetScriptUrl(widgetKey: string): string {
+  return `https://static.zdassets.com/ekr/snippet.js?key=${encodeURIComponent(widgetKey)}`;
+}
+
 const FALLBACK_MAILTO =
   "mailto:support@example.com?subject=Support%20request";
 
