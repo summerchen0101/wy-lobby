@@ -219,7 +219,7 @@ export function InviteFriendsModal({ open, onClose }: Props) {
       return
     }
     void copyUrl()
-  }, [copyUrl, referralUrl])
+  }, [copyUrl, referralUrl, show])
 
   const onClaimRewards = useCallback(async () => {
     const req = requestRef.current

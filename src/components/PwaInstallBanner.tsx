@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { isStandalonePWA } from '../lib/pwaMode'
 import './PwaInstallBanner.css'
 
@@ -26,13 +27,21 @@ function writeSessionDismissed() {
 }
 
 export function PwaInstallBanner() {
+  const { pathname } = useLocation()
+  const pathnameRef = useRef(pathname)
+
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [dismissed, setDismissed] = useState(readSessionDismissed)
+
+  useEffect(() => {
+    pathnameRef.current = pathname
+  }, [pathname])
 
   useEffect(() => {
     if (isStandalonePWA()) return
     const onBip = (e: Event) => {
       if (isStandalonePWA()) return
+      if (pathnameRef.current !== '/') return
       e.preventDefault()
       setDeferred(e as BeforeInstallPromptEvent)
     }
@@ -52,7 +61,7 @@ export function PwaInstallBanner() {
     setDeferred(null)
   }, [deferred])
 
-  if (isStandalonePWA() || dismissed || !deferred) return null
+  if (isStandalonePWA() || dismissed || !deferred || pathname !== '/') return null
 
   return (
     <div

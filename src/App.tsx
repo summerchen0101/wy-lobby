@@ -30,6 +30,11 @@ const GamePopoutPage = lazy(() =>
     default: m.GamePopoutPage,
   })),
 );
+const GamePlayPage = lazy(() =>
+  import("./features/lobby/GamePlayPage").then((m) => ({
+    default: m.GamePlayPage,
+  })),
+);
 const PromoPage = lazy(() =>
   import("./features/lobby/PromoPage").then((m) => ({ default: m.PromoPage })),
 );
@@ -73,6 +78,7 @@ export default function App() {
                           path="/game-popout"
                           element={<GamePopoutPage />}
                         />
+                        <Route path="/play" element={<GamePlayPage />} />
                         <Route path="/login" element={<LoginRedirect />} />
                         <Route
                           path="/register"

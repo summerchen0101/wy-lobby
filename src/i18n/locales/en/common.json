@@ -2,5 +2,7 @@
   "appTitle": "Wynoco",
   "brandName": "Wynoco",
   "chatSupportAria": "Chat support",
-  "trustpilotSectionAria": "Reviews"
+  "trustpilotSectionAria": "Reviews",
+  "gameIosScrollHint": "Scroll up on the black strip at the bottom (or scroll the page slightly) to hide the Safari address bar and enlarge the game.",
+  "gameIosScrollHintDismiss": "OK"
 }
