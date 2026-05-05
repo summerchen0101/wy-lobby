@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdIosShare } from "react-icons/md";
+import { useLocation } from "react-router-dom";
 import { isStandalonePWA } from "../lib/pwaMode";
 import "./IosInstallGuide.css";
 
@@ -12,13 +13,20 @@ function isIOS(): boolean {
 const SHOW_DELAY_MS = 10_000;
 
 export function IosInstallGuide() {
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (!isIOS() || isStandalonePWA()) return;
+    if (pathname !== "/" || !isIOS() || isStandalonePWA()) {
+      setOpen(false);
+      return;
+    }
     const t = window.setTimeout(() => setOpen(true), SHOW_DELAY_MS);
-    return () => clearTimeout(t);
-  }, []);
+    return () => {
+      window.clearTimeout(t);
+      setOpen(false);
+    };
+  }, [pathname]);
 
   const close = useCallback(() => setOpen(false), []);
 
