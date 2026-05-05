@@ -3,6 +3,6 @@
   "brandName": "Wynoco",
   "chatSupportAria": "客服聊天",
   "trustpilotSectionAria": "評價",
-  "gameIosScrollHint": "請在畫面底部黑色區往上滑，或在該區按住再滑，讓整頁捲動一小段，即可收合 Safari 網址列、放大遊戲。",
+  "gameIosScrollHint": "往上滑動畫面即可開啟全螢幕",
   "gameIosScrollHintDismiss": "知道了"
 }
