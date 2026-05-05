@@ -94,10 +94,9 @@ steps:
       VITE_UNITY_WEBENTRY_URL: "https://luklokcasino.com/games"
       # VITE_UNITY_WEBENTRY_URL:
       #   from_secret: vite_unity_webentry_us
-      VITE_OPEN_GAMES_IN_NEW_WINDOW: "true"
+      VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_CLIENT_VER: "web-us-${DRONE_TAG}"
-      VITE_OPEN_GAMES_IN_NEW_WINDOW: "true"
       VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
     commands:
       - npm run build
@@ -151,7 +150,6 @@ steps:
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_CLIENT_VER: "web-tw-${DRONE_TAG}"
-      VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
     commands:
       - npm run build
