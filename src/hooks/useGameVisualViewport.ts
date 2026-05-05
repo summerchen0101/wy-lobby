@@ -33,6 +33,15 @@ export function useGameVisualViewport(
     const applyIosBottomGutter = (hRound: number) => {
       if (!adaptGutter) return
       const inner = window.innerHeight
+      /*
+       * 旋轉後常有一兩幀 `innerHeight` 仍是橫式、hRound 已是直式，若仍用
+       * hRound >= inner - 80 會誤判「chrome 已收合」而把 gutter 設 0，iframe 貼滿底部，
+       * 宿主就再也沒有可穿透捲動的帶狀區。
+       */
+      if (hRound > inner + 48) {
+        el.style.removeProperty('--game-ios-bottom-gutter')
+        return
+      }
       const chromeCollapsed = hRound >= inner - 80
       if (chromeCollapsed) el.style.setProperty('--game-ios-bottom-gutter', '0px')
       else el.style.removeProperty('--game-ios-bottom-gutter')
@@ -67,15 +76,34 @@ export function useGameVisualViewport(
     const vv = window.visualViewport
     if (!vv) return () => clear()
 
+    const orientationFollowUps: number[] = []
+    const clearOrientationFollowUps = () => {
+      while (orientationFollowUps.length) {
+        const id = orientationFollowUps.pop()
+        if (id !== undefined) window.clearTimeout(id)
+      }
+    }
+
+    const onOrientationChange = () => {
+      apply()
+      clearOrientationFollowUps()
+      for (const ms of [0, 90, 240, 500]) {
+        orientationFollowUps.push(window.setTimeout(apply, ms))
+      }
+    }
+
     vv.addEventListener('resize', apply)
     vv.addEventListener('scroll', apply)
-    window.addEventListener('orientationchange', apply)
+    window.addEventListener('resize', apply)
+    window.addEventListener('orientationchange', onOrientationChange)
     window.addEventListener('pageshow', apply)
 
     return () => {
+      clearOrientationFollowUps()
       vv.removeEventListener('resize', apply)
       vv.removeEventListener('scroll', apply)
-      window.removeEventListener('orientationchange', apply)
+      window.removeEventListener('resize', apply)
+      window.removeEventListener('orientationchange', onOrientationChange)
       window.removeEventListener('pageshow', apply)
       clear()
     }

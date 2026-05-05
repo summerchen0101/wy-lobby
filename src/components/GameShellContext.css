@@ -1,5 +1,5 @@
 /*
- * iOS Safari：宿主文件需可被手勢捲動才易收起網址列。
+ * iOS Safari（僅橫向）：宿主文件需可被手勢捲動才易收起網址列；直式不掛此模式（見 GameOverlay）。
  * fixed 全層若攔截 hit-test，捲動只會發生在 iframe 內，對宿主無效；
  * --ios 模式將殼設為 pointer-events: none，僅 iframe／按鈕保留 auto，並在底部留空讓穿透區能捲動 body。
  */
