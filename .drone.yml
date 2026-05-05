@@ -43,6 +43,7 @@ steps:
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_THIRD_PARTY_GAME_THUMB_BASE: https://nas01.ffglobaltech.com
       VITE_CLIENT_VER: "web-alpha-${DRONE_COMMIT_SHA:0:8}"
+      VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
     commands:
       - npm run build
       - ls -lah dist/
@@ -96,6 +97,7 @@ steps:
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_CLIENT_VER: "web-us-${DRONE_TAG}"
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "true"
+      VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
     commands:
       - npm run build
       - ls -lah dist/
@@ -149,6 +151,7 @@ steps:
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_CLIENT_VER: "web-tw-${DRONE_TAG}"
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
+      VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
     commands:
       - npm run build
       - ls -lah dist/
