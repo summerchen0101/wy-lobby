@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   agentDebugLog,
   agentDebugUrlPreview,
@@ -19,6 +20,7 @@ import { GameOverlay } from './GameOverlay'
 import { GameShellContext, type OpenShellOptions } from './game-shell-context'
 
 export function GameShellProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
   const { refreshLobbyGet } = useGatewayLobby()
   const [overlay, setOverlay] = useState<{
     url: string
@@ -73,26 +75,46 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
       if (!w) console.warn('[GameShell] window.open blocked')
       return
     }
+    if (o.isPayment) {
+      // #region agent log
+      agentDebugLog({
+        hypothesisId: 'A',
+        location: 'GameShellProvider.tsx:open',
+        message: 'shell_overlay_open',
+        data: {
+          path: agentDebugUrlPreview(o.url.trim()),
+          isPayment: true,
+        },
+      })
+      // #endregion
+      logGameOverlayOpened(o.url.trim())
+      logPerfMemorySnapshot('[game-shell][dev] heap on overlay_open')
+      setOverlay({
+        url: o.url,
+        widthPercent: o.widthPercent ?? 90,
+        heightPercent: o.heightPercent ?? 90,
+        isPayment: true,
+      })
+      return
+    }
+    const trimmed = o.url.trim()
     // #region agent log
     agentDebugLog({
       hypothesisId: 'A',
       location: 'GameShellProvider.tsx:open',
-      message: 'shell_overlay_open',
-      data: {
-        path: agentDebugUrlPreview(o.url.trim()),
-        isPayment: !!o.isPayment,
-      },
+      message: 'shell_play_route_open',
+      data: { path: agentDebugUrlPreview(trimmed) },
     })
     // #endregion
-    logGameOverlayOpened(o.url.trim())
-    logPerfMemorySnapshot('[game-shell][dev] heap on overlay_open')
-    setOverlay({
-      url: o.url,
-      widthPercent: o.widthPercent ?? 90,
-      heightPercent: o.heightPercent ?? 90,
-      isPayment: !!o.isPayment,
-    })
-  }, [])
+    logGameOverlayOpened(trimmed)
+    logPerfMemorySnapshot('[game-shell][dev] heap on play_route_open')
+    const q = buildGamePopoutPathQuery(trimmed)
+    if (!q) {
+      console.warn('[GameShell] invalid or unsupported game URL for play route')
+      return
+    }
+    navigate(`/play?${q}`)
+  }, [navigate])
 
   const close = useCallback(() => {
     // #region agent log
