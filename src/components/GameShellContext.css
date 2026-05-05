@@ -97,6 +97,7 @@ html.game-fullscreen-host #root {
   height: var(--game-visible-h, 100dvh);
   max-height: none;
   display: block;
+  border: 0;
 }
 
 /*
