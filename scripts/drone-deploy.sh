@@ -24,7 +24,7 @@ GS="gs://${BUCKET}"
 
 echo "==> [${REGION:-?}] Sync hashed assets (immutable, 1y) → $GS"
 gcloud storage rsync -r dist/ "$GS" \
-  --cache-control="public,max-age=31536000,immutable" \
+  --cache-control="public,max-age=86400,immutable" \
   --exclude='index\.html|sw\.js|manifest\.webmanifest'
 
 echo "==> [${REGION:-?}] Upload entry files (no-cache)"
