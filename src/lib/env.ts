@@ -94,7 +94,7 @@ export function getWsUrl(): string {
 }
 
 const DEFAULT_UNITY_WEBENTRY =
-  "https://unityweb-alpha.ffglobaltech.com/0000/WebGL_Build_WebEntry/index.html";
+  "https://unityweb-alpha.ffglobaltech.com/0000/WebGL_Build_Alpha/index.html";
 
 /** Unity WebGL WebEntry（slot query：game_id、mode、amount、vip_lv、token） */
 export function getUnityWebEntryBase(): string {
