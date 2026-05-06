@@ -1,6 +1,7 @@
-import { Home } from 'lucide-react'
+import { ChevronsUpDown, Home } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'react-router-dom'
 import {
   agentDebugLog,
   agentDebugUrlPreview,
@@ -31,6 +32,8 @@ type GameOverlayProps = {
 }
 
 export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
+  const { pathname } = useLocation()
+  const showPlayRouteDragAffordance = pathname === '/play'
   const { t } = useTranslation('common')
   const allow = buildIframeAllow(isPayment)
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -132,6 +135,11 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
     setIosHintLeaving(true)
   }
 
+  const handleHomeClick = () => {
+    postQuitToGameIframe(iframeRef.current)
+    onClose()
+  }
+
   const iosScrollHostClass = iosWorkarounds
     ? 'game-overlay game-overlay--ios-scroll-host'
     : 'game-overlay'
@@ -155,10 +163,7 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
       <button
         type="button"
         className="game-overlay__close"
-        onClick={() => {
-          postQuitToGameIframe(iframeRef.current)
-          onClose()
-        }}
+        onClick={handleHomeClick}
         aria-label="Return to lobby"
       >
         <Home
@@ -167,6 +172,18 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
           aria-hidden
         />
       </button>
+      {showPlayRouteDragAffordance ? (
+        <div
+          className="game-overlay__drag-affordance game-overlay__drag-affordance--right-mid"
+          aria-hidden
+        >
+          <ChevronsUpDown
+            className="game-overlay__drag-affordance-icon"
+            strokeWidth={2}
+            aria-hidden
+          />
+        </div>
+      ) : null}
       {iosHintOn ? (
         <aside
           className={`game-overlay__ios-hint${iosHintLeaving ? ' game-overlay__ios-hint--leaving' : ''}`}

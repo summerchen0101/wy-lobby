@@ -20,6 +20,12 @@ export type UseGameVisualViewportOpts = {
 /** 略長於 fsm 400ms，讓 iframe 暫停命中覆蓋整段 nudge */
 const HIDE_CHROME_NUDGE_MS = 450
 
+/** 收合 Safari UI 所需的父文件捲動幅度；過大易造成體感跳動 */
+const HIDE_CHROME_SCROLL_NUDGE_PX = 120
+
+/** vv.offsetTop／offsetLeft 細幅抖動時略過 CSS 更新，降低 iframe 視覺顫動 */
+const VV_OFFSET_APPLY_EPS_PX = 2
+
 function isLandscapeLayout(): boolean {
   return window.innerWidth > window.innerHeight
 }
@@ -70,6 +76,12 @@ export function useGameVisualViewport(
     let hasTriggeredSwipe = false
     let swipeStartY = 0
     const nudgeTimers: number[] = []
+
+    let lastAppliedH = -1
+    let lastAppliedW = -1
+    let lastAppliedTop = 0
+    let lastAppliedLeft = 0
+    let vvScrollRaf = 0
 
     const clear = () => {
       el.style.removeProperty('--game-visible-h')
@@ -161,11 +173,11 @@ export function useGameVisualViewport(
       }
       isScrolling = true
       el.classList.add('game-overlay--parent-scroll-nudge')
-      setDocumentScrollTop(200)
+      setDocumentScrollTop(HIDE_CHROME_SCROLL_NUDGE_PX)
       const tid = window.setTimeout(() => {
         isScrolling = false
         el.classList.remove('game-overlay--parent-scroll-nudge')
-        apply()
+        applyImmediate()
         /* 對齊 fsm.js：若捲動後仍未收合，允許再次邊緣上滑觸發 */
         if (!isToolbarHidden) {
           hasTriggeredSwipe = false
@@ -174,7 +186,14 @@ export function useGameVisualViewport(
       nudgeTimers.push(tid)
     }
 
-    const apply = () => {
+    const flushVvScrollRaf = () => {
+      if (vvScrollRaf !== 0) {
+        window.cancelAnimationFrame(vvScrollRaf)
+        vvScrollRaf = 0
+      }
+    }
+
+    const applyImmediate = () => {
       const vv = window.visualViewport
       if (!vv) {
         clear()
@@ -189,16 +208,45 @@ export function useGameVisualViewport(
       if (adaptGutter) {
         updateToolbarFromVvResize(h)
       }
+
+      const sizeChanged = h !== lastAppliedH || w !== lastAppliedW
+      const ot = Math.round(vv.offsetTop)
+      const ol = Math.round(vv.offsetLeft)
+      const offsetJump =
+        Math.abs(ot - lastAppliedTop) > VV_OFFSET_APPLY_EPS_PX ||
+        Math.abs(ol - lastAppliedLeft) > VV_OFFSET_APPLY_EPS_PX
+
       el.style.setProperty('--game-visible-h', `${h}px`)
       el.style.setProperty('--game-visible-w', `${w}px`)
-      el.style.setProperty('--game-vv-top', `${Math.round(vv.offsetTop)}px`)
-      el.style.setProperty('--game-vv-left', `${Math.round(vv.offsetLeft)}px`)
+      lastAppliedH = h
+      lastAppliedW = w
+
+      if (sizeChanged || offsetJump) {
+        el.style.setProperty('--game-vv-top', `${ot}px`)
+        el.style.setProperty('--game-vv-left', `${ol}px`)
+        lastAppliedTop = ot
+        lastAppliedLeft = ol
+      }
+
       if (adaptGutter) {
         applyGutterStyle()
       }
     }
 
-    apply()
+    const scheduleApplyOnVvScroll = () => {
+      if (vvScrollRaf !== 0) return
+      vvScrollRaf = window.requestAnimationFrame(() => {
+        vvScrollRaf = 0
+        applyImmediate()
+      })
+    }
+
+    const onVisualViewportResize = () => {
+      flushVvScrollRaf()
+      applyImmediate()
+    }
+
+    applyImmediate()
 
     const vv = window.visualViewport
     if (!vv) return () => clear()
@@ -210,19 +258,19 @@ export function useGameVisualViewport(
         isRotating = true
         setDocumentScrollTop(0)
       }
-      apply()
+      onVisualViewportResize()
       orientationDeferTimers.forEach((id) => window.clearTimeout(id))
       orientationDeferTimers.length = 0
       orientationDeferTimers.push(
-        window.setTimeout(apply, 100),
-        window.setTimeout(apply, 250),
+        window.setTimeout(onVisualViewportResize, 100),
+        window.setTimeout(onVisualViewportResize, 250),
       )
       if (adaptGutter) {
         orientationDeferTimers.push(
           window.setTimeout(() => {
             syncToolbarAfterOrientation()
             isRotating = false
-            apply()
+            onVisualViewportResize()
             if (!isToolbarHidden && isLandscapeLayout()) {
               runHideChromeScrollNudge()
             }
@@ -230,15 +278,12 @@ export function useGameVisualViewport(
           /* iOS 延遲換算 inner/vv 時再同步一次，避免首次 sync 仍誤判 */
           window.setTimeout(() => {
             syncToolbarAfterOrientation()
-            apply()
+            onVisualViewportResize()
           }, 700),
-          /* vv 穩定後若仍見工具列再 nudge 一次（避免首次捲動落在錯誤 layout） */
+          /* vv 穩定後再同步（不重複 nudge，避免雙重捲動體感） */
           window.setTimeout(() => {
             syncToolbarAfterOrientation()
-            apply()
-            if (!isToolbarHidden && isLandscapeLayout()) {
-              runHideChromeScrollNudge()
-            }
+            onVisualViewportResize()
           }, 820),
         )
       }
@@ -290,24 +335,25 @@ export function useGameVisualViewport(
       })
     }
 
-    vv.addEventListener('resize', apply)
-    vv.addEventListener('scroll', apply)
-    window.addEventListener('resize', apply)
+    vv.addEventListener('resize', onVisualViewportResize)
+    vv.addEventListener('scroll', scheduleApplyOnVvScroll)
+    window.addEventListener('resize', onVisualViewportResize)
     window.addEventListener('orientationchange', applyOrientationFollowUps)
-    window.addEventListener('pageshow', apply)
+    window.addEventListener('pageshow', onVisualViewportResize)
 
     return () => {
       if (edgeAttachRaf !== 0) window.cancelAnimationFrame(edgeAttachRaf)
+      flushVvScrollRaf()
       nudgeTimers.forEach((id) => window.clearTimeout(id))
       el.classList.remove('game-overlay--parent-scroll-nudge')
       orientationDeferTimers.forEach((id) => window.clearTimeout(id))
       detachEdge(edgeLeft)
       detachEdge(edgeRight)
-      vv.removeEventListener('resize', apply)
-      vv.removeEventListener('scroll', apply)
-      window.removeEventListener('resize', apply)
+      vv.removeEventListener('resize', onVisualViewportResize)
+      vv.removeEventListener('scroll', scheduleApplyOnVvScroll)
+      window.removeEventListener('resize', onVisualViewportResize)
       window.removeEventListener('orientationchange', applyOrientationFollowUps)
-      window.removeEventListener('pageshow', apply)
+      window.removeEventListener('pageshow', onVisualViewportResize)
       clear()
     }
   }, [

@@ -51,6 +51,7 @@ html.game-fullscreen-host #root {
 }
 
 .game-overlay--ios-scroll-host .game-overlay__close,
+.game-overlay--ios-scroll-host .game-overlay__drag-affordance,
 .game-overlay--ios-scroll-host .game-overlay__ios-hint,
 .game-overlay--ios-scroll-host .game-overlay__frame {
   pointer-events: auto;
@@ -121,7 +122,7 @@ html.game-fullscreen-host #root {
 }
 
 .game-overlay__ios-hint {
-  position: absolute;
+  position: fixed;
   top: calc(max(var(--space-5), var(--safe-top)) + 44px + var(--space-2));
   left: max(var(--space-4), var(--safe-left));
   right: max(var(--space-4), var(--safe-right));
@@ -200,9 +201,9 @@ html.game-fullscreen-host #root {
 }
 
 .game-overlay__close {
-  position: absolute;
+  position: fixed;
   top: max(var(--space-5), var(--safe-top));
-  left: var(--space-5);
+  left: max(var(--space-5), var(--safe-left));
   z-index: 10001;
   display: flex;
   align-items: center;
@@ -234,5 +235,39 @@ html.game-fullscreen-host #root {
   flex-shrink: 0;
   width: var(--icon-rwd-lg);
   height: var(--icon-rwd-lg);
+  pointer-events: none;
+}
+
+/* /play 右側：上下箭頭拖曳提示（長條半透明把手）。預設 pointer-events:none；iOS scroll-host 見上列改為 auto */
+.game-overlay__drag-affordance {
+  position: fixed;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(2.125rem, 6vw, 2.75rem);
+  min-height: clamp(5.75rem, 24dvh, 8rem);
+  padding: var(--space-4) var(--space-2);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 9999px;
+  background: rgba(22, 24, 30, 0.48);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: rgba(244, 244, 245, 0.92);
+  pointer-events: none;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.game-overlay__drag-affordance--right-mid {
+  left: auto;
+  right: max(var(--space-5), var(--safe-right));
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.game-overlay__drag-affordance-icon {
+  flex-shrink: 0;
+  width: clamp(1.375rem, 4.5vw, 1.75rem);
+  height: clamp(1.375rem, 4.5vw, 1.75rem);
   pointer-events: none;
 }
