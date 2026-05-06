@@ -1,5 +1,5 @@
 import { ChevronsUpDown, Home } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import {
@@ -7,6 +7,7 @@ import {
   agentDebugUrlPreview,
 } from '../debug/agentDebugIngest'
 import { useGameVisualViewport } from '../hooks/useGameVisualViewport'
+import { playSwipeHintImageUrl } from '../lib/env'
 import { buildIframeAllow, postQuitToGameIframe } from '../lib/gameShell'
 import {
   dismissIosGameScrollHintPermanently,
@@ -34,6 +35,16 @@ type GameOverlayProps = {
 export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const { pathname } = useLocation()
   const showPlayRouteDragAffordance = pathname === '/play'
+  const playSwipeHintConfiguredUrl = playSwipeHintImageUrl()
+  /** 已設定 URL 且為 /play；實際顯示還需 playSwipeHintFeatureOn */
+  const playSwipeHintConfigured =
+    showPlayRouteDragAffordance && Boolean(playSwipeHintConfiguredUrl)
+  /**
+   * 生產環境僅真 iOS 分頁內需要上滑收合 chrome；本機 dev 允許任何 UA 預覽滿版圖。
+   */
+  const playSwipeHintFeatureOn =
+    playSwipeHintConfigured &&
+    (shouldUseIosGameViewportWorkarounds() || import.meta.env.DEV)
   const { t } = useTranslation('common')
   const allow = buildIframeAllow(isPayment)
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -44,11 +55,23 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const iframeTeardownTimerRef = useRef<number | undefined>(undefined)
 
   const iosWorkarounds = shouldUseIosGameViewportWorkarounds()
+  /** 曾偵測到「網址列尚未收合」狀態；用以區分 Chrome 裝置模擬首幀即 full-vv 的情況（DEV 仍顯示示意圖） */
+  const [iosToolbarChromeEverVisible, setIosToolbarChromeEverVisible] =
+    useState(false)
+  const [iosToolbarHidden, setIosToolbarHidden] = useState(false)
+  const onIosToolbarHiddenChange = useCallback((hidden: boolean) => {
+    if (!hidden) setIosToolbarChromeEverVisible(true)
+    setIosToolbarHidden(hidden)
+  }, [])
+
   useGameVisualViewport(rootRef, {
     adaptIosBottomGutter: iosWorkarounds,
     iosScrollEdgeLeftRef: iosWorkarounds ? iosScrollEdgeLeftRef : undefined,
     iosScrollEdgeRightRef: iosWorkarounds ? iosScrollEdgeRightRef : undefined,
     blurTargetRef: iosWorkarounds ? iframeRef : undefined,
+    onIosToolbarHiddenChange: iosWorkarounds
+      ? onIosToolbarHiddenChange
+      : undefined,
   })
 
   useEffect(() => {
@@ -140,12 +163,29 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
     onClose()
   }
 
-  const iosScrollHostClass = iosWorkarounds
-    ? 'game-overlay game-overlay--ios-scroll-host'
-    : 'game-overlay'
+  const showPlaySwipeHintImage =
+    playSwipeHintFeatureOn &&
+    Boolean(playSwipeHintConfiguredUrl) &&
+    ((!iosWorkarounds && import.meta.env.DEV) ||
+      (iosWorkarounds &&
+        (!iosToolbarHidden ||
+          (import.meta.env.DEV && !iosToolbarChromeEverVisible))))
+
+  const showIosTextScrollHint = iosHintOn && !playSwipeHintFeatureOn
+  /** 與滿版示意圖並存時由 z-index 疊在圖上（見 GameShellContext.css） */
+  const showDragAffordance = showPlayRouteDragAffordance
+
+  const overlayClassNames = [
+    iosWorkarounds ? 'game-overlay game-overlay--ios-scroll-host' : 'game-overlay',
+    iosWorkarounds && showPlaySwipeHintImage
+      ? 'game-overlay--swipe-hint-suppress-iframe'
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
-    <div ref={rootRef} className={iosScrollHostClass} role="presentation">
+    <div ref={rootRef} className={overlayClassNames} role="presentation">
       {iosWorkarounds ? (
         <>
           <div
@@ -172,7 +212,15 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
           aria-hidden
         />
       </button>
-      {showPlayRouteDragAffordance ? (
+      {showPlaySwipeHintImage && playSwipeHintConfiguredUrl ? (
+        <img
+          src={playSwipeHintConfiguredUrl}
+          alt=""
+          className="game-overlay__play-swipe-hint"
+          aria-hidden
+        />
+      ) : null}
+      {showDragAffordance ? (
         <div
           className="game-overlay__drag-affordance game-overlay__drag-affordance--right-mid"
           aria-hidden
@@ -184,7 +232,7 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
           />
         </div>
       ) : null}
-      {iosHintOn ? (
+      {showIosTextScrollHint ? (
         <aside
           className={`game-overlay__ios-hint${iosHintLeaving ? ' game-overlay__ios-hint--leaving' : ''}`}
           role="note"

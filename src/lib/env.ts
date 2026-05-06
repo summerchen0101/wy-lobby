@@ -128,3 +128,12 @@ export function supportChatUrl(): string | undefined {
   const v = import.meta.env.VITE_SUPPORT_CHAT_URL?.trim();
   return v || undefined;
 }
+
+/**
+ * `/play` + iOS Safari：滿版「上滑開啟全螢幕」示意圖 URL（絕對路徑如 `/play-swipe-hint.webp` 或完整 https URL）。
+ * 未設時沿用既有文字提示與右側箭頭，不顯示滿版圖。
+ */
+export function playSwipeHintImageUrl(): string | undefined {
+  const v = import.meta.env.VITE_PLAY_SWIPE_HINT_URL?.trim();
+  return v || undefined;
+}

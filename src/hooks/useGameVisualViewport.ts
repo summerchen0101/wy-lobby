@@ -15,6 +15,11 @@ export type UseGameVisualViewportOpts = {
   iosScrollEdgeRightRef?: RefObject<HTMLElement | null>
   /** scroll nudge 前對遊戲 iframe blur，避免焦點留在子 frame 時宿主捲動失效（僅 adaptIosBottomGutter） */
   blurTargetRef?: RefObject<HTMLIFrameElement | null>
+  /**
+   * iOS Safari：網址列／工具列收合狀態變更時回報（僅在 adaptIosBottomGutter 為 true 時有效）。
+   * 初次 apply 也會回報目前值。
+   */
+  onIosToolbarHiddenChange?: (toolbarHidden: boolean) => void
 }
 
 /** 略長於 fsm 400ms，讓 iframe 暫停命中覆蓋整段 nudge */
@@ -67,6 +72,7 @@ export function useGameVisualViewport(
     const edgeLeft = opts?.iosScrollEdgeLeftRef
     const edgeRight = opts?.iosScrollEdgeRightRef
     const blurTargetRef = opts?.blurTargetRef
+    const onToolbarHiddenChange = opts?.onIosToolbarHiddenChange
 
     let baselineHeight = 0
     let baselineInitialized = false
@@ -82,6 +88,14 @@ export function useGameVisualViewport(
     let lastAppliedTop = 0
     let lastAppliedLeft = 0
     let vvScrollRaf = 0
+    let lastReportedToolbarHidden: boolean | null = null
+
+    const notifyToolbarHiddenIfChanged = () => {
+      if (!adaptGutter || !onToolbarHiddenChange) return
+      if (lastReportedToolbarHidden === isToolbarHidden) return
+      lastReportedToolbarHidden = isToolbarHidden
+      onToolbarHiddenChange(isToolbarHidden)
+    }
 
     const clear = () => {
       el.style.removeProperty('--game-visible-h')
@@ -230,6 +244,7 @@ export function useGameVisualViewport(
 
       if (adaptGutter) {
         applyGutterStyle()
+        notifyToolbarHiddenIfChanged()
       }
     }
 
@@ -362,5 +377,6 @@ export function useGameVisualViewport(
     opts?.iosScrollEdgeLeftRef,
     opts?.iosScrollEdgeRightRef,
     opts?.blurTargetRef,
+    opts?.onIosToolbarHiddenChange,
   ])
 }

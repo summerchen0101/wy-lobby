@@ -57,8 +57,9 @@ html.game-fullscreen-host #root {
   pointer-events: auto;
 }
 
-/* scroll nudge 期間讓觸控穿透宿主，避免捲動落在 iframe 內（見 useGameVisualViewport） */
-.game-overlay--parent-scroll-nudge .game-overlay__frame {
+/* 滿版上滑示意顯示期間：暫不讓 iframe 攔截捲動，與 scroll nudge 相同（見 GameOverlay） */
+.game-overlay--ios-scroll-host.game-overlay--swipe-hint-suppress-iframe
+  .game-overlay__frame {
   pointer-events: none !important;
 }
 
@@ -239,9 +240,10 @@ html.game-fullscreen-host #root {
 }
 
 /* /play 右側：上下箭頭拖曳提示（長條半透明把手）。預設 pointer-events:none；iOS scroll-host 見上列改為 auto */
+/* 高於滿版示意圖（10000）、關閉鈕（10001）、ios 文字提示（10002），略高於橫屏捲動邊緣（10003）以便右側可見可點 */
 .game-overlay__drag-affordance {
   position: fixed;
-  z-index: 10001;
+  z-index: 10005;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -270,4 +272,35 @@ html.game-fullscreen-host #root {
   width: clamp(1.375rem, 4.5vw, 1.75rem);
   height: clamp(1.375rem, 4.5vw, 1.75rem);
   pointer-events: none;
+}
+
+/* /play + iOS：滿版上滑示意（須 pointer-events:none 以免擋宿主捲動收合網址列） */
+.game-overlay__play-swipe-hint {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100dvw;
+  height: 100dvh;
+  z-index: 10000;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+  user-select: none;
+  animation: game-overlay-play-swipe-hint-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes game-overlay-play-swipe-hint-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-overlay__play-swipe-hint {
+    animation: none;
+  }
 }
