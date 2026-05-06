@@ -1,4 +1,4 @@
-import { ChevronsUpDown, Home } from 'lucide-react'
+import { Home } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
@@ -17,6 +17,12 @@ import {
 import { logPerfMemorySnapshot } from '../lib/gameShellTelemetry'
 import './GameShellContext.css'
 
+/** 略長於 useGameVisualViewport 轉向 follow-up（480/700/820ms），避免 vv 暫態誤判全螢幕而提早關閉滿版提示 */
+const ORIENTATION_SWIPE_HINT_HOLD_MS = 800
+
+/** 連續視為全螢幕前的等待；濾掉 vv 抖動導致 cover 过早消失 */
+const IOS_TOOLBAR_HIDDEN_DEBOUNCE_MS = 520
+
 /** ms — brief delay so embedded Unity can run `Quit()` after shell postMessage before `about:blank`. */
 const IFRAME_TEARDOWN_DELAY_MS = 120
 
@@ -34,11 +40,11 @@ type GameOverlayProps = {
 
 export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const { pathname } = useLocation()
-  const showPlayRouteDragAffordance = pathname === '/play'
+  const isPlayRoute = pathname === '/play'
   const playSwipeHintConfiguredUrl = playSwipeHintImageUrl()
   /** 已設定 URL 且為 /play；實際顯示還需 playSwipeHintFeatureOn */
   const playSwipeHintConfigured =
-    showPlayRouteDragAffordance && Boolean(playSwipeHintConfiguredUrl)
+    isPlayRoute && Boolean(playSwipeHintConfiguredUrl)
   /**
    * 生產環境僅真 iOS 分頁內需要上滑收合 chrome；本機 dev 允許任何 UA 預覽滿版圖。
    */
@@ -59,9 +65,40 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const [iosToolbarChromeEverVisible, setIosToolbarChromeEverVisible] =
     useState(false)
   const [iosToolbarHidden, setIosToolbarHidden] = useState(false)
+  /** 轉向後短暫忽略 toolbar「已全螢」回報，避免滿版提示早關（見 ORIENTATION_SWIPE_HINT_HOLD_MS） */
+  const [orientationSwipeHintHold, setOrientationSwipeHintHold] =
+    useState(false)
+  /** 供 orientationchange 讀取「已確認」全螢幕，與滿版圖顯示邏輯一致 */
+  const iosToolbarHiddenRef = useRef(false)
+  /** `hidden:true` 延後套用，避免誤判瞬間關掉 cover */
+  const toolbarHiddenConfirmTimerRef = useRef<number | undefined>(undefined)
+
   const onIosToolbarHiddenChange = useCallback((hidden: boolean) => {
-    if (!hidden) setIosToolbarChromeEverVisible(true)
-    setIosToolbarHidden(hidden)
+    if (!hidden) {
+      if (toolbarHiddenConfirmTimerRef.current !== undefined) {
+        window.clearTimeout(toolbarHiddenConfirmTimerRef.current)
+        toolbarHiddenConfirmTimerRef.current = undefined
+      }
+      iosToolbarHiddenRef.current = false
+      setIosToolbarChromeEverVisible(true)
+      setIosToolbarHidden(false)
+      return
+    }
+    if (toolbarHiddenConfirmTimerRef.current !== undefined) return
+    toolbarHiddenConfirmTimerRef.current = window.setTimeout(() => {
+      toolbarHiddenConfirmTimerRef.current = undefined
+      iosToolbarHiddenRef.current = true
+      setIosToolbarHidden(true)
+    }, IOS_TOOLBAR_HIDDEN_DEBOUNCE_MS)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (toolbarHiddenConfirmTimerRef.current !== undefined) {
+        window.clearTimeout(toolbarHiddenConfirmTimerRef.current)
+        toolbarHiddenConfirmTimerRef.current = undefined
+      }
+    }
   }, [])
 
   useGameVisualViewport(rootRef, {
@@ -73,6 +110,35 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
       ? onIosToolbarHiddenChange
       : undefined,
   })
+
+  useEffect(() => {
+    if (!iosWorkarounds) return
+    let holdTimer: number | undefined
+    const onOrientationChange = () => {
+      /*
+       * 轉向後 Safari 經常重新排版網址列（尤其直向），舊的 hidden 狀態不可沿用；
+       * 先取消「全螢幕」判定與 debounce，否則橫屏全螢 → 轉直後非全螢仍不顯示 cover。
+       */
+      if (toolbarHiddenConfirmTimerRef.current !== undefined) {
+        window.clearTimeout(toolbarHiddenConfirmTimerRef.current)
+        toolbarHiddenConfirmTimerRef.current = undefined
+      }
+      iosToolbarHiddenRef.current = false
+      setIosToolbarHidden(false)
+
+      setOrientationSwipeHintHold(true)
+      if (holdTimer !== undefined) window.clearTimeout(holdTimer)
+      holdTimer = window.setTimeout(() => {
+        holdTimer = undefined
+        setOrientationSwipeHintHold(false)
+      }, ORIENTATION_SWIPE_HINT_HOLD_MS)
+    }
+    window.addEventListener('orientationchange', onOrientationChange)
+    return () => {
+      window.removeEventListener('orientationchange', onOrientationChange)
+      if (holdTimer !== undefined) window.clearTimeout(holdTimer)
+    }
+  }, [iosWorkarounds])
 
   useEffect(() => {
     const doc = document.documentElement
@@ -169,11 +235,10 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
     ((!iosWorkarounds && import.meta.env.DEV) ||
       (iosWorkarounds &&
         (!iosToolbarHidden ||
+          orientationSwipeHintHold ||
           (import.meta.env.DEV && !iosToolbarChromeEverVisible))))
 
   const showIosTextScrollHint = iosHintOn && !playSwipeHintFeatureOn
-  /** 與滿版示意圖並存時由 z-index 疊在圖上（見 GameShellContext.css） */
-  const showDragAffordance = showPlayRouteDragAffordance
 
   const overlayClassNames = [
     iosWorkarounds ? 'game-overlay game-overlay--ios-scroll-host' : 'game-overlay',
@@ -219,18 +284,6 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
           className="game-overlay__play-swipe-hint"
           aria-hidden
         />
-      ) : null}
-      {showDragAffordance ? (
-        <div
-          className="game-overlay__drag-affordance game-overlay__drag-affordance--right-mid"
-          aria-hidden
-        >
-          <ChevronsUpDown
-            className="game-overlay__drag-affordance-icon"
-            strokeWidth={2}
-            aria-hidden
-          />
-        </div>
       ) : null}
       {showIosTextScrollHint ? (
         <aside

@@ -125,7 +125,8 @@ export function useGameVisualViewport(
       const h = Math.round(vv.height)
       if (isLandscapeLayout()) {
         const shortSide = Math.min(window.innerWidth, window.innerHeight)
-        isToolbarHidden = h >= shortSide - 72
+        /* 略嚴於舊 - 72，減少轉橫後 vv 暫態偏大誤判已全螢 */
+        isToolbarHidden = h >= shortSide - 48
       } else {
         isToolbarHidden = h >= window.innerHeight - 80
       }
