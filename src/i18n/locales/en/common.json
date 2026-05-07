@@ -4,5 +4,6 @@
   "chatSupportAria": "Chat support",
   "trustpilotSectionAria": "Reviews",
   "gameIosScrollHint": "Swipe up on the screen to enter fullscreen.",
-  "gameIosScrollHintDismiss": "OK"
+  "gameIosScrollHintDismiss": "OK",
+  "gameTapToFullscreenHint": "Tap to enter fullscreen"
 }

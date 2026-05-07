@@ -243,6 +243,42 @@ html.game-fullscreen-host #root {
   pointer-events: none;
 }
 
+/*
+ * 行動／平板：首次點擊呼叫 requestFullscreen；須蓋在 iframe 之上且低於關閉鈕（z-index 10001）。
+ */
+.game-overlay__tap-fs-gate {
+  position: absolute;
+  inset: 0;
+  z-index: 9995;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(var(--space-6), var(--safe-top) + 52px) var(--space-5)
+    max(var(--space-8), var(--safe-bottom));
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(244, 244, 245, 0.95);
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.game-overlay__tap-fs-gate:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -4px;
+}
+
+.game-overlay__tap-fs-gate-label {
+  max-width: 18rem;
+  line-height: 1.45;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
+}
+
 /* /play + iOS：黑底中央上滑示意（須 pointer-events:none 以免擋宿主捲動收合網址列） */
 .game-overlay__play-swipe-hint {
   position: fixed;

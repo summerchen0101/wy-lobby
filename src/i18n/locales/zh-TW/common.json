@@ -4,5 +4,6 @@
   "chatSupportAria": "客服聊天",
   "trustpilotSectionAria": "評價",
   "gameIosScrollHint": "往上滑動畫面即可開啟全螢幕",
-  "gameIosScrollHintDismiss": "知道了"
+  "gameIosScrollHintDismiss": "知道了",
+  "gameTapToFullscreenHint": "點一下進入全螢幕"
 }
