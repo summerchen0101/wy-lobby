@@ -29,3 +29,10 @@ export function dismissIosGameScrollHintPermanently(): void {
     /* ignore */
   }
 }
+
+/**
+ * GameOverlay 在 orientationchange 樂觀重設 `iosToolbarHidden` 時送出，讓 useGameVisualViewport
+ * 清掉 lastReported／狀態，否則 hook 仍認為「已回報過 true」而不再 notify，React 會卡在 false、cover 不消失。
+ */
+export const GAME_OVERLAY_IOS_TOOLBAR_CONSUMER_RESET_EVENT =
+  'ffgt-game-overlay-ios-toolbar-consumer-reset'

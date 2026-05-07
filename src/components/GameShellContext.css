@@ -51,14 +51,19 @@ html.game-fullscreen-host #root {
 }
 
 .game-overlay--ios-scroll-host .game-overlay__close,
-.game-overlay--ios-scroll-host .game-overlay__drag-affordance,
 .game-overlay--ios-scroll-host .game-overlay__ios-hint,
 .game-overlay--ios-scroll-host .game-overlay__frame {
   pointer-events: auto;
 }
 
-/* scroll nudge 期間讓觸控穿透宿主，避免捲動落在 iframe 內（見 useGameVisualViewport） */
+/* scroll nudge 期間讓觸控穿透 iframe，避免捲動落在遊戲內（見 useGameVisualViewport） */
 .game-overlay--parent-scroll-nudge .game-overlay__frame {
+  pointer-events: none !important;
+}
+
+/* 滿版上滑示意顯示期間：暫不讓 iframe 攔截捲動，與 scroll nudge 相同（見 GameOverlay） */
+.game-overlay--ios-scroll-host.game-overlay--swipe-hint-suppress-iframe
+  .game-overlay__frame {
   pointer-events: none !important;
 }
 
@@ -238,36 +243,38 @@ html.game-fullscreen-host #root {
   pointer-events: none;
 }
 
-/* /play 右側：上下箭頭拖曳提示（長條半透明把手）。預設 pointer-events:none；iOS scroll-host 見上列改為 auto */
-.game-overlay__drag-affordance {
+/* /play + iOS：黑底中央上滑示意（須 pointer-events:none 以免擋宿主捲動收合網址列） */
+.game-overlay__play-swipe-hint {
   position: fixed;
-  z-index: 10001;
+  inset: 0;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(2.125rem, 6vw, 2.75rem);
-  min-height: clamp(5.75rem, 24dvh, 8rem);
-  padding: var(--space-4) var(--space-2);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 9999px;
-  background: rgba(22, 24, 30, 0.48);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  color: rgba(244, 244, 245, 0.92);
+  background: #000;
   pointer-events: none;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.38s ease;
 }
 
-.game-overlay__drag-affordance--right-mid {
-  left: auto;
-  right: max(var(--space-5), var(--safe-right));
-  top: 50%;
-  transform: translateY(-50%);
+.game-overlay__play-swipe-hint-img {
+  max-width: min(90vw, 560px);
+  max-height: 80vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.game-overlay__drag-affordance-icon {
-  flex-shrink: 0;
-  width: clamp(1.375rem, 4.5vw, 1.75rem);
-  height: clamp(1.375rem, 4.5vw, 1.75rem);
-  pointer-events: none;
+.game-overlay__play-swipe-hint--visible {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-overlay__play-swipe-hint {
+    transition-duration: 0.05s;
+  }
 }
