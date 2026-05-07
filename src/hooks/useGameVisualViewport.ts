@@ -56,6 +56,12 @@ const SWIPE_HINT_VV_GATE_TRUST_USER_FULLSCREEN_MS = 880
 /** 橫屏：vv 高度接近 layout 短邊視為網址列已收合；過緊時首趟上滑全螢仍低於閾值、hook 不報 hidden、cover 卡住 */
 const IOS_LANDSCAPE_TOOLBAR_HIDDEN_VV_SLACK_PX = 52
 
+/**
+ * `/play` 橫屏滿版示意（suppress nudge）時：Safari 首幀／layout 穩定前 vv 常短暫達「全高」→ 誤判 hidden、cover ~1s 內消失。
+ * 需連續多幀皆為 hidden 才採信；邊緣 nudge 已 unlock 時改回即時採信。
+ */
+const SWIPE_HINT_TOOLBAR_HIDDEN_STREAK_REQUIRED = 8
+
 function toolbarHiddenFromVvHeight(hRound: number): boolean {
   if (isLandscapeLayout()) {
     const shortSide = Math.min(window.innerWidth, window.innerHeight)
@@ -124,6 +130,10 @@ export function useGameVisualViewport(
     let swipeHintVvGateStartedAt = 0
     /** 使用者已主動觸發 nudge／邊緣上滑，採信 vv */
     let swipeHintUnlockVvRead = false
+    /**
+     * `/play` 橫屏：連續幀 absHidden 累計；抑制 Safari 載入後短暫假全高。
+     */
+    let vvToolbarHiddenStreak = 0
 
     const armSwipeHintVvGateFromNow = () => {
       swipeHintVvGateStartedAt = Date.now()
@@ -161,6 +171,29 @@ export function useGameVisualViewport(
       return toolbarHiddenFromVvHeight(hRound)
     }
 
+    /**
+     * 非 nudge-unlock 的 /play 橫屏：須連續多幀 vv 皆判定 hidden，避免首屏誤判讓 cover ~1s 內消失。
+     */
+    const stableToolbarHiddenForSwipeHint = (absHidden: boolean): boolean => {
+      if (!suppressAutoChromeNudgeRef?.current) {
+        vvToolbarHiddenStreak = 0
+        return absHidden
+      }
+      if (swipeHintUnlockVvRead) {
+        vvToolbarHiddenStreak = 0
+        return absHidden
+      }
+      if (!absHidden) {
+        vvToolbarHiddenStreak = 0
+        return false
+      }
+      vvToolbarHiddenStreak += 1
+      if (vvToolbarHiddenStreak > SWIPE_HINT_TOOLBAR_HIDDEN_STREAK_REQUIRED) {
+        vvToolbarHiddenStreak = SWIPE_HINT_TOOLBAR_HIDDEN_STREAK_REQUIRED
+      }
+      return vvToolbarHiddenStreak >= SWIPE_HINT_TOOLBAR_HIDDEN_STREAK_REQUIRED
+    }
+
     const notifyToolbarHiddenIfChanged = () => {
       if (!adaptGutter || !onToolbarHiddenChange) return
       if (lastReportedToolbarHidden === isToolbarHidden) return
@@ -194,7 +227,9 @@ export function useGameVisualViewport(
       const vv = window.visualViewport
       if (!vv) return
       const h = Math.round(vv.height)
-      isToolbarHidden = toolbarHiddenForChrome(h)
+      vvToolbarHiddenStreak = 0
+      const absHidden = toolbarHiddenForChrome(h)
+      isToolbarHidden = stableToolbarHiddenForSwipeHint(absHidden)
       baselineInitialized = true
       hasTriggeredSwipe = false
       /* GameOverlay 可能在轉向時單方面重設 UI；強制再送一次目前狀態，否則已全螢後無 edge 再次觸發 notify */
@@ -210,12 +245,13 @@ export function useGameVisualViewport(
        * 轉向後 gate 由 `applyOrientationFollowUps` 與 `onToolbarConsumerReset` 負責。
        */
       const absHidden = toolbarHiddenForChrome(hRound)
+      const hiddenForState = stableToolbarHiddenForSwipeHint(absHidden)
       if (!baselineInitialized) {
         baselineInitialized = true
-        isToolbarHidden = absHidden
+        isToolbarHidden = hiddenForState
         return
       }
-      if (absHidden !== isToolbarHidden) {
+      if (hiddenForState !== isToolbarHidden) {
         if (isToolbarHidden && !absHidden) {
           const activeEl = document.activeElement
           const isKeyboardOpen =
@@ -227,7 +263,7 @@ export function useGameVisualViewport(
             return
           }
         }
-        isToolbarHidden = absHidden
+        isToolbarHidden = hiddenForState
         hasTriggeredSwipe = false
       }
     }
@@ -330,6 +366,7 @@ export function useGameVisualViewport(
       if (!adaptGutter) return
       lastReportedToolbarHidden = null
       swipeHintUnlockVvRead = false
+      vvToolbarHiddenStreak = 0
       if (suppressAutoChromeNudgeRef?.current) {
         armSwipeHintVvGateFromNow()
       } else {
@@ -363,6 +400,7 @@ export function useGameVisualViewport(
 
     const applyOrientationFollowUps = () => {
       swipeHintUnlockVvRead = false
+      vvToolbarHiddenStreak = 0
       if (adaptGutter && suppressAutoChromeNudgeRef?.current) {
         armSwipeHintVvGateFromNow()
       } else {
