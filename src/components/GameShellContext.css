@@ -249,7 +249,7 @@ html.game-fullscreen-host #root {
 .game-overlay__tap-fs-gate {
   position: absolute;
   inset: 0;
-  z-index: 9995;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
