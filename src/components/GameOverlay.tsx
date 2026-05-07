@@ -1,4 +1,5 @@
 import { Home } from 'lucide-react'
+import type { TransitionEvent } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
@@ -10,6 +11,7 @@ import { useGameVisualViewport } from '../hooks/useGameVisualViewport'
 import { playSwipeHintImageUrl } from '../lib/env'
 import { buildIframeAllow, postQuitToGameIframe } from '../lib/gameShell'
 import {
+  GAME_OVERLAY_IOS_TOOLBAR_CONSUMER_RESET_EVENT,
   dismissIosGameScrollHintPermanently,
   hasDismissedIosGameScrollHint,
   shouldUseIosGameViewportWorkarounds,
@@ -17,8 +19,11 @@ import {
 import { logPerfMemorySnapshot } from '../lib/gameShellTelemetry'
 import './GameShellContext.css'
 
-/** 略長於 useGameVisualViewport 轉向 follow-up（480/700/820ms），避免 vv 暫態誤判全螢幕而提早關閉滿版提示 */
-const ORIENTATION_SWIPE_HINT_HOLD_MS = 800
+/**
+ * 轉向後多久內不採信「已全螢」的 debounce 截止時間（從 orientationchange 起算）。
+ * 須 ≥ useGameVisualViewport 轉向 follow-up（~820ms），否則剛轉橫就會被誤判全螢、cover 約 1s 內消失。
+ */
+const ORIENTATION_POST_ROTATION_GRACE_MS = 1100
 
 /** 連續視為全螢幕前的等待；濾掉 vv 抖動導致 cover 过早消失 */
 const IOS_TOOLBAR_HIDDEN_DEBOUNCE_MS = 520
@@ -40,6 +45,10 @@ type GameOverlayProps = {
 
 export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const { pathname } = useLocation()
+  const [layoutLandscape, setLayoutLandscape] = useState(
+    () =>
+      typeof window !== 'undefined' && window.innerWidth > window.innerHeight,
+  )
   const isPlayRoute = pathname === '/play'
   const playSwipeHintConfiguredUrl = playSwipeHintImageUrl()
   /** 已設定 URL 且為 /play；實際顯示還需 playSwipeHintFeatureOn */
@@ -65,13 +74,15 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const [iosToolbarChromeEverVisible, setIosToolbarChromeEverVisible] =
     useState(false)
   const [iosToolbarHidden, setIosToolbarHidden] = useState(false)
-  /** 轉向後短暫忽略 toolbar「已全螢」回報，避免滿版提示早關（見 ORIENTATION_SWIPE_HINT_HOLD_MS） */
-  const [orientationSwipeHintHold, setOrientationSwipeHintHold] =
-    useState(false)
+  /** 滿版 cover 仍掛在 DOM（含淡出中），供漸入漸出與 iframe suppress */
+  const [swipeHintInDom, setSwipeHintInDom] = useState(false)
+  const [swipeHintOpaque, setSwipeHintOpaque] = useState(false)
   /** 供 orientationchange 讀取「已確認」全螢幕，與滿版圖顯示邏輯一致 */
   const iosToolbarHiddenRef = useRef(false)
   /** `hidden:true` 延後套用，避免誤判瞬間關掉 cover */
   const toolbarHiddenConfirmTimerRef = useRef<number | undefined>(undefined)
+  /** 上次 orientationchange 時間；轉向後短時間內拉長「採信全螢」延遲 */
+  const lastOrientationAtRef = useRef(0)
 
   const onIosToolbarHiddenChange = useCallback((hidden: boolean) => {
     if (!hidden) {
@@ -85,11 +96,17 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
       return
     }
     if (toolbarHiddenConfirmTimerRef.current !== undefined) return
+    const sinceOrient = Date.now() - lastOrientationAtRef.current
+    const graceRemain = Math.max(
+      0,
+      ORIENTATION_POST_ROTATION_GRACE_MS - sinceOrient,
+    )
+    const wait = IOS_TOOLBAR_HIDDEN_DEBOUNCE_MS + graceRemain
     toolbarHiddenConfirmTimerRef.current = window.setTimeout(() => {
       toolbarHiddenConfirmTimerRef.current = undefined
       iosToolbarHiddenRef.current = true
       setIosToolbarHidden(true)
-    }, IOS_TOOLBAR_HIDDEN_DEBOUNCE_MS)
+    }, wait)
   }, [])
 
   useEffect(() => {
@@ -112,9 +129,22 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   })
 
   useEffect(() => {
+    const syncLayout = () => {
+      setLayoutLandscape(window.innerWidth > window.innerHeight)
+    }
+    syncLayout()
+    window.addEventListener('resize', syncLayout)
+    window.addEventListener('orientationchange', syncLayout)
+    return () => {
+      window.removeEventListener('resize', syncLayout)
+      window.removeEventListener('orientationchange', syncLayout)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!iosWorkarounds) return
-    let holdTimer: number | undefined
     const onOrientationChange = () => {
+      lastOrientationAtRef.current = Date.now()
       /*
        * 轉向後 Safari 經常重新排版網址列（尤其直向），舊的 hidden 狀態不可沿用；
        * 先取消「全螢幕」判定與 debounce，否則橫屏全螢 → 轉直後非全螢仍不顯示 cover。
@@ -125,18 +155,11 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
       }
       iosToolbarHiddenRef.current = false
       setIosToolbarHidden(false)
-
-      setOrientationSwipeHintHold(true)
-      if (holdTimer !== undefined) window.clearTimeout(holdTimer)
-      holdTimer = window.setTimeout(() => {
-        holdTimer = undefined
-        setOrientationSwipeHintHold(false)
-      }, ORIENTATION_SWIPE_HINT_HOLD_MS)
+      window.dispatchEvent(new Event(GAME_OVERLAY_IOS_TOOLBAR_CONSUMER_RESET_EVENT))
     }
     window.addEventListener('orientationchange', onOrientationChange)
     return () => {
       window.removeEventListener('orientationchange', onOrientationChange)
-      if (holdTimer !== undefined) window.clearTimeout(holdTimer)
     }
   }, [iosWorkarounds])
 
@@ -232,19 +255,60 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const showPlaySwipeHintImage =
     playSwipeHintFeatureOn &&
     Boolean(playSwipeHintConfiguredUrl) &&
+    layoutLandscape &&
     ((!iosWorkarounds && import.meta.env.DEV) ||
       (iosWorkarounds &&
         (!iosToolbarHidden ||
-          orientationSwipeHintHold ||
           (import.meta.env.DEV && !iosToolbarChromeEverVisible))))
 
-  const showIosTextScrollHint = iosHintOn && !playSwipeHintFeatureOn
+  useEffect(() => {
+    if (!playSwipeHintConfiguredUrl) {
+      setSwipeHintInDom(false)
+      setSwipeHintOpaque(false)
+      return
+    }
+    if (showPlaySwipeHintImage) {
+      setSwipeHintInDom(true)
+    } else {
+      setSwipeHintOpaque(false)
+    }
+  }, [showPlaySwipeHintImage, playSwipeHintConfiguredUrl])
+
+  useEffect(() => {
+    if (!swipeHintInDom || !showPlaySwipeHintImage) return
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setSwipeHintOpaque(true))
+    })
+    return () => cancelAnimationFrame(id)
+  }, [swipeHintInDom, showPlaySwipeHintImage])
+
+  const onSwipeHintTransitionEnd = (e: TransitionEvent<HTMLImageElement>) => {
+    if (e.propertyName !== 'opacity') return
+    if (!showPlaySwipeHintImage) setSwipeHintInDom(false)
+  }
+
+  /** 未實際完成 fade-in 就關閉時，opacity 未變可能不觸發 transitionend */
+  useEffect(() => {
+    if (showPlaySwipeHintImage || !swipeHintInDom) return
+    const tid = window.setTimeout(() => {
+      setSwipeHintInDom(false)
+    }, 450)
+    return () => window.clearTimeout(tid)
+  }, [showPlaySwipeHintImage, swipeHintInDom])
+
+  /** 直向不顯示滿版圖時仍用既有文字提示（與舊版 ios-hint 並存） */
+  const showIosTextScrollHint =
+    iosHintOn && (!playSwipeHintFeatureOn || !layoutLandscape)
+
+  const swipeHintSuppressIframe =
+    iosWorkarounds &&
+    Boolean(playSwipeHintConfiguredUrl) &&
+    layoutLandscape &&
+    swipeHintInDom
 
   const overlayClassNames = [
     iosWorkarounds ? 'game-overlay game-overlay--ios-scroll-host' : 'game-overlay',
-    iosWorkarounds && showPlaySwipeHintImage
-      ? 'game-overlay--swipe-hint-suppress-iframe'
-      : '',
+    swipeHintSuppressIframe ? 'game-overlay--swipe-hint-suppress-iframe' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -277,12 +341,13 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
           aria-hidden
         />
       </button>
-      {showPlaySwipeHintImage && playSwipeHintConfiguredUrl ? (
+      {swipeHintInDom && playSwipeHintConfiguredUrl ? (
         <img
           src={playSwipeHintConfiguredUrl}
           alt=""
-          className="game-overlay__play-swipe-hint"
+          className={`game-overlay__play-swipe-hint${swipeHintOpaque ? ' game-overlay__play-swipe-hint--visible' : ''}`}
           aria-hidden
+          onTransitionEnd={onSwipeHintTransitionEnd}
         />
       ) : null}
       {showIosTextScrollHint ? (

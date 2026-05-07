@@ -2,6 +2,7 @@ import {
   useEffect,
   type RefObject,
 } from 'react'
+import { GAME_OVERLAY_IOS_TOOLBAR_CONSUMER_RESET_EVENT } from '../lib/iosGameFullscreen'
 
 export type UseGameVisualViewportOpts = {
   /**
@@ -33,6 +34,17 @@ const VV_OFFSET_APPLY_EPS_PX = 2
 
 function isLandscapeLayout(): boolean {
   return window.innerWidth > window.innerHeight
+}
+
+/** 橫屏：vv 高度接近 layout 短邊視為網址列已收合；略寬鬆於 -48，減少首次上滑後漏判 */
+const IOS_LANDSCAPE_TOOLBAR_HIDDEN_VV_SLACK_PX = 40
+
+function toolbarHiddenFromVvHeight(hRound: number): boolean {
+  if (isLandscapeLayout()) {
+    const shortSide = Math.min(window.innerWidth, window.innerHeight)
+    return hRound >= shortSide - IOS_LANDSCAPE_TOOLBAR_HIDDEN_VV_SLACK_PX
+  }
+  return hRound >= window.innerHeight - 80
 }
 
 /**
@@ -74,7 +86,6 @@ export function useGameVisualViewport(
     const blurTargetRef = opts?.blurTargetRef
     const onToolbarHiddenChange = opts?.onIosToolbarHiddenChange
 
-    let baselineHeight = 0
     let baselineInitialized = false
     let isToolbarHidden = false
     let isRotating = false
@@ -123,50 +134,36 @@ export function useGameVisualViewport(
       const vv = window.visualViewport
       if (!vv) return
       const h = Math.round(vv.height)
-      if (isLandscapeLayout()) {
-        const shortSide = Math.min(window.innerWidth, window.innerHeight)
-        /* 略嚴於舊 - 72，減少轉橫後 vv 暫態偏大誤判已全螢 */
-        isToolbarHidden = h >= shortSide - 48
-      } else {
-        isToolbarHidden = h >= window.innerHeight - 80
-      }
-      baselineHeight = h
+      isToolbarHidden = toolbarHiddenFromVvHeight(h)
       baselineInitialized = true
       hasTriggeredSwipe = false
+      /* GameOverlay 可能在轉向時單方面重設 UI；強制再送一次目前狀態，否則已全螢後無 edge 再次觸發 notify */
+      lastReportedToolbarHidden = null
+      notifyToolbarHiddenIfChanged()
     }
 
     const updateToolbarFromVvResize = (hRound: number) => {
       if (!adaptGutter || isRotating || isScrolling) return
+      const absHidden = toolbarHiddenFromVvHeight(hRound)
       if (!baselineInitialized) {
-        baselineHeight = hRound
         baselineInitialized = true
-        if (hRound >= window.innerHeight - 80) {
-          isToolbarHidden = true
-        }
+        isToolbarHidden = absHidden
         return
       }
-      const diff = hRound - baselineHeight
-
-      if (!isToolbarHidden && diff > 10) {
-        isToolbarHidden = true
-        baselineHeight = hRound
-        hasTriggeredSwipe = false
-      } else if (isToolbarHidden && diff < -10) {
-        const activeEl = document.activeElement
-        const isKeyboardOpen =
-          activeEl instanceof HTMLElement &&
-          (activeEl.tagName === 'INPUT' ||
-            activeEl.tagName === 'TEXTAREA' ||
-            activeEl.isContentEditable)
-        if (isKeyboardOpen) {
-          baselineHeight = hRound
-        } else {
-          isToolbarHidden = false
-          baselineHeight = hRound
-          hasTriggeredSwipe = false
+      if (absHidden !== isToolbarHidden) {
+        if (isToolbarHidden && !absHidden) {
+          const activeEl = document.activeElement
+          const isKeyboardOpen =
+            activeEl instanceof HTMLElement &&
+            (activeEl.tagName === 'INPUT' ||
+              activeEl.tagName === 'TEXTAREA' ||
+              activeEl.isContentEditable)
+          if (isKeyboardOpen) {
+            return
+          }
         }
-      } else if (isToolbarHidden && diff > 10) {
-        baselineHeight = hRound
+        isToolbarHidden = absHidden
+        hasTriggeredSwipe = false
       }
     }
 
@@ -192,7 +189,21 @@ export function useGameVisualViewport(
       const tid = window.setTimeout(() => {
         isScrolling = false
         el.classList.remove('game-overlay--parent-scroll-nudge')
-        applyImmediate()
+        /**
+         * iOS：nudge 結束當下 vv.height 常晚一兩幀才反映網址列收合；期間 isScrolling 又會讓
+         * updateToolbarFromVvResize 略過，若單次 apply 讀到舊高度，diff 無法變 true，
+         * React 永遠收不到 hidden（要等拉回再滑第二次才會出現高度落差）。先以絕對閾值重算並補幾拍重試。
+         */
+        const syncToolbarThenApply = () => {
+          syncToolbarAfterOrientation()
+          applyImmediate()
+        }
+        syncToolbarThenApply()
+        requestAnimationFrame(() => {
+          syncToolbarThenApply()
+        })
+        window.setTimeout(syncToolbarThenApply, 100)
+        window.setTimeout(syncToolbarThenApply, 260)
         /* 對齊 fsm.js：若捲動後仍未收合，允許再次邊緣上滑觸發 */
         if (!isToolbarHidden) {
           hasTriggeredSwipe = false
@@ -247,6 +258,15 @@ export function useGameVisualViewport(
         applyGutterStyle()
         notifyToolbarHiddenIfChanged()
       }
+    }
+
+    const onToolbarConsumerReset = () => {
+      if (!adaptGutter) return
+      lastReportedToolbarHidden = null
+      isToolbarHidden = false
+      hasTriggeredSwipe = false
+      notifyToolbarHiddenIfChanged()
+      applyImmediate()
     }
 
     const scheduleApplyOnVvScroll = () => {
@@ -356,6 +376,12 @@ export function useGameVisualViewport(
     window.addEventListener('resize', onVisualViewportResize)
     window.addEventListener('orientationchange', applyOrientationFollowUps)
     window.addEventListener('pageshow', onVisualViewportResize)
+    if (adaptGutter) {
+      window.addEventListener(
+        GAME_OVERLAY_IOS_TOOLBAR_CONSUMER_RESET_EVENT,
+        onToolbarConsumerReset,
+      )
+    }
 
     return () => {
       if (edgeAttachRaf !== 0) window.cancelAnimationFrame(edgeAttachRaf)
@@ -370,6 +396,12 @@ export function useGameVisualViewport(
       window.removeEventListener('resize', onVisualViewportResize)
       window.removeEventListener('orientationchange', applyOrientationFollowUps)
       window.removeEventListener('pageshow', onVisualViewportResize)
+      if (adaptGutter) {
+        window.removeEventListener(
+          GAME_OVERLAY_IOS_TOOLBAR_CONSUMER_RESET_EVENT,
+          onToolbarConsumerReset,
+        )
+      }
       clear()
     }
   }, [

@@ -255,21 +255,16 @@ html.game-fullscreen-host #root {
   object-position: center;
   pointer-events: none;
   user-select: none;
-  animation: game-overlay-play-swipe-hint-breathe 2.4s ease-in-out infinite;
+  opacity: 0;
+  transition: opacity 0.38s ease;
 }
 
-@keyframes game-overlay-play-swipe-hint-breathe {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.88;
-  }
+.game-overlay__play-swipe-hint--visible {
+  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .game-overlay__play-swipe-hint {
-    animation: none;
+    transition-duration: 0.05s;
   }
 }
