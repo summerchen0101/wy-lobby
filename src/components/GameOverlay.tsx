@@ -7,10 +7,14 @@ import { agentDebugLog, agentDebugUrlPreview } from "../debug/agentDebugIngest";
 import { useGameVisualViewport } from "../hooks/useGameVisualViewport";
 import { buildIframeAllow, postQuitToGameIframe } from "../lib/gameShell";
 import {
+  enterBrowserFullscreen,
+  exitBrowserFullscreen,
   GAME_OVERLAY_IOS_TOOLBAR_CONSUMER_RESET_EVENT,
   dismissIosGameScrollHintPermanently,
+  getFullscreenElement,
   hasDismissedIosGameScrollHint,
   shouldUseIosGameViewportWorkarounds,
+  shouldUseTapToBrowserFullscreen,
 } from "../lib/iosGameFullscreen";
 import { logPerfMemorySnapshot } from "../lib/gameShellTelemetry";
 import "./GameShellContext.css";
@@ -69,6 +73,7 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const iframeTeardownTimerRef = useRef<number | undefined>(undefined);
 
   const iosWorkarounds = shouldUseIosGameViewportWorkarounds();
+  const tapFullscreenMode = shouldUseTapToBrowserFullscreen();
 
   const [iosToolbarHidden, setIosToolbarHidden] = useState(false);
   /** 滿版 cover 仍掛在 DOM（含淡出中），供漸入漸出與 iframe suppress */
@@ -80,6 +85,11 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const toolbarHiddenConfirmTimerRef = useRef<number | undefined>(undefined);
   /** 上次 orientationchange 時間；轉向後短時間內拉長「採信全螢」延遲 */
   const lastOrientationAtRef = useRef(0);
+
+  /** 行動／平板首次點擊進瀏覽器全螢：預設顯示閘門，listener 再對齊實際 fullscreen 狀態 */
+  const [tapFullscreenGateVisible, setTapFullscreenGateVisible] = useState(
+    () => tapFullscreenMode,
+  );
 
   const onIosToolbarHiddenChange = useCallback((hidden: boolean) => {
     if (!hidden) {
@@ -174,6 +184,42 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   }, [iosWorkarounds]);
 
   useEffect(() => {
+    if (!tapFullscreenMode) {
+      setTapFullscreenGateVisible(false);
+      return;
+    }
+    const syncTapGate = () => {
+      const root = rootRef.current;
+      const fsEl = getFullscreenElement();
+      const inOurs = !!(root && fsEl && root.contains(fsEl));
+      setTapFullscreenGateVisible(!inOurs);
+    };
+    syncTapGate();
+    document.addEventListener("fullscreenchange", syncTapGate);
+    document.addEventListener(
+      "webkitfullscreenchange",
+      syncTapGate as EventListener,
+    );
+    return () => {
+      document.removeEventListener("fullscreenchange", syncTapGate);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        syncTapGate as EventListener,
+      );
+    };
+  }, [tapFullscreenMode]);
+
+  useEffect(() => {
+    const rootEl = rootRef.current;
+    return () => {
+      const fsEl = getFullscreenElement();
+      if (rootEl && fsEl && rootEl.contains(fsEl)) {
+        void exitBrowserFullscreen();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const doc = document.documentElement;
     if (!shouldUseIosGameViewportWorkarounds()) return;
     doc.classList.add("game-fullscreen-host");
@@ -257,9 +303,31 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
     setIosHintLeaving(true);
   };
 
-  const handleHomeClick = () => {
+  const finishCloseAfterFullscreen = useCallback(() => {
     postQuitToGameIframe(iframeRef.current);
     onClose();
+  }, [onClose]);
+
+  const handleTapFullscreenGateActivate = useCallback(() => {
+    const root = rootRef.current;
+    if (!root || !tapFullscreenMode) return;
+    void enterBrowserFullscreen(root).catch(() => {
+      setTapFullscreenGateVisible(false);
+    });
+  }, [tapFullscreenMode]);
+
+  const handleHomeClick = () => {
+    const root = rootRef.current;
+    const fsEl = getFullscreenElement();
+    if (root && fsEl && root.contains(fsEl)) {
+      void exitBrowserFullscreen()
+        .catch(() => {
+          /* ignore */
+        })
+        .finally(finishCloseAfterFullscreen);
+      return;
+    }
+    finishCloseAfterFullscreen();
   };
 
   const showPlaySwipeHintImage =
@@ -379,6 +447,25 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
             </button>
           </div>
         </aside>
+      ) : null}
+      {tapFullscreenGateVisible ? (
+        <button
+          type="button"
+          className="game-overlay__tap-fs-gate"
+          aria-label={t("gameTapToFullscreenHint")}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            handleTapFullscreenGateActivate();
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" && e.key !== " ") return;
+            e.preventDefault();
+            handleTapFullscreenGateActivate();
+          }}>
+          <span className="game-overlay__tap-fs-gate-label">
+            {t("gameTapToFullscreenHint")}
+          </span>
+        </button>
       ) : null}
       <iframe
         ref={iframeRef}
