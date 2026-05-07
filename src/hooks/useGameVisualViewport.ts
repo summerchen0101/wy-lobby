@@ -17,6 +17,11 @@ export type UseGameVisualViewportOpts = {
   /** scroll nudge 前對遊戲 iframe blur，避免焦點留在子 frame 時宿主捲動失效（僅 adaptIosBottomGutter） */
   blurTargetRef?: RefObject<HTMLIFrameElement | null>
   /**
+   * `/play` 橫屏顯示上滑示意時為 true：略過轉向後自動 scroll nudge，且在 SWIPE_HINT_VV_GATE_MS 內
+   * 不採信 vv 高度判「網址列已收合」（避免 follow-up sync 誤報 true、cover ~1s 消失）；邊緣上滑／nudge 後解除。
+   */
+  suppressAutoChromeNudgeRef?: RefObject<boolean>
+  /**
    * iOS Safari：網址列／工具列收合狀態變更時回報（僅在 adaptIosBottomGutter 為 true 時有效）。
    * 初次 apply 也會回報目前值。
    */
@@ -36,8 +41,20 @@ function isLandscapeLayout(): boolean {
   return window.innerWidth > window.innerHeight
 }
 
-/** 橫屏：vv 高度接近 layout 短邊視為網址列已收合；略寬鬆於 -48，減少首次上滑後漏判 */
-const IOS_LANDSCAPE_TOOLBAR_HIDDEN_VV_SLACK_PX = 40
+/**
+ * `/play` 橫屏滿版示意啟用時：僅在轉向／consumer reset 後開啟；此時間內不採信 vv「已全螢」高度
+ *（仍會跑 layout／CSS），須覆蓋 follow-up sync（480/700/820ms）+ GameOverlay debounce。
+ */
+const SWIPE_HINT_VV_GATE_MS = 3200
+
+/**
+ * Gate 開啟後多久起，若 vv 已達「網址列收合」閾值則視為使用者手勢而非 follow-up 假陽性、結束 gate。
+ * 須 ≥ 820ms（最後一次 orientation follow-up）。
+ */
+const SWIPE_HINT_VV_GATE_TRUST_USER_FULLSCREEN_MS = 880
+
+/** 橫屏：vv 高度接近 layout 短邊視為網址列已收合；過緊時首趟上滑全螢仍低於閾值、hook 不報 hidden、cover 卡住 */
+const IOS_LANDSCAPE_TOOLBAR_HIDDEN_VV_SLACK_PX = 52
 
 function toolbarHiddenFromVvHeight(hRound: number): boolean {
   if (isLandscapeLayout()) {
@@ -84,6 +101,7 @@ export function useGameVisualViewport(
     const edgeLeft = opts?.iosScrollEdgeLeftRef
     const edgeRight = opts?.iosScrollEdgeRightRef
     const blurTargetRef = opts?.blurTargetRef
+    const suppressAutoChromeNudgeRef = opts?.suppressAutoChromeNudgeRef
     const onToolbarHiddenChange = opts?.onIosToolbarHiddenChange
 
     let baselineInitialized = false
@@ -100,6 +118,48 @@ export function useGameVisualViewport(
     let lastAppliedLeft = 0
     let vvScrollRaf = 0
     let lastReportedToolbarHidden: boolean | null = null
+    /** -1：未啟用 gate；>=0：在此之前強制「未全螢」（僅配合 suppress ref） */
+    let swipeHintVvGateUntil = -1
+    /** `armSwipeHintVvGateFromNow` 時刻；用於 gate 內晚於 follow-up 後採信使用者全螢 */
+    let swipeHintVvGateStartedAt = 0
+    /** 使用者已主動觸發 nudge／邊緣上滑，採信 vv */
+    let swipeHintUnlockVvRead = false
+
+    const armSwipeHintVvGateFromNow = () => {
+      swipeHintVvGateStartedAt = Date.now()
+      swipeHintVvGateUntil = Date.now() + SWIPE_HINT_VV_GATE_MS
+    }
+
+    const clearSwipeHintVvGate = () => {
+      swipeHintVvGateUntil = -1
+      swipeHintVvGateStartedAt = 0
+    }
+
+    const unlockSwipeHintVvRead = () => {
+      swipeHintUnlockVvRead = true
+      clearSwipeHintVvGate()
+    }
+
+    const toolbarHiddenForChrome = (hRound: number): boolean => {
+      if (
+        suppressAutoChromeNudgeRef?.current &&
+        !swipeHintUnlockVvRead &&
+        swipeHintVvGateUntil >= 0 &&
+        Date.now() < swipeHintVvGateUntil
+      ) {
+        const sinceGate = Date.now() - swipeHintVvGateStartedAt
+        if (
+          swipeHintVvGateStartedAt > 0 &&
+          sinceGate >= SWIPE_HINT_VV_GATE_TRUST_USER_FULLSCREEN_MS &&
+          toolbarHiddenFromVvHeight(hRound)
+        ) {
+          unlockSwipeHintVvRead()
+          return toolbarHiddenFromVvHeight(hRound)
+        }
+        return false
+      }
+      return toolbarHiddenFromVvHeight(hRound)
+    }
 
     const notifyToolbarHiddenIfChanged = () => {
       if (!adaptGutter || !onToolbarHiddenChange) return
@@ -134,7 +194,7 @@ export function useGameVisualViewport(
       const vv = window.visualViewport
       if (!vv) return
       const h = Math.round(vv.height)
-      isToolbarHidden = toolbarHiddenFromVvHeight(h)
+      isToolbarHidden = toolbarHiddenForChrome(h)
       baselineInitialized = true
       hasTriggeredSwipe = false
       /* GameOverlay 可能在轉向時單方面重設 UI；強制再送一次目前狀態，否則已全螢後無 edge 再次觸發 notify */
@@ -144,7 +204,12 @@ export function useGameVisualViewport(
 
     const updateToolbarFromVvResize = (hRound: number) => {
       if (!adaptGutter || isRotating || isScrolling) return
-      const absHidden = toolbarHiddenFromVvHeight(hRound)
+      /**
+       * 勿在此開啟 swipe-hint vv gate：首次橫屏載入時第一次 vv 就會鎖 3.2s，期間一般上滑收合網址列
+       *（未走邊緣 nudge → 未 unlock）會讓 `toolbarHiddenForChrome` 恒為 false、滿版 cover 卡住。
+       * 轉向後 gate 由 `applyOrientationFollowUps` 與 `onToolbarConsumerReset` 負責。
+       */
+      const absHidden = toolbarHiddenForChrome(hRound)
       if (!baselineInitialized) {
         baselineInitialized = true
         isToolbarHidden = absHidden
@@ -170,6 +235,7 @@ export function useGameVisualViewport(
     /** sample tryHideBar：父文件捲動以促使 Safari 收合 UI */
     const runHideChromeScrollNudge = () => {
       if (!adaptGutter) return
+      unlockSwipeHintVvRead()
       try {
         blurTargetRef?.current?.blur()
       } catch {
@@ -263,6 +329,12 @@ export function useGameVisualViewport(
     const onToolbarConsumerReset = () => {
       if (!adaptGutter) return
       lastReportedToolbarHidden = null
+      swipeHintUnlockVvRead = false
+      if (suppressAutoChromeNudgeRef?.current) {
+        armSwipeHintVvGateFromNow()
+      } else {
+        clearSwipeHintVvGate()
+      }
       isToolbarHidden = false
       hasTriggeredSwipe = false
       notifyToolbarHiddenIfChanged()
@@ -290,6 +362,12 @@ export function useGameVisualViewport(
     const orientationDeferTimers: number[] = []
 
     const applyOrientationFollowUps = () => {
+      swipeHintUnlockVvRead = false
+      if (adaptGutter && suppressAutoChromeNudgeRef?.current) {
+        armSwipeHintVvGateFromNow()
+      } else {
+        clearSwipeHintVvGate()
+      }
       if (adaptGutter) {
         isRotating = true
         setDocumentScrollTop(0)
@@ -307,7 +385,11 @@ export function useGameVisualViewport(
             syncToolbarAfterOrientation()
             isRotating = false
             onVisualViewportResize()
-            if (!isToolbarHidden && isLandscapeLayout()) {
+            if (
+              !isToolbarHidden &&
+              isLandscapeLayout() &&
+              !suppressAutoChromeNudgeRef?.current
+            ) {
               runHideChromeScrollNudge()
             }
           }, 480),
@@ -410,6 +492,7 @@ export function useGameVisualViewport(
     opts?.iosScrollEdgeLeftRef,
     opts?.iosScrollEdgeRightRef,
     opts?.blurTargetRef,
+    opts?.suppressAutoChromeNudgeRef,
     opts?.onIosToolbarHiddenChange,
   ])
 }

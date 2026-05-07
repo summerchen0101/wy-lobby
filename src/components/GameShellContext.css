@@ -243,20 +243,30 @@ html.game-fullscreen-host #root {
   pointer-events: none;
 }
 
-/* /play + iOS：滿版上滑示意（須 pointer-events:none 以免擋宿主捲動收合網址列） */
+/* /play + iOS：黑底中央上滑示意（須 pointer-events:none 以免擋宿主捲動收合網址列） */
 .game-overlay__play-swipe-hint {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100dvw;
-  height: 100dvh;
+  inset: 0;
   z-index: 10000;
-  object-fit: cover;
-  object-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
   pointer-events: none;
   user-select: none;
   opacity: 0;
   transition: opacity 0.38s ease;
+}
+
+.game-overlay__play-swipe-hint-img {
+  max-width: min(90vw, 560px);
+  max-height: 80vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .game-overlay__play-swipe-hint--visible {

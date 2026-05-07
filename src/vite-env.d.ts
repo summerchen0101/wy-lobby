@@ -71,8 +71,6 @@ interface ImportMetaEnv {
    * Alpha 範例：https://nas01.ffglobaltech.com；Prod：https://unityweb-cdn.boss-fun.com
    */
   readonly VITE_THIRD_PARTY_GAME_THUMB_BASE?: string;
-  /** `/play` iOS：滿版上滑示意圖；未設則不顯示該層 */
-  readonly VITE_PLAY_SWIPE_HINT_URL?: string;
 }
 
 interface ImportMeta {
