@@ -2,12 +2,24 @@
   /* 與 .session-header 內層 min-height + padding 對齊，供主內容避開 fixed header */
   --session-header-stripe-h: calc(var(--space-3) + 3.35rem + var(--space-2));
 
+  /* 大廳 tab 等：與 header pill／footer 同色（GC default） */
+  --session-wallet-accent: #eab308;
+  --session-wallet-accent-hover: color-mix(
+    in srgb,
+    var(--session-wallet-accent) 72%,
+    #ffffff
+  );
+
   display: flex;
   flex-direction: column;
   min-height: 100%;
   min-height: 100dvh;
   min-height: 100svh;
   background: transparent;
+}
+
+.session-layout[data-active-wallet='SC'] {
+  --session-wallet-accent: #4ade80;
 }
 
 /* 大廳：banner 頂到螢幕上緣，safe 改由 header 內層處理 */
@@ -368,7 +380,7 @@ a.session-header__avatar {
   z-index: 200;
   padding-bottom: var(--safe-bottom);
   background: #000000;
-  border-top: 1px solid var(--session-footer-accent);
+  border-top: 2px solid var(--session-footer-accent);
   box-shadow: 0 -8px 32px rgb(0 0 0 / 55%);
 }
 

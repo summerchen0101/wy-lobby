@@ -7,7 +7,7 @@
   flex-shrink: 0;
   padding-top: var(--safe-top);
   background: rgb(36 41 70 / 94%);
-  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  border-bottom: 2px solid rgb(255 255 255 / 8%);
   backdrop-filter: blur(12px);
 }
 
@@ -152,7 +152,7 @@
 
 .landing-header__logout {
   padding: 0.35rem 0.75rem;
-  border: 1px solid rgb(255 255 255 / 22%);
+  border: 2px solid rgb(255 255 255 / 22%);
   border-radius: 999px;
   background: transparent;
   color: var(--color-text);

@@ -139,7 +139,7 @@ html.game-fullscreen-host #root {
   border-radius: 10px;
   background: rgba(12, 16, 22, 0.88);
   color: rgba(244, 244, 245, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.12);
   box-shadow:
     0 8px 28px rgba(0, 0, 0, 0.5),
     0 1px 0 rgba(255, 255, 255, 0.08) inset;
@@ -216,7 +216,7 @@ html.game-fullscreen-host #root {
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   background: linear-gradient(155deg, #3d3d42 0%, #1c1c1f 45%, #0e0e10 100%);
   color: #f4f4f5;

@@ -103,7 +103,7 @@
 
 .app-modal__rule {
   display: block;
-  height: 1px;
+  height: 2px;
   margin: 0 var(--modal-rule-inset);
   background: var(--modal-rule-color);
   border: none;

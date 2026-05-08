@@ -12,7 +12,7 @@
   padding: var(--space-2) var(--page-pad-inline);
   padding-top: calc(var(--space-2) + var(--safe-top));
   background: rgb(0 0 0 / 92%);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 2px solid var(--color-border);
   backdrop-filter: blur(12px);
 }
 

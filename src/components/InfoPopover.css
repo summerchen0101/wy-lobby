@@ -11,11 +11,11 @@
   line-height: 1.5;
   color: rgb(255 255 255 / 88%);
   background: #1e2438;
-  border: 1px solid rgb(255 255 255 / 12%);
+  border: 2px solid rgb(255 255 255 / 12%);
   border-radius: 0.5rem;
   box-shadow:
     0 0.5rem 1.5rem rgb(0 0 0 / 45%),
-    0 0 0 1px rgb(0 0 0 / 20%);
+    0 0 0 2px rgb(0 0 0 / 20%);
 }
 
 .info-popover:focus-visible {

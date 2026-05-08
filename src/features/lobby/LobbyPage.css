@@ -148,11 +148,11 @@ html.session-lobby-page {
 }
 
 .lobby-game-search__trigger:hover {
-  color: var(--crown-gold-hover);
+  color: var(--session-wallet-accent-hover, var(--crown-gold-hover));
 }
 
 .lobby-game-search__trigger:focus-visible {
-  outline: 2px solid var(--crown-gold);
+  outline: 2px solid var(--session-wallet-accent, var(--crown-gold));
   outline-offset: 2px;
 }
 
@@ -178,7 +178,7 @@ html.session-lobby-page {
   min-height: 2.25rem;
   padding: 0 0.45rem 0 0.55rem;
   border-radius: 9999px;
-  border: 1px solid rgb(255 255 255 / 18%);
+  border: 2px solid rgb(255 255 255 / 18%);
   background: rgb(0 0 0 / 35%);
 }
 
@@ -227,7 +227,7 @@ html.session-lobby-page {
 }
 
 .lobby-game-search__pill:focus-within {
-  border-color: var(--crown-gold);
+  border-color: var(--session-wallet-accent, var(--crown-gold));
 }
 
 .lobby-game-search__close {
@@ -252,7 +252,7 @@ html.session-lobby-page {
 }
 
 .lobby-game-search__close:focus-visible {
-  outline: 1px solid var(--crown-gold);
+  outline: 2px solid var(--session-wallet-accent, var(--crown-gold));
   outline-offset: 0;
 }
 
@@ -292,7 +292,7 @@ html.session-lobby-page {
   flex-shrink: 0;
   min-height: 2.25rem;
   padding: 0.25rem 0.7rem;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   border-radius: 9999px;
   background: transparent;
   color: var(--color-text);
@@ -311,12 +311,12 @@ html.session-lobby-page {
 }
 
 .lobby-game-filter__tab:hover {
-  color: var(--crown-gold-hover);
+  color: var(--session-wallet-accent-hover, var(--crown-gold-hover));
 }
 
 .lobby-game-filter__tab.is-active {
-  border-color: var(--crown-gold);
-  color: var(--crown-gold);
+  border-color: var(--session-wallet-accent, var(--crown-gold));
+  color: var(--session-wallet-accent, var(--crown-gold));
   box-shadow: none;
 }
 
@@ -751,7 +751,7 @@ html.session-lobby-page {
   background: linear-gradient(145deg, #2d3358 0%, #1a1f35 100%);
   background-size: cover;
   background-position: center;
-  border: 1px solid rgb(255 255 255 / 12%);
+  border: 0;
   box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
   transition:
     transform 0.15s ease,
@@ -1096,7 +1096,7 @@ html.guest-lobby-page body::-webkit-scrollbar {
   padding: var(--space-2) var(--space-2);
   padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
   background: linear-gradient(180deg, #3c0553 0%, #0c0324 100%);
-  border-top: 1px solid rgb(255 255 255 / 12%);
+  border-top: 2px solid rgb(255 255 255 / 12%);
   box-shadow: 0 -8px 24px rgb(0 0 0 / 35%);
   pointer-events: auto;
 }
@@ -1169,7 +1169,7 @@ html.guest-lobby-page body::-webkit-scrollbar {
   gap: 0.15rem;
   padding: 0.45rem 0.65rem;
   border-radius: 0.5rem;
-  border: 1px solid rgb(255 255 255 / 18%);
+  border: 2px solid rgb(255 255 255 / 18%);
   background: rgb(20 24 42 / 85%);
   color: var(--color-text, #fff);
   font: inherit;

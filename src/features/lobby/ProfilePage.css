@@ -246,7 +246,7 @@
 .profile-page__copy {
   flex-shrink: 0;
   padding: 0.35rem 0.6rem;
-  border: 1px solid color-mix(in srgb, var(--crown-gold) 45%, transparent);
+  border: 2px solid color-mix(in srgb, var(--crown-gold) 45%, transparent);
   border-radius: var(--crown-btn-radius, 999px);
   background: transparent;
   color: var(--crown-gold);
@@ -314,7 +314,7 @@
   border-radius: 999px;
   background: var(--profile-bar-track);
   overflow: visible;
-  border: 1px solid color-mix(in srgb, #000 55%, transparent);
+  border: 2px solid color-mix(in srgb, #000 55%, transparent);
 }
 
 .profile-page__bar-fill {
@@ -369,8 +369,8 @@
 
 .profile-page__settings {
   margin-bottom: var(--space-4);
-  border-top: 1px solid var(--profile-hairline);
-  border-bottom: 1px solid var(--profile-hairline);
+  border-top: 2px solid var(--profile-hairline);
+  border-bottom: 2px solid var(--profile-hairline);
 }
 
 .profile-page__setting-row {
@@ -382,7 +382,7 @@
 }
 
 .profile-page__setting-row + .profile-page__setting-row {
-  border-top: 1px solid var(--profile-hairline-soft);
+  border-top: 2px solid var(--profile-hairline-soft);
 }
 
 .profile-page__setting-label {
@@ -426,7 +426,7 @@
 
 .profile-page__switch[aria-checked="true"] {
   background: var(--crown-locale-green);
-  box-shadow: 0 0 0 1px
+  box-shadow: 0 0 0 2px
     color-mix(in srgb, var(--crown-mint-shadow) 60%, transparent);
 }
 
