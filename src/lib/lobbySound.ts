@@ -43,14 +43,112 @@ function getSfx(kind: "btn" | "menu"): HTMLAudioElement {
   return sfxBtn;
 }
 
+/* --- Web Audio (lower tap-to-sound latency than HTMLAudioElement on many mobile browsers) --- */
+
+let sfxCtx: AudioContext | null = null;
+let bufBtn: AudioBuffer | null = null;
+let bufMenu: AudioBuffer | null = null;
+let sfxDecodePromise: Promise<void> | null = null;
+
+function getSfxAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!sfxCtx) {
+    const Ctor =
+      window.AudioContext ||
+      (
+        window as unknown as {
+          webkitAudioContext?: typeof AudioContext;
+        }
+      ).webkitAudioContext;
+    if (!Ctor) return null;
+    sfxCtx = new Ctor({ latencyHint: "interactive" });
+  }
+  return sfxCtx;
+}
+
+function startSfxDecode(): void {
+  if (bufBtn && bufMenu) return;
+  if (sfxDecodePromise) return;
+  const ctx = getSfxAudioContext();
+  if (!ctx) return;
+
+  sfxDecodePromise = (async () => {
+    try {
+      const [rBtn, rMenu] = await Promise.all([
+        fetch(LOBBY_SFX_BTN_SRC),
+        fetch(LOBBY_SFX_MENU_SRC),
+      ]);
+      const [abBtn, abMenu] = await Promise.all([
+        rBtn.arrayBuffer(),
+        rMenu.arrayBuffer(),
+      ]);
+      const [bBtn, bMenu] = await Promise.all([
+        ctx.decodeAudioData(abBtn.slice(0)),
+        ctx.decodeAudioData(abMenu.slice(0)),
+      ]);
+      bufBtn = bBtn;
+      bufMenu = bMenu;
+    } catch {
+      sfxDecodePromise = null;
+    }
+  })();
+}
+
+function playLobbySfxWebAudio(kind: "btn" | "menu"): boolean {
+  const buf = kind === "menu" ? bufMenu : bufBtn;
+  const ctx = sfxCtx;
+  if (!buf || !ctx) return false;
+
+  const startSource = () => {
+    try {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  /* resume() must be reached from the same user gesture stack; avoid extra delay when already running */
+  if (ctx.state === "running") {
+    startSource();
+  } else {
+    void ctx.resume().then(startSource);
+  }
+  return true;
+}
+
+function playLobbySfxFallback(kind: "btn" | "menu"): void {
+  const a = getSfx(kind);
+  a.currentTime = 0;
+  void a.play().catch(() => {
+    /* autoplay / decode */
+  });
+}
+
 export function playLobbySfx(kind: "btn" | "menu"): void {
   if (!isLobbySoundEnabled()) return;
   try {
-    const a = getSfx(kind);
-    a.currentTime = 0;
-    void a.play().catch(() => {
-      /* autoplay / decode */
-    });
+    startSfxDecode();
+    if (playLobbySfxWebAudio(kind)) return;
+    playLobbySfxFallback(kind);
+  } catch {
+    try {
+      playLobbySfxFallback(kind);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/** Prime fetch+decode so the first tap only pays resume()+startSource (Web Audio path). */
+export function warmLobbySfx(): void {
+  if (typeof window === "undefined") return;
+  try {
+    startSfxDecode();
+    getSfx("btn").load();
+    getSfx("menu").load();
   } catch {
     /* ignore */
   }
