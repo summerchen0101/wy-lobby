@@ -130,7 +130,7 @@
 .auth-modal__divider::after {
   content: "";
   flex: 1;
-  height: 1px;
+  height: 2px;
   background: rgb(255 255 255 / 25%);
 }
 
@@ -243,7 +243,7 @@
 .auth-modal--register .auth-modal__input--register,
 .auth-modal--login .auth-modal__input--register {
   background: #000000;
-  border: 1px solid color-mix(in srgb, #6b4cff 35%, #000000);
+  border: 2px solid color-mix(in srgb, #6b4cff 35%, #000000);
   color: #ffffff;
 }
 
@@ -397,7 +397,7 @@
   height: 1.1rem;
   margin-top: 0.15rem;
   border-radius: 0.3rem;
-  border: 1px solid color-mix(in srgb, #ffffff 25%, #000000);
+  border: 2px solid color-mix(in srgb, #ffffff 25%, #000000);
   background: #0a0a0f;
   accent-color: var(--crown-button-primary-bg);
   cursor: pointer;

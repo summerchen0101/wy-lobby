@@ -118,7 +118,7 @@
   background: var(--crown-surface-card-bg);
   text-align: center;
   box-shadow: var(--crown-surface-card-shadow);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
 }
 
 .redeem-form-page__missing-text {

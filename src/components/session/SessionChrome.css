@@ -368,7 +368,7 @@ a.session-header__avatar {
   z-index: 200;
   padding-bottom: var(--safe-bottom);
   background: #000000;
-  border-top: 1px solid var(--session-footer-accent);
+  border-top: 2px solid var(--session-footer-accent);
   box-shadow: 0 -8px 32px rgb(0 0 0 / 55%);
 }
 

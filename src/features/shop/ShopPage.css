@@ -134,13 +134,13 @@
 }
 
 .shop-page__chip--gc {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--crown-gold) 40%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--crown-gold) 40%, transparent);
 }
 
 .shop-page__chip--sc {
   width: 1.45rem;
   height: 1.45rem;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 35%);
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 35%);
 }
 
 .shop-page__gc-amount {

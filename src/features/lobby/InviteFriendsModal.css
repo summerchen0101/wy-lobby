@@ -115,7 +115,7 @@
 
 .invite-friends-modal__retry {
   padding: 0.35rem 1rem;
-  border: 1px solid rgb(255 255 255 / 22%);
+  border: 2px solid rgb(255 255 255 / 22%);
   border-radius: 999px;
   background: rgb(255 255 255 / 8%);
   color: #fff;
@@ -255,10 +255,10 @@
   color: rgb(255 255 255 / 88%);
   background: #1e2438;
   border-radius: 0.5rem;
-  border: 1px solid rgb(255 255 255 / 12%);
+  border: 2px solid rgb(255 255 255 / 12%);
   box-shadow:
     0 0.5rem 1.5rem rgb(0 0 0 / 45%),
-    0 0 0 1px rgb(0 0 0 / 20%);
+    0 0 0 2px rgb(0 0 0 / 20%);
 }
 
 .invite-friends-modal__qualified {
@@ -270,7 +270,7 @@
   color: rgb(255 255 255 / 88%);
   background: rgb(0 0 0 / 28%);
   border-radius: 0.5rem;
-  border: 1px solid rgb(255 255 255 / 8%);
+  border: 2px solid rgb(255 255 255 / 8%);
 }
 
 .invite-friends-modal__qualified--popover {

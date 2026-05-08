@@ -38,7 +38,7 @@
 
 .lobby-comp__tagline-line {
   flex: 1;
-  height: 1px;
+  height: 2px;
   background: var(--lobby-comp-accent);
   opacity: 0.85;
 }
@@ -119,7 +119,7 @@
 .lobby-comp__divider {
   width: 100%;
   max-width: 20rem;
-  height: 1px;
+  height: 2px;
   background: var(--lobby-comp-accent);
   opacity: 0.6;
 }
