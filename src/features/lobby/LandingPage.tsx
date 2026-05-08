@@ -29,11 +29,6 @@ import {
   isMockMode,
   isWsLobbyGamesEnabled,
 } from "../../lib/env";
-import {
-  LOBBY_BGM_SRC,
-  LOBBY_SOUND_PREF_EVENT,
-  isLobbySoundEnabled,
-} from "../../lib/lobbySound";
 import * as apiMock from "../../lib/api/mock";
 import { GATEWAY_API_GET_THIRD_PARTY_GAME_INFO } from "../../realtime/gatewayApi";
 import {
@@ -342,7 +337,7 @@ function LobbyGameCardThumb({
 export function LandingPage() {
   const { token, user, refreshUser } = useAuth();
   const { activeWallet } = useWallet();
-  const { open: openShell, isOpen: gameShellOpen } = useGameShell();
+  const { open: openShell } = useGameShell();
   const {
     lobbyGames,
     lobbyLoading,
@@ -363,36 +358,6 @@ export function LandingPage() {
   const [lobbySearchModalOpen, setLobbySearchModalOpen] = useState(false);
   const lobbyGameFilterRef = useRef<HTMLDivElement | null>(null);
   const lobbyGamesSectionRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (user) return;
-
-    const audio = new Audio(LOBBY_BGM_SRC);
-    audio.loop = false;
-    audio.preload = "auto";
-    const sync = () => {
-      if (
-        !isLobbySoundEnabled() ||
-        gameShellOpen ||
-        document.visibilityState !== "visible"
-      ) {
-        audio.pause();
-        return;
-      }
-      void audio.play().catch(() => {
-        /* autoplay policy */
-      });
-    };
-    sync();
-    window.addEventListener(LOBBY_SOUND_PREF_EVENT, sync);
-    document.addEventListener("visibilitychange", sync);
-    return () => {
-      window.removeEventListener(LOBBY_SOUND_PREF_EVENT, sync);
-      document.removeEventListener("visibilitychange", sync);
-      audio.pause();
-      audio.removeAttribute("src");
-    };
-  }, [gameShellOpen, user]);
 
   const loading =
     user && mockLobby

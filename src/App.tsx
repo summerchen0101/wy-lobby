@@ -5,6 +5,7 @@ import { RequireAuth } from "./auth/RequireAuth";
 import { AlertProvider } from "./components/alert/AlertProvider";
 import { LoadingOverlayProvider } from "./components/loading/LoadingOverlayProvider";
 import { FullScreenLoadingOverlay } from "./components/loading/FullScreenLoadingOverlay";
+import { LobbyBgmOrchestrator } from "./components/LobbyBgmOrchestrator";
 import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
@@ -69,6 +70,7 @@ export default function App() {
               <GatewayLobbyProvider>
                 <AuthModalsProvider>
                   <GameShellProvider>
+                    <LobbyBgmOrchestrator />
                     <ZendeskLoader />
                     <PwaInstallBanner />
                     <IosInstallGuide />
