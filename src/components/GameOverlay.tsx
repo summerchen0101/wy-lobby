@@ -38,6 +38,14 @@ const IOS_HINT_AUTO_LEAVE_MS = 11_500;
 /** `/play` 橫向上滑全螢幕示意（`web/public/images/games/`） */
 const PLAY_SWIPE_HINT_IMAGE_SRC = "/images/games/swipe-loop.webp";
 
+/** 僅 overlay 根節點為 fullscreenElement 時視為殼層全螢（排除 iframe 等子節點誤判）。 */
+function isShellFullscreenRoot(
+  root: HTMLDivElement | null,
+  fsEl: Element | null,
+): boolean {
+  return !!(root && fsEl && fsEl === root);
+}
+
 type GameOverlayProps = {
   url: string;
   widthPercent: number;
@@ -191,7 +199,7 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
     const syncTapGate = () => {
       const root = rootRef.current;
       const fsEl = getFullscreenElement();
-      const inOurs = !!(root && fsEl && root.contains(fsEl));
+      const inOurs = isShellFullscreenRoot(root, fsEl);
       setTapFullscreenGateVisible(!inOurs);
     };
     syncTapGate();
@@ -311,8 +319,19 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const handleTapFullscreenGateActivate = useCallback(() => {
     const root = rootRef.current;
     if (!root || !tapFullscreenMode) return;
-    void enterBrowserFullscreen(root).catch(() => {
-      setTapFullscreenGateVisible(false);
+    void enterBrowserFullscreen(root).catch((err: unknown) => {
+      const name = err instanceof Error ? err.name : "unknown";
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("[GameOverlay] tap fullscreen request failed:", name, message);
+      agentDebugLog({
+        hypothesisId: "E",
+        location: "GameOverlay.tsx:tap_fs_gate",
+        message: "tap_fs_request_rejected",
+        data: { name, message },
+      });
+      setTapFullscreenGateVisible(
+        !isShellFullscreenRoot(rootRef.current, getFullscreenElement()),
+      );
     });
   }, [tapFullscreenMode]);
 
