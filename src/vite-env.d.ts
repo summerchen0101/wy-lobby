@@ -40,6 +40,8 @@ interface ImportMetaEnv {
   readonly VITE_DEV_LOBBY_GET?: string;
   /** 寫入 Gateway RequestBasic.clientVer */
   readonly VITE_CLIENT_VER?: string;
+  /** 登入 `app_meta.apk`：`ios` \| `web` \| `google`；亦可暫填舊值 megarich／megarich_web／megarich_google（會自動轉換）。不設則 **Web 大廳預設 `web`**。 */
+  readonly VITE_APP_META_APK?: string;
   /**
    * 非 mock 時預設以 WS LOBBY_GET 驅動大廳遊戲列表；設為 `"false"` 可關閉。
    */
