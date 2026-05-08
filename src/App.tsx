@@ -5,6 +5,7 @@ import { RequireAuth } from "./auth/RequireAuth";
 import { AlertProvider } from "./components/alert/AlertProvider";
 import { LoadingOverlayProvider } from "./components/loading/LoadingOverlayProvider";
 import { FullScreenLoadingOverlay } from "./components/loading/FullScreenLoadingOverlay";
+import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
 import { PwaInstallBanner } from "./components/PwaInstallBanner";
@@ -72,6 +73,7 @@ export default function App() {
                     <PwaInstallBanner />
                     <IosInstallGuide />
                     <Suspense fallback={<FullScreenLoadingOverlay />}>
+                      <LobbyUiSoundRoot />
                       <Routes>
                         <Route path="/" element={<LandingPage />} />
                         <Route
