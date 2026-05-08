@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { LandingHeader } from "../../components/LandingHeader";
@@ -61,7 +61,6 @@ import {
   UNITY_DEMO_LOBBY_GAME,
   unityDemoGameUrl,
 } from "./landingContent";
-import { LobbyGameSearchModal } from "./LobbyGameSearchModal";
 import "./LobbyPage.css";
 
 type LobbyFilterTab = "all" | "hot" | "providers" | "slots";
@@ -355,7 +354,8 @@ export function LandingPage() {
   const [mockError, setMockError] = useState<string | null>(null);
   const [lobbyFilter, setLobbyFilter] = useState<LobbyFilterTab>("all");
   const [lobbySearch, setLobbySearch] = useState("");
-  const [lobbySearchModalOpen, setLobbySearchModalOpen] = useState(false);
+  const [lobbySearchExpanded, setLobbySearchExpanded] = useState(false);
+  const lobbySearchInputRef = useRef<HTMLInputElement | null>(null);
   const lobbyGameFilterRef = useRef<HTMLDivElement | null>(null);
   const lobbyGamesSectionRef = useRef<HTMLElement | null>(null);
 
@@ -538,6 +538,26 @@ export function LandingPage() {
     },
     [scrollLobbyGamesSectionIntoView],
   );
+
+  useEffect(() => {
+    if (!lobbySearchExpanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setLobbySearch("");
+        setLobbySearchExpanded(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [lobbySearchExpanded]);
+
+  useEffect(() => {
+    if (!lobbySearchExpanded) return;
+    const id = requestAnimationFrame(() => {
+      lobbySearchInputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [lobbySearchExpanded]);
 
   useEffect(() => {
     if (!user) return;
@@ -857,13 +877,52 @@ export function LandingPage() {
           {user ? (
             <div className="lobby-games-toolbar">
               <div className="lobby-games-filter-strip">
-                <button
-                  type="button"
-                  className="lobby-game-search-trigger"
-                  aria-label="Search games"
-                  onClick={() => setLobbySearchModalOpen(true)}>
-                  <Search strokeWidth={2.25} aria-hidden />
-                </button>
+                <div
+                  className={
+                    "lobby-game-search" +
+                    (lobbySearchExpanded ? " is-expanded" : "")
+                  }
+                  aria-expanded={lobbySearchExpanded}>
+                  {lobbySearchExpanded ? (
+                    <div className="lobby-game-search__pill" role="search">
+                      <span
+                        className="lobby-game-search__lead-icon"
+                        aria-hidden>
+                        <Search strokeWidth={2.25} />
+                      </span>
+                      <input
+                        ref={lobbySearchInputRef}
+                        type="search"
+                        className="lobby-game-search__input"
+                        value={lobbySearch}
+                        onChange={(e) => setLobbySearch(e.target.value)}
+                        autoComplete="off"
+                        enterKeyHint="search"
+                        placeholder="Search games"
+                        aria-label="Search games"
+                      />
+                      <button
+                        type="button"
+                        className="lobby-game-search__close"
+                        aria-label="Close search"
+                        onClick={() => {
+                          setLobbySearch("");
+                          setLobbySearchExpanded(false);
+                          lobbySearchInputRef.current?.blur();
+                        }}>
+                        <X strokeWidth={2.25} aria-hidden />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="lobby-game-search__trigger"
+                      aria-label="Search games"
+                      onClick={() => setLobbySearchExpanded(true)}>
+                      <Search strokeWidth={2.25} aria-hidden />
+                    </button>
+                  )}
+                </div>
                 <div
                   ref={lobbyGameFilterRef}
                   className="lobby-game-filter"
@@ -1020,12 +1079,6 @@ export function LandingPage() {
         onClose={closePhoneVerify}
         displayEmail={phoneVerifyPayload?.displayEmail ?? ""}
         pendingBody={phoneVerifyPayload?.body ?? null}
-      />
-      <LobbyGameSearchModal
-        open={lobbySearchModalOpen}
-        onClose={() => setLobbySearchModalOpen(false)}
-        initialQuery={lobbySearch}
-        onSubmit={(q) => setLobbySearch(q)}
       />
     </div>
   );
