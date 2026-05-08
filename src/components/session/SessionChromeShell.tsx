@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useWallet } from '../../wallet/walletContext'
 import { SessionFooter } from './SessionFooter'
 import { SessionHeader } from './SessionHeader'
 import { SupportFab } from './SupportFab'
@@ -11,11 +12,13 @@ type SessionChromeShellProps = {
 }
 
 export function SessionChromeShell({ children, headerOverHero = false }: SessionChromeShellProps) {
+  const { activeWallet } = useWallet()
   return (
     <div
       className={
         'session-layout' + (headerOverHero ? ' session-layout--hero-overlay' : '')
       }
+      data-active-wallet={activeWallet}
     >
       <SessionHeader />
       <div className="session-layout__main">{children}</div>
