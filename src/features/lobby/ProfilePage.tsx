@@ -27,10 +27,12 @@ import {
 } from "./profileAvatarChoices";
 import { openZendeskOrFallback } from "../../lib/zendeskSupport";
 import { useProfileAvatarId } from "./profileAvatarStorage";
+import {
+  LOBBY_SOUND_PREF_STORAGE_KEY,
+  notifyLobbySoundPreferenceChanged,
+} from "../../lib/lobbySound";
 import "./ProfilePage.css";
 import "./SessionPageDecor.css";
-
-const SOUND_KEY = "wynoco_profile_sound_on";
 const RANK_MAX = 500;
 /** Placeholder until rank API exists */
 const RANK_PCT = 0;
@@ -71,7 +73,7 @@ export function ProfilePage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const v = window.localStorage.getItem(SOUND_KEY);
+    const v = window.localStorage.getItem(LOBBY_SOUND_PREF_STORAGE_KEY);
     if (v === "0") {
       setSoundOn(false);
     } else if (v === "1") {
@@ -191,10 +193,14 @@ export function ProfilePage() {
     setSoundOn((prev) => {
       const next = !prev;
       try {
-        window.localStorage.setItem(SOUND_KEY, next ? "1" : "0");
+        window.localStorage.setItem(
+          LOBBY_SOUND_PREF_STORAGE_KEY,
+          next ? "1" : "0",
+        );
       } catch {
         /* ignore */
       }
+      notifyLobbySoundPreferenceChanged();
       return next;
     });
   }
