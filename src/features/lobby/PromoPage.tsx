@@ -1,6 +1,7 @@
 import type { CSSProperties, KeyboardEvent } from 'react'
 import { useState } from 'react'
 import { CURRENCY_ICON_SC } from '../../lib/currencyIcons'
+import { publicImageUrl } from '../../lib/publicImageUrl'
 import { InviteFriendsModal } from './InviteFriendsModal'
 import './PromoPage.css'
 import './SessionPageDecor.css'
@@ -16,14 +17,14 @@ const PROMOS: {
     id: '1',
     title: 'Daily Bonus',
     desc: 'Open daily bonus rewards and claim your free credits.',
-    artSrc: '/images/promo/icon_daily.png',
+    artSrc: publicImageUrl('/images/promo/icon_daily.png'),
     cta: 'view',
   },
   {
     id: '2',
     title: 'Invite Friends',
     desc: 'Refer friends to earn free sweepstakes coins in the store.',
-    artSrc: '/images/promo/icon_invite.png',
+    artSrc: publicImageUrl('/images/promo/icon_invite.png'),
     cta: 'invite',
   },
 ]

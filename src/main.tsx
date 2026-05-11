@@ -9,6 +9,8 @@ import './styles/theme-seasonal.css'
 import './styles/crown-theme.css'
 import './components/AppModal.css'
 import './index.css'
+import { initSitePatternTileCssVar } from './lib/publicImageUrl'
+initSitePatternTileCssVar()
 import './styles/site-background.css'
 import { applyThemeFromEnv } from './theme/applyTheme'
 import i18n from './i18n/i18n'

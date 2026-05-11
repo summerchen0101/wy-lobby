@@ -18,6 +18,7 @@ import {
 } from "../../realtime/shopLobbyWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { mapListProductToShopPack } from "./mapListProductToShopPack";
+import { publicImageUrl } from "../../lib/publicImageUrl";
 import {
   resolveServerPaymentTypeForUiMethod,
   serverPaymentTypesToMethods,
@@ -33,7 +34,7 @@ import type {
 import "./ShopPage.css";
 import "../lobby/SessionPageDecor.css";
 
-const PANEL = "/images/shop";
+const PANEL = publicImageUrl("/images/shop");
 
 const MOCK_PACKS: ShopPack[] = [
   {

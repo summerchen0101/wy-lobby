@@ -71,6 +71,10 @@ interface ImportMetaEnv {
    * Alpha 範例：https://nas01.ffglobaltech.com；Prod：https://unityweb-cdn.boss-fun.com
    */
   readonly VITE_THIRD_PARTY_GAME_THUMB_BASE?: string;
+  /**
+   * `public/images/**` CDN origin（不含尾隨 /）。未設時沿用同源 `/images/...`。
+   */
+  readonly VITE_PUBLIC_IMAGE_CDN_BASE?: string;
 }
 
 interface ImportMeta {

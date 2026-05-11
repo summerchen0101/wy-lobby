@@ -17,6 +17,7 @@ import {
   shouldUseTapToBrowserFullscreen,
 } from "../lib/iosGameFullscreen";
 import { logPerfMemorySnapshot } from "../lib/gameShellTelemetry";
+import { publicImageUrl } from "../lib/publicImageUrl";
 import "./GameShellContext.css";
 
 /**
@@ -36,7 +37,7 @@ const IOS_HINT_LEAVE_MS = 480;
 const IOS_HINT_AUTO_LEAVE_MS = 11_500;
 
 /** `/play` 橫向上滑全螢幕示意（`web/public/images/games/`） */
-const PLAY_SWIPE_HINT_IMAGE_SRC = "/images/games/swipe-loop.webp";
+const PLAY_SWIPE_HINT_IMAGE_SRC = publicImageUrl("/images/games/swipe-loop.webp");
 
 /** 僅 overlay 根節點為 fullscreenElement 時視為殼層全螢（排除 iframe 等子節點誤判）。 */
 function isShellFullscreenRoot(

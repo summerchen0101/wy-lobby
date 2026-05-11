@@ -1,6 +1,7 @@
-import './FullScreenLoadingOverlay.css'
+import { publicImageUrl } from "../../lib/publicImageUrl";
+import "./FullScreenLoadingOverlay.css";
 
-const BRAND_LOGO = '/images/brand/brand-logo.webp'
+const BRAND_LOGO = publicImageUrl("/images/brand/brand-logo.webp");
 
 export function FullScreenLoadingOverlay() {
   return (
