@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useAuth } from "../auth/useAuth";
 import type { User } from "../lib/api/types";
 import {
-  LOBBY_BGM_SRC,
+  assignRandomLobbyBgm,
   LOBBY_SOUND_PREF_EVENT,
   isLobbySoundEnabled,
 } from "../lib/lobbySound";
@@ -23,7 +23,7 @@ export function LobbyBgmOrchestrator() {
 
   const getAudio = useCallback(() => {
     if (!audioRef.current) {
-      const a = new Audio(LOBBY_BGM_SRC);
+      const a = new Audio();
       a.loop = false;
       a.preload = "auto";
       audioRef.current = a;
@@ -52,7 +52,7 @@ export function LobbyBgmOrchestrator() {
     if (firstVisitPlayedRef.current) return;
     firstVisitPlayedRef.current = true;
     const audio = getAudio();
-    audio.currentTime = 0;
+    assignRandomLobbyBgm(audio);
     if (
       !isLobbySoundEnabled() ||
       gameShellOpen ||
@@ -85,7 +85,7 @@ export function LobbyBgmOrchestrator() {
     }
     if (prevUserRef.current === null && user !== null) {
       const audio = getAudio();
-      audio.currentTime = 0;
+      assignRandomLobbyBgm(audio);
       if (
         !isLobbySoundEnabled() ||
         gameShellOpen ||

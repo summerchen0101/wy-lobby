@@ -6,7 +6,21 @@ export const LOBBY_SOUND_PREF_EVENT = "wynoco-lobby-sound-pref";
 
 export const LOBBY_SFX_BTN_SRC = "/voices/Btn.mp3";
 export const LOBBY_SFX_MENU_SRC = "/voices/US_MenuBtn.mp3";
-export const LOBBY_BGM_SRC = "/voices/Us_LobbyVoice_F1.mp3";
+
+export const LOBBY_BGM_VARIANTS = [
+  "/voices/Us_LobbyVoice_F1.mp3",
+  "/voices/Us_LobbyVoice_F3.mp3",
+] as const;
+
+export function pickLobbyBgmSrc(): string {
+  const i = Math.floor(Math.random() * LOBBY_BGM_VARIANTS.length);
+  return LOBBY_BGM_VARIANTS[i]!;
+}
+
+export function assignRandomLobbyBgm(audio: HTMLAudioElement): void {
+  audio.src = pickLobbyBgmSrc();
+  audio.load();
+}
 
 export function isLobbySoundEnabled(): boolean {
   if (typeof window === "undefined") return true;
