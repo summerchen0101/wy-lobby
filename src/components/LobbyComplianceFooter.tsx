@@ -1,7 +1,8 @@
+import { publicImageUrl } from '../lib/publicImageUrl'
 import './LobbyComplianceFooter.css'
 
-const LOGO_SRC = '/images/compliance/img_logo.png'
-const AGE_SRC = '/images/compliance/icon_21UP.png'
+const LOGO_SRC = publicImageUrl('/images/compliance/img_logo.png')
+const AGE_SRC = publicImageUrl('/images/compliance/icon_21UP.png')
 
 const LINK_COL_A: { href: string; label: string }[] = [
   { href: '#terms', label: 'Terms of Service' },

@@ -134,13 +134,13 @@
 }
 
 .shop-page__chip--gc {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--crown-gold) 40%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--crown-gold) 40%, transparent);
 }
 
 .shop-page__chip--sc {
   width: 1.45rem;
   height: 1.45rem;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 35%);
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 35%);
 }
 
 .shop-page__gc-amount {
@@ -155,11 +155,8 @@
 
 .shop-page__card-art {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 100%;
-  height: 80px;
+  aspect-ratio: 30 / 25;
   margin-top: -0.3rem;
   margin-bottom: -0.8rem;
   background: transparent;
@@ -167,14 +164,14 @@
 }
 
 .shop-page__card-art-img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  max-width: 6.25rem;
-  height: 72px;
+  height: 100%;
   object-fit: cover;
   object-position: center;
-  margin: 0 auto;
-  transform: scale(1.15);
+  margin: 0;
 }
 
 .shop-page__bonus {

@@ -12,6 +12,7 @@ import {
   getCurrencyIconUrl,
   getCurrencyTextIconUrl,
 } from "../../lib/currencyIcons";
+import { publicImageUrl } from "../../lib/publicImageUrl";
 import { GATEWAY_API_WALLET_USE } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
@@ -21,7 +22,7 @@ import type { ActiveWallet } from "../../wallet/walletContext";
 import { useWallet } from "../../wallet/walletContext";
 import "./SessionChrome.css";
 
-const BRAND_LOGO = "/images/brand/brand-logo.webp";
+const BRAND_LOGO = publicImageUrl("/images/brand/brand-logo.webp");
 
 export function SessionHeader() {
   const { user } = useAuth();

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdIosShare } from "react-icons/md";
 import { useLocation } from "react-router-dom";
+import { publicImageUrl } from "../lib/publicImageUrl";
 import { isStandalonePWA } from "../lib/pwaMode";
 import "./IosInstallGuide.css";
 
@@ -47,7 +48,7 @@ export function IosInstallGuide() {
         </h2>
         <img
           className="ios-guide__icon"
-          src="/images/app/pwa_icon.png"
+          src={publicImageUrl("/images/app/pwa_icon.png")}
           alt=""
           width={80}
           height={80}

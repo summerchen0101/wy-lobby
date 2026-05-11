@@ -1,5 +1,5 @@
 /**
- * `app_meta` 對齊產品規格（如 login_flow.pdf：apk=megarich, version, device, resolution）。
+ * `app_meta` 對齊產品規格：Web 客戶端 `apk` 為 `web`（對應舊 megarich_web）；另含 `device_type`、`version`、`device`、`resolution`。
  * `device` 可含平台與 user agent（如 iOS Safari 字串）。
  */
 const DEVICE_ID_KEY = "wynoco_device_id";
@@ -29,10 +29,27 @@ function resolutionBucket(): "High" | "Medium" | "Low" {
   return "Low";
 }
 
+/** 登入／註冊 `app_meta.device_type`：由瀏覽器環境推斷。 */
+export type AppDeviceType = "ios" | "android" | "pc";
+
+export function detectDeviceType(): AppDeviceType {
+  if (typeof navigator === "undefined") return "pc";
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPod/i.test(ua)) return "ios";
+  if (/iPad/i.test(ua)) return "ios";
+  // iPadOS 13+ Safari often reports Macintosh + touch
+  if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) {
+    return "ios";
+  }
+  if (/Android/i.test(ua)) return "android";
+  return "pc";
+}
+
 export type AppMetaPayload = {
   apk: string;
   version: string;
   device: string;
+  device_type: AppDeviceType;
   resolution: "High" | "Medium" | "Low" | string;
 };
 
@@ -53,9 +70,10 @@ export function buildAppMetaPayload(): AppMetaPayload {
     device = parts.join(" ").trim() || "web";
   }
   return {
-    apk: "megarich",
+    apk: "web",
     version,
     device,
+    device_type: detectDeviceType(),
     resolution: resolutionBucket(),
   };
 }

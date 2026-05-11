@@ -164,7 +164,7 @@
   border-radius: var(--crown-surface-card-radius);
   /* Darker than modal panel so white / accent copy reads clearly */
   background: #121421;
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  border: 2px solid color-mix(in srgb, var(--color-border) 88%, transparent);
   box-shadow: var(--crown-surface-card-shadow);
 }
 
@@ -209,7 +209,7 @@
   padding: var(--space-4);
   border-radius: var(--crown-surface-card-radius);
   background: var(--crown-surface-card-bg);
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  border: 2px solid color-mix(in srgb, var(--color-border) 88%, transparent);
   box-shadow: var(--crown-surface-card-shadow);
 }
 

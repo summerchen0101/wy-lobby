@@ -1,10 +1,11 @@
 import type { Game } from "../../lib/api/types";
+import { publicImageUrl } from "../../lib/publicImageUrl";
 import type { ActiveWallet } from "../../wallet/walletContext";
 
 const G = "https://static.crowncoinscasino.com/production/assets/games";
 
 /** 直向大廳 Panel 背景（public） */
-export const PANEL_VERTICAL_LOBBY_BG_BASE = "/images/lobby/bg";
+export const PANEL_VERTICAL_LOBBY_BG_BASE = publicImageUrl("/images/lobby/bg");
 
 export const PANEL_BG_UNLOGIN = `${PANEL_VERTICAL_LOBBY_BG_BASE}/tmp_unLoginBg.png`;
 export const PANEL_BG_GC = `${PANEL_VERTICAL_LOBBY_BG_BASE}/tmp_GCbg.png`;
@@ -19,7 +20,7 @@ export function unityDemoGameUrl(): string {
 }
 
 /** 本地遊戲卡圖（放於 public/images/games/entry）；檔名：entry_slot{N}_L.png */
-export const GAME_ENTRY_BASE = "/images/games/entry";
+export const GAME_ENTRY_BASE = publicImageUrl("/images/games/entry");
 
 /** 未登入大廳第二列固定試玩（由 LOBBY_GET 同批清單依 id 對應，缺漏時以 placeholder 顯示卡圖） */
 export const GUEST_DEMO_SLOT_IDS: readonly [number, number, number] = [
@@ -197,7 +198,7 @@ export function getGuestHeroImage(): string {
   return u || PANEL_BG_UNLOGIN;
 }
 
-export const FLOATING_CTA_IMAGE = "/images/lobby/gift_box.png";
+export const FLOATING_CTA_IMAGE = publicImageUrl("/images/lobby/gift_box.png");
 
 export type BenefitItem = {
   alt: string;

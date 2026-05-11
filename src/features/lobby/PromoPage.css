@@ -47,25 +47,30 @@
   padding-inline: 0;
 }
 
-/* 卡片與上一區塊留白，contain 對齊時也不易覺得頂緣「貼切」*/
+/* 卡片與上一區塊留白 */
 .promo-page__list > li {
   list-style: none;
   min-width: 0;
-  width: 100%;
+  width: 90%;
+  max-width: 25rem;
   box-sizing: border-box;
+  margin: 0 auto;
 }
 
-/* 整卡可點：role=button 的 div，背景由 --promo-card-bg 提供 */
+/* 整卡可點：role=button 的 div，背景由 --promo-card-bg 提供（與美術 1050×320 同比例） */
 .promo-page__card {
   display: block;
   min-height: 0;
-  height: clamp(6rem, 24.2vw, 15.6rem);
-  max-height: 8.85rem;
   width: 100%;
+  aspect-ratio: 1050 / 320;
+  container-type: inline-size;
+  container-name: promo-card;
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   font: inherit;
+  /* 基準字級跟卡片寬度走；子層用 em 一併縮放 */
+  font-size: clamp(0.75rem, 3.55cqw, 1.05rem);
   text-align: inherit;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
@@ -77,12 +82,11 @@
   z-index: 0;
   cursor: pointer;
   transition: box-shadow 0.12s ease;
-  /* 全程 contain：不裁切；置中對齊避免寬板上整張圖偏一側 */
   background-color: transparent;
   background-image: var(--promo-card-bg);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: contain;
+  background-size: cover;
   background-clip: border-box;
   background-origin: border-box;
   transform: scale(1.1) translate(-0.4rem, 0);
@@ -114,16 +118,16 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.28rem;
-  /* 上多下少：標題＋ CTA 在右欄略偏下，貼近美術深色帶視覺重心 */
-  padding: clamp(0.85rem, 3.5vw, 1.2rem) clamp(0.35rem, 2vw, 0.85rem)
-    clamp(0.25rem, 1vw, 0.5rem);
+  gap: 0.26em;
+  /* 上多下少：標題＋ CTA 在右欄略偏下，貼近美術深色帶視覺重心（em 隨卡片基準字級） */
+  padding: 1.2em 0.4em 0.26em;
   text-align: center;
 }
 
 .promo-page__h {
   margin: 0;
-  font-size: clamp(0.88rem, 0.85rem + 0.2vw, 0.98rem);
+  margin-bottom: 0.3em;
+  font-size: 1.08em;
   font-weight: 700;
   line-height: 1.1;
   color: #fff;
@@ -133,7 +137,7 @@
 .promo-page__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: 0.32em;
   justify-content: center;
   margin: 0;
 }
@@ -142,14 +146,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
-  min-height: 1.85rem;
-  min-width: 4.6rem;
-  padding: 0.22rem 0.8rem;
+  gap: 0.22em;
+  min-height: 2.05em;
+  min-width: 5.25em;
+  padding: 0.26em 0.82em;
   border-radius: 999px;
   box-sizing: border-box;
   font: inherit;
-  font-size: 0.72rem;
+  font-size: 0.92em;
   font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -186,8 +190,8 @@
 
 .promo-page__btn-sc-icon {
   display: block;
-  width: 1.8rem;
-  height: 1.8rem;
+  width: 1.5em;
+  height: 1.5em;
   object-fit: contain;
 }
 
@@ -208,15 +212,10 @@
 }
 
 @media (max-width: 20rem) {
-  .promo-page__card {
-    min-height: clamp(6.6rem, 42vw, 7.85rem);
-  }
-
   .promo-page__body {
     left: 0;
     width: 100%;
-    padding: calc(var(--space-2) + 0.65rem) var(--space-3)
-      calc(var(--space-2) - 0.1rem);
+    padding: 0.72em 0.55em 0.46em;
     background: linear-gradient(
       to bottom,
       transparent 0%,
@@ -226,6 +225,6 @@
   }
 
   .promo-page__h {
-    font-size: clamp(0.82rem, 0.76rem + 0.35vw, 0.93rem);
+    font-size: 1.02em;
   }
 }

@@ -28,7 +28,7 @@
   line-height: 1.35;
   text-align: center;
   box-shadow: 0 0.4rem 1.2rem rgb(0 0 0 / 45%);
-  border: 1px solid color-mix(in srgb, var(--crown-locale-green) 45%, transparent);
+  border: 2px solid color-mix(in srgb, var(--crown-locale-green) 45%, transparent);
   background: var(--color-elevated);
   color: var(--crown-locale-green, #3dd68c);
   pointer-events: auto;

@@ -81,7 +81,7 @@
   --modal-radius: 1.1rem;
   --modal-shadow: 0 1.5rem 3rem rgb(0 0 0 / 55%);
   --modal-panel-bg: var(--color-elevated);
-  --modal-panel-border: 1px solid var(--color-border);
+  --modal-panel-border: 2px solid var(--color-border);
   --modal-header-min-height: 3.25rem;
   /* 全站彈窗標題同字級 */
   --modal-title-size: 1rem;

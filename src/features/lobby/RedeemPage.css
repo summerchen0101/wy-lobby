@@ -40,7 +40,7 @@
   margin: 0 0 var(--space-2);
   padding: 0.6rem 1.35rem;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, #8fa8ff 38%, transparent);
+  border: 2px solid color-mix(in srgb, #8fa8ff 38%, transparent);
   background: linear-gradient(
     180deg,
     #2a3158 0%,
@@ -53,7 +53,7 @@
   color: #fff;
   text-align: center;
   box-shadow:
-    0 0 0 1px color-mix(in srgb, #000 45%, transparent),
+    0 0 0 2px color-mix(in srgb, #000 45%, transparent),
     0 1px 0 color-mix(in srgb, #fff 16%, transparent) inset,
     0 6px 18px rgb(0 0 0 / 38%),
     0 0 22px color-mix(in srgb, #6b7fd4 32%, transparent);
@@ -215,7 +215,7 @@
   line-height: 0;
   flex-shrink: 0;
   box-shadow:
-    0 0 0 1px color-mix(in srgb, #ffffff 35%, transparent),
+    0 0 0 2px color-mix(in srgb, #ffffff 35%, transparent),
     0 0 12px rgb(255 255 255 / 12%);
 }
 
@@ -246,7 +246,7 @@
   gap: var(--space-3);
   margin-bottom: var(--space-3);
   padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 2px solid var(--color-border);
 }
 
 .redeem-page__history-head .redeem-page__history-title {
@@ -292,7 +292,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 2px solid var(--color-border);
 }
 
 .redeem-page__history-row:last-of-type {
@@ -427,7 +427,7 @@
   padding: var(--space-5) var(--space-4);
   border-radius: var(--crown-surface-card-radius);
   background: #121421;
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  border: 2px solid color-mix(in srgb, var(--color-border) 88%, transparent);
   box-shadow: var(--crown-surface-card-shadow);
   text-align: center;
 }

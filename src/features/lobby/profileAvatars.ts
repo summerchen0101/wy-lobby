@@ -1,3 +1,5 @@
+import { publicImageUrl } from "../../lib/publicImageUrl";
+
 export type ProfileAvatar = {
   id: string
   imageSrc: string
@@ -12,7 +14,7 @@ export const PROFILE_AVATARS: readonly ProfileAvatar[] = Array.from(
     const n = i + 1
     return {
       id: String(n),
-      imageSrc: `/images/head/head${n}.png`,
+      imageSrc: publicImageUrl(`/images/head/head${n}.png`),
     }
   },
 )
@@ -35,7 +37,7 @@ function isLegacyOneToTenId(id: string): boolean {
 }
 
 function headSrcForIndex(n: number): string {
-  return `/images/head/head${n}.png`
+  return publicImageUrl(`/images/head/head${n}.png`);
 }
 
 /**

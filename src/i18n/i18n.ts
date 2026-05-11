@@ -20,7 +20,8 @@ void i18n
     defaultNS: "common",
     interpolation: { escapeValue: false },
     detection: {
-      order: ["localStorage", "navigator"],
+      // Persisted choice only; new visitors stay on DEFAULT_LANGUAGE ("en").
+      order: ["localStorage"],
       lookupLocalStorage: I18N_STORAGE_KEY,
       caches: ["localStorage"],
     },

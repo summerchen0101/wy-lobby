@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { publicImageUrl } from '../lib/publicImageUrl'
 import './LandingHeader.css'
 
-const BRAND_LOGO = '/images/brand/brand-logo.webp'
+const BRAND_LOGO = publicImageUrl('/images/brand/brand-logo.webp')
 
 function formatHeaderBalance(n: number | undefined, currency?: string) {
   if (n === undefined) return null

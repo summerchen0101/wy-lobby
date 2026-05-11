@@ -56,8 +56,14 @@ html.game-fullscreen-host #root {
   pointer-events: auto;
 }
 
-/* scroll nudge 期間讓觸控穿透宿主，避免捲動落在 iframe 內（見 useGameVisualViewport） */
+/* scroll nudge 期間讓觸控穿透 iframe，避免捲動落在遊戲內（見 useGameVisualViewport） */
 .game-overlay--parent-scroll-nudge .game-overlay__frame {
+  pointer-events: none !important;
+}
+
+/* 滿版上滑示意顯示期間：暫不讓 iframe 攔截捲動，與 scroll nudge 相同（見 GameOverlay） */
+.game-overlay--ios-scroll-host.game-overlay--swipe-hint-suppress-iframe
+  .game-overlay__frame {
   pointer-events: none !important;
 }
 
@@ -121,7 +127,7 @@ html.game-fullscreen-host #root {
 }
 
 .game-overlay__ios-hint {
-  position: absolute;
+  position: fixed;
   top: calc(max(var(--space-5), var(--safe-top)) + 44px + var(--space-2));
   left: max(var(--space-4), var(--safe-left));
   right: max(var(--space-4), var(--safe-right));
@@ -133,7 +139,7 @@ html.game-fullscreen-host #root {
   border-radius: 10px;
   background: rgba(12, 16, 22, 0.88);
   color: rgba(244, 244, 245, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.12);
   box-shadow:
     0 8px 28px rgba(0, 0, 0, 0.5),
     0 1px 0 rgba(255, 255, 255, 0.08) inset;
@@ -200,9 +206,9 @@ html.game-fullscreen-host #root {
 }
 
 .game-overlay__close {
-  position: absolute;
+  position: fixed;
   top: max(var(--space-5), var(--safe-top));
-  left: var(--space-5);
+  left: max(var(--space-5), var(--safe-left));
   z-index: 10001;
   display: flex;
   align-items: center;
@@ -210,7 +216,7 @@ html.game-fullscreen-host #root {
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   background: linear-gradient(155deg, #3d3d42 0%, #1c1c1f 45%, #0e0e10 100%);
   color: #f4f4f5;
@@ -235,4 +241,76 @@ html.game-fullscreen-host #root {
   width: var(--icon-rwd-lg);
   height: var(--icon-rwd-lg);
   pointer-events: none;
+}
+
+/*
+ * 行動／平板：首次點擊呼叫 requestFullscreen；須蓋在 iframe 之上且低於關閉鈕（z-index 10001）。
+ */
+.game-overlay__tap-fs-gate {
+  position: absolute;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(var(--space-6), var(--safe-top) + 52px) var(--space-5)
+    max(var(--space-8), var(--safe-bottom));
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(244, 244, 245, 0.95);
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.game-overlay__tap-fs-gate:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -4px;
+}
+
+.game-overlay__tap-fs-gate-label {
+  max-width: 18rem;
+  line-height: 1.45;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
+}
+
+/* /play + iOS：黑底中央上滑示意（須 pointer-events:none 以免擋宿主捲動收合網址列） */
+.game-overlay__play-swipe-hint {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.38s ease;
+}
+
+.game-overlay__play-swipe-hint-img {
+  max-width: min(90vw, 560px);
+  max-height: 80vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.game-overlay__play-swipe-hint--visible {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-overlay__play-swipe-hint {
+    transition-duration: 0.05s;
+  }
 }

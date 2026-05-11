@@ -218,7 +218,7 @@
 }
 
 .shop-checkout__input:focus {
-  box-shadow: 0 0 0 1px var(--crown-gold);
+  box-shadow: 0 0 0 2px var(--crown-gold);
 }
 
 .shop-checkout__row2 {
@@ -273,7 +273,7 @@
 }
 
 .shop-checkout__input--protect:focus {
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 22%);
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 22%);
 }
 
 .shop-checkout__input--protect.shop-checkout__field-invalid,
@@ -391,12 +391,12 @@
   border-radius: 0.2rem;
   background: #1a1f35;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 15%);
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 15%);
 }
 
 .shop-checkout__save-input:checked + .shop-checkout__save-box {
   background: var(--crown-button-primary-gradient);
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 20%);
+  box-shadow: inset 0 0 0 2px rgb(0 0 0 / 20%);
 }
 
 .shop-checkout__save-input:checked + .shop-checkout__save-box::after {

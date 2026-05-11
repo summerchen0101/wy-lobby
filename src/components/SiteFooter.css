@@ -2,7 +2,7 @@
   margin-top: var(--space-8);
   padding: var(--space-8) var(--page-pad-inline) var(--space-6);
   background: linear-gradient(180deg, var(--color-elevated) 0%, var(--color-bg) 100%);
-  border-top: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-border);
 }
 
 .site-footer__brand {
@@ -25,7 +25,7 @@
   gap: var(--space-4);
   margin-bottom: var(--space-6);
   padding-bottom: var(--space-6);
-  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  border-bottom: 2px solid rgb(255 255 255 / 8%);
 }
 
 @media (min-width: 48rem) {
