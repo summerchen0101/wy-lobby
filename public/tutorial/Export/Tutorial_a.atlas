@@ -1,0 +1,28 @@
+Tutorial_a.png
+size:1528,1528
+filter:Linear,Linear
+BG_C
+bounds:2,244,720,1280
+BG_S
+bounds:724,244,720,1280
+ICON_Resize
+bounds:2,2,240,277
+rotate:90
+button_return
+bounds:1007,186,104,56
+icon_menu
+bounds:1113,186,70,56
+img_arrow
+bounds:601,134,108,128
+rotate:90
+img_coin1
+bounds:918,156,86,87
+rotate:90
+img_coin3
+bounds:731,152,90,90
+img_coin4
+bounds:823,155,93,87
+pic_dialog box1
+bounds:281,124,158,118
+pic_dialog box2
+bounds:441,124,158,118

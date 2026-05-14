@@ -1,0 +1,153 @@
+.newbie-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  /* Above Welcome Bonus demo modal (+20) and default modals */
+  z-index: calc(var(--modal-z-index) + 120);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: max(var(--page-pad), var(--safe-top));
+  padding-bottom: max(24px, var(--safe-bottom));
+  padding-left: var(--page-pad-inline);
+  padding-right: var(--page-pad-inline);
+  background: var(--modal-overlay-scrim, rgb(0 0 0 / 72%));
+  backdrop-filter: blur(var(--modal-overlay-blur, 6px));
+  box-sizing: border-box;
+}
+
+.newbie-tutorial-overlay__panel {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  border-radius: 20px;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.newbie-tutorial-overlay__stage {
+  position: relative;
+  width: 100%;
+}
+
+/* Portrait framebuffer 720×1280 — matches Spine tutorial export artboard. */
+.newbie-tutorial-overlay__canvas {
+  width: 100%;
+  height: auto;
+  max-height: min(78vh, 780px);
+  aspect-ratio: 720 / 1280;
+  display: block;
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+/* DOM copy over Spine Tutorial_a bubble (upper stage). */
+.newbie-tutorial-overlay__bubble {
+  position: absolute;
+  left: 50%;
+  top: clamp(2%, 2.5vh, 8%);
+  transform: translateX(-50%);
+  width: min(86%, 300px);
+  max-height: min(22vh, 200px);
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  box-sizing: border-box;
+  padding: clamp(8px, 2vw, 12px) clamp(14px, 3.5vw, 20px)
+    clamp(6px, 1.5vw, 10px);
+}
+
+.newbie-tutorial-overlay__bubble-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.newbie-tutorial-overlay__text {
+  margin: 0;
+  font-size: clamp(0.88rem, 2.5vw, 0.98rem);
+  line-height: 1.45;
+  white-space: pre-line;
+  color: var(--color-text, #f4f4f8);
+}
+
+.newbie-tutorial-overlay__error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #ffb4b4;
+  line-height: 1.35;
+}
+
+.newbie-tutorial-overlay__code {
+  font-size: 0.68rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.newbie-tutorial-overlay__progress {
+  margin: 0;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+}
+
+.newbie-tutorial-overlay__footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 0;
+}
+
+.newbie-tutorial-overlay__skip {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(12, 18, 30, 0.55);
+  color: inherit;
+  cursor: pointer;
+}
+
+.newbie-tutorial-overlay__skip:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.36);
+}
+
+.newbie-tutorial-overlay__back {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  cursor: pointer;
+}
+
+.newbie-tutorial-overlay__back:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.newbie-tutorial-overlay__skip:disabled,
+.newbie-tutorial-overlay__back:disabled,
+.newbie-tutorial-overlay__next:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.newbie-tutorial-overlay__next {
+  padding: 10px 22px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #6ea8ff, #4b7bff);
+  color: #0c1220;
+}
+
+.newbie-tutorial-overlay__next:hover:not(:disabled) {
+  filter: brightness(1.06);
+}

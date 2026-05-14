@@ -61,6 +61,10 @@ import {
   UNITY_DEMO_LOBBY_GAME,
   unityDemoGameUrl,
 } from "./landingContent";
+import { NewbieTutorialOverlay } from "../tutorial/NewbieTutorialOverlay";
+import { WelcomeBonusDemoModal } from "../tutorial/WelcomeBonusDemoModal";
+import { isNewbieTutorialMarkedDone } from "../tutorial/tutorialStorage";
+import { subscribeWelcomeBonusClaimFinished } from "../tutorial/welcomeBonusTutorialBridge";
 import "./LobbyPage.css";
 
 type LobbyFilterTab = "all" | "hot" | "providers" | "slots";
@@ -385,6 +389,26 @@ export function LandingPage() {
     closePhoneVerify,
     onTermsAccepted,
   } = useAuthModals();
+
+  const [welcomeBonusDemoOpen, setWelcomeBonusDemoOpen] = useState(false);
+  const [newbieTutorialOpen, setNewbieTutorialOpen] = useState(false);
+
+  useEffect(() => {
+    return subscribeWelcomeBonusClaimFinished(() => {
+      if (isNewbieTutorialMarkedDone()) return;
+      setWelcomeBonusDemoOpen(false);
+      setNewbieTutorialOpen(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (!user || isNewbieTutorialMarkedDone() || newbieTutorialOpen) {
+      setWelcomeBonusDemoOpen(false);
+      return;
+    }
+    setWelcomeBonusDemoOpen(true);
+  }, [user, newbieTutorialOpen]);
 
   const tpId = trustpilotBusinessUnitId();
   const sessionHeroSrc = useMemo(
@@ -1079,6 +1103,20 @@ export function LandingPage() {
         onClose={closePhoneVerify}
         displayEmail={phoneVerifyPayload?.displayEmail ?? ""}
         pendingBody={phoneVerifyPayload?.body ?? null}
+      />
+
+      <WelcomeBonusDemoModal
+        open={welcomeBonusDemoOpen && !newbieTutorialOpen}
+        onClose={() => setWelcomeBonusDemoOpen(false)}
+      />
+      <NewbieTutorialOverlay
+        open={newbieTutorialOpen}
+        onClose={() => {
+          setNewbieTutorialOpen(false);
+          if (import.meta.env.DEV && isNewbieTutorialMarkedDone()) {
+            setWelcomeBonusDemoOpen(false);
+          }
+        }}
       />
     </div>
   );
