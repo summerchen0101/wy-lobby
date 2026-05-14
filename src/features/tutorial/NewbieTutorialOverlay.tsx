@@ -80,40 +80,40 @@ export function NewbieTutorialOverlay({ open, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-label="New player tutorial">
-      <div className="newbie-tutorial-overlay__panel">
-        <div className="newbie-tutorial-overlay__stage">
-          <TutorialSpineCanvas
-            className="newbie-tutorial-overlay__canvas"
-            phase={phase}
-            onLoadError={onSpineLoadError}
-            onEnterComplete={() =>
-              setPhase((current) => (current === "enter" ? "steps" : current))
-            }
-            onExitComplete={afterExitClose}
-          />
-          <div className="newbie-tutorial-overlay__bubble">
-            <div className="newbie-tutorial-overlay__bubble-body">
-              {spineError ? (
-                <p className="newbie-tutorial-overlay__error" role="alert">
-                  Could not load tutorial animations ({spineError}). Ensure
-                  atlas textures exist next to the .atlas files, e.g.{" "}
-                  <code className="newbie-tutorial-overlay__code">
-                    Tutorial_a.png
-                  </code>
-                  , under{" "}
-                  <code className="newbie-tutorial-overlay__code">
-                    public/tutorial/Export/
-                  </code>
-                  .
-                </p>
-              ) : (
-                <div className="newbie-tutorial-overlay__text">
-                  {renderBbcodeTutorial(step.textBbcode)}
-                </div>
-              )}
-            </div>
+      <div className="newbie-tutorial-overlay__stage">
+        <TutorialSpineCanvas
+          className="newbie-tutorial-overlay__canvas"
+          phase={phase}
+          onLoadError={onSpineLoadError}
+          onEnterComplete={() =>
+            setPhase((current) => (current === "enter" ? "steps" : current))
+          }
+          onExitComplete={afterExitClose}
+        />
+        <div className="newbie-tutorial-overlay__bubble">
+          <div className="newbie-tutorial-overlay__bubble-body">
+            {spineError ? (
+              <p className="newbie-tutorial-overlay__error" role="alert">
+                Could not load tutorial animations ({spineError}). Ensure
+                atlas textures exist next to the .atlas files, e.g.{" "}
+                <code className="newbie-tutorial-overlay__code">
+                  Tutorial_a.png
+                </code>
+                , under{" "}
+                <code className="newbie-tutorial-overlay__code">
+                  public/tutorial/Export/
+                </code>
+                .
+              </p>
+            ) : (
+              <div className="newbie-tutorial-overlay__text">
+                {renderBbcodeTutorial(step.textBbcode)}
+              </div>
+            )}
           </div>
         </div>
+      </div>
+      <div className="newbie-tutorial-overlay__chrome">
         <p className="newbie-tutorial-overlay__progress" aria-live="polite">
           Step {stepIndex + 1} of {NEWBIE_TUTORIAL_STEPS.length}
         </p>

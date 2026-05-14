@@ -3,52 +3,40 @@
   inset: 0;
   /* Above Welcome Bonus demo modal (+20) and default modals */
   z-index: calc(var(--modal-z-index) + 120);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-top: max(var(--page-pad), var(--safe-top));
-  padding-bottom: max(24px, var(--safe-bottom));
-  padding-left: var(--page-pad-inline);
-  padding-right: var(--page-pad-inline);
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
   background: var(--modal-overlay-scrim, rgb(0 0 0 / 72%));
   backdrop-filter: blur(var(--modal-overlay-blur, 6px));
-  box-sizing: border-box;
-}
-
-.newbie-tutorial-overlay__panel {
-  width: min(560px, 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-  border-radius: 20px;
-  overflow: visible;
-  background: transparent;
-  border: none;
-  box-shadow: none;
 }
 
 .newbie-tutorial-overlay__stage {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
   width: 100%;
+  /* Height never exceeds 2× width (narrow portrait stays shorter than full viewport). */
+  height: min(100vh, calc(100vw * 2));
+  height: min(100dvh, calc(100dvw * 2));
 }
 
-/* Portrait framebuffer 720×1280 — matches Spine tutorial export artboard. */
+/* Full device-sized drawable area; backing store synced in TutorialSpineCanvas. */
 .newbie-tutorial-overlay__canvas {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
-  max-height: min(78vh, 780px);
-  aspect-ratio: 720 / 1280;
+  height: 100%;
   display: block;
-  margin: 0 auto;
   pointer-events: none;
 }
 
 /* DOM copy over Spine Tutorial_a bubble (upper stage). */
 .newbie-tutorial-overlay__bubble {
   position: absolute;
+  z-index: 2;
   left: 50%;
-  top: clamp(2%, 2.5vh, 8%);
+  top: clamp(5%, 4.5vh, 14%);
   transform: translateX(-50%);
   width: min(86%, 300px);
   max-height: min(22vh, 200px);
@@ -88,8 +76,21 @@
   background: rgba(0, 0, 0, 0.35);
 }
 
+.newbie-tutorial-overlay__chrome {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding-bottom: max(12px, var(--safe-bottom));
+  padding-left: max(var(--page-pad-inline), var(--safe-left, 0px));
+  padding-right: max(var(--page-pad-inline), var(--safe-right, 0px));
+  padding-top: 8px;
+  box-sizing: border-box;
+}
+
 .newbie-tutorial-overlay__progress {
-  margin: 0;
+  margin: 0 0 10px;
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.55);
   text-align: center;
@@ -101,7 +102,6 @@
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  padding: 4px 4px 0;
 }
 
 .newbie-tutorial-overlay__skip {

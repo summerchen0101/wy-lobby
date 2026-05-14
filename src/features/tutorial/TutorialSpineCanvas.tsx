@@ -13,13 +13,16 @@ import {
   SpineCanvas,
   type SpineCanvasApp,
 } from "@esotericsoftware/spine-webgl";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 export type TutorialSpinePhase = "enter" | "steps" | "exit";
 
 /** Artboard size used by tutorial exports (see Tutorial_a.atlas BG_C bounds 720×1280). */
 const DESIGN_W = 720;
 const DESIGN_H = 1280;
+
+/** Scale dialog + characters past safe bounds; edges may clip off-frame (by design). */
+const VISUAL_ZOOM = 1.5;
 
 const UI_ANIM_IN = "Tutorial_a_in";
 const UI_ANIM_IDLE = "Tutorial_a_idle";
@@ -32,6 +35,17 @@ const GIRL_ANIM_OUT = "girl1_idle_out";
 const MAN_ANIM_IN = "man_Idle1_in";
 const MAN_ANIM_IDLE = "man_Idle1";
 const MAN_ANIM_OUT = "man_Idle1_out";
+
+function syncCanvasBackingStore(canvas: HTMLCanvasElement) {
+  const r = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio ?? 1, 2);
+  const w = Math.max(1, Math.round(r.width * dpr));
+  const h = Math.max(1, Math.round(r.height * dpr));
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+}
 
 function tutorialExportPrefix(): string {
   const base = import.meta.env.BASE_URL;
@@ -103,9 +117,13 @@ export function TutorialSpineCanvas({
     onLoadErrorRef.current = onLoadError;
   }, [phase, onEnterComplete, onExitComplete, onLoadError]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const canvas = canvasElRef.current;
     if (!canvas) return;
+
+    syncCanvasBackingStore(canvas);
+    const ro = new ResizeObserver(() => syncCanvasBackingStore(canvas));
+    ro.observe(canvas);
 
     let loadFailed = false;
 
@@ -218,25 +236,25 @@ export function TutorialSpineCanvas({
           sc.renderer.camera.viewportWidth || canvas.width || DESIGN_W;
         const vpH =
           sc.renderer.camera.viewportHeight || canvas.height || DESIGN_H;
-        /** Fit full portrait design inside framebuffer (no edge crop vs 720×1280 source). */
+        /** Fit portrait design then zoom 1.5×; overflow clips at framebuffer edges. */
         const layoutScale =
-          Math.min(vpW / DESIGN_W, vpH / DESIGN_H, 1.06) * 0.74;
+          Math.min(vpW / DESIGN_W, vpH / DESIGN_H, 1.06) * 0.74 * VISUAL_ZOOM;
 
         skeletonGirl.scaleX = layoutScale;
         skeletonGirl.scaleY = layoutScale;
         skeletonGirl.x = vpW * 0.22;
-        skeletonGirl.y = -vpH * 0.14;
+        skeletonGirl.y = -vpH * 0.21;
 
         skeletonMan.scaleX = layoutScale;
         skeletonMan.scaleY = layoutScale;
         skeletonMan.x = -vpW * 0.22;
-        skeletonMan.y = -vpH * 0.13;
+        skeletonMan.y = -vpH * 0.2;
 
-        /** Tutorial_a dialog above characters; shares portrait coordinate space. */
+        /** Tutorial_a dialog above characters; nudge down vs viewport top safe area */
         skeletonUi.scaleX = layoutScale;
         skeletonUi.scaleY = layoutScale;
         skeletonUi.x = 0;
-        skeletonUi.y = vpH * 0.34;
+        skeletonUi.y = vpH * 0.27;
 
         const ph = driveRef.current.phase;
         if (ph === "enter") {
@@ -302,17 +320,12 @@ export function TutorialSpineCanvas({
     });
 
     return () => {
+      ro.disconnect();
       spine.dispose();
     };
   }, []);
 
   return (
-    <canvas
-      ref={canvasElRef}
-      className={className}
-      aria-hidden
-      width={DESIGN_W}
-      height={DESIGN_H}
-    />
+    <canvas ref={canvasElRef} className={className} aria-hidden />
   );
 }
