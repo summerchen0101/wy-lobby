@@ -7,10 +7,7 @@ export const LOBBY_SOUND_PREF_EVENT = "wynoco-lobby-sound-pref";
 export const LOBBY_SFX_BTN_SRC = "/voices/Btn.mp3";
 export const LOBBY_SFX_MENU_SRC = "/voices/US_MenuBtn.mp3";
 
-export const LOBBY_BGM_VARIANTS = [
-  "/voices/Us_LobbyVoice_F1.mp3",
-  "/voices/Us_LobbyVoice_F3.mp3",
-] as const;
+export const LOBBY_BGM_VARIANTS = ["/voices/lobbybpm106_loop.mp3"] as const;
 
 export function pickLobbyBgmSrc(): string {
   const i = Math.floor(Math.random() * LOBBY_BGM_VARIANTS.length);
