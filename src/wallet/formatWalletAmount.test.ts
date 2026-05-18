@@ -13,7 +13,7 @@ describe("formatScFromRawWireInteger", () => {
     expect(() => BigInt(wire)).not.toThrow();
     const a = formatScFromRawWireInteger(wire);
     expect(a).not.toBe("—");
-    expect(a).toMatch(/^\d[\d,]*(\.\d{1,2})?$/);
+    expect(a).toMatch(/^\d[\d,]*(\.\d{1,4})?$/);
   });
 
   it("非十進位整數或空值回傳 dash", () => {

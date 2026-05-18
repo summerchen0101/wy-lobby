@@ -1,4 +1,5 @@
 import * as protobuf from "protobufjs/light.js";
+import { formatWalletScAmountForDisplay } from "../wallet/formatWalletAmount";
 import schema from "../gen/lobby_wire.schema.js";
 
 const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
@@ -94,7 +95,8 @@ export function formatReferralRewardAmountsForMessage(
   const sc = referralScDisplayAmount(rewards);
   const parts: string[] = [];
   if (gc !== null) parts.push(`${gc} GC`);
-  if (sc !== null) parts.push(`${sc} SC`);
+  if (sc !== null)
+    parts.push(`${formatWalletScAmountForDisplay(sc)} SC`);
   return parts.length ? parts.join(", ") : "Rewards claimed";
 }
 

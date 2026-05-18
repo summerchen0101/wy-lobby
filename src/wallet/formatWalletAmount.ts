@@ -11,16 +11,16 @@ export function formatWalletPillAmount(n: number | undefined): string {
 }
 
 /**
- * Sweeps Coins 畫面值：小數第 3 位起無條件捨去（向零截斷），至多顯示兩位（依目前語系千分位）。
+ * Sweeps Coins 畫面值：小數第 5 位起無條件捨去（向零截斷），至多顯示四位（依目前語系千分位）。
  * Header SC 與 {@link formatScFromRaw} 共用。
  */
 export function formatWalletScAmountForDisplay(n: number | undefined): string {
   if (n === undefined) return "—";
   if (!Number.isFinite(n)) return "—";
-  const truncatedTowardZero = Math.trunc(n * 100) / 100;
+  const truncatedTowardZero = Math.trunc(n * 10000) / 10000;
   return new Intl.NumberFormat(getActiveLocale(), {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 4,
   }).format(truncatedTowardZero);
 }
 
@@ -38,20 +38,20 @@ export function scRawToDisplay(raw: number): number {
   return raw / SC_POINT_SCALE;
 }
 
-/** 後端原始值 → 顯示字串（向零捨去至小數兩位，與 header SC 一致）。 */
+/** 後端原始值 → 顯示字串（向零捨去至小數四位，與 header SC 一致）。 */
 export function formatScFromRaw(raw: number | undefined): string {
   if (raw === undefined) return "—";
   return formatWalletScAmountForDisplay(scRawToDisplay(raw));
 }
 
-/** 對齊 {@link formatScFromRaw} 的舍入：`trunc(raw × 100 / SC_POINT_SCALE)` 再格式化（非負數 raw）。 */
-function formatScTruncHundredthsBigInt(totalHundredths: bigint): string {
-  if (totalHundredths < 0n) return "—";
-  const intPart = totalHundredths / 100n;
-  const frac = Number(totalHundredths % 100n);
+/** 對齊 {@link formatScFromRaw}：後端 raw 已為 SC×10000，直接拆整數／小數（非負數 raw）。 */
+function formatScTruncTenThousandthsBigInt(rawTenThousandths: bigint): string {
+  if (rawTenThousandths < 0n) return "—";
+  const intPart = rawTenThousandths / 10000n;
+  const frac = Number(rawTenThousandths % 10000n);
   const intFmt = intPart.toLocaleString(getActiveLocale());
   if (frac === 0) return intFmt;
-  const fracFmt = String(frac).padStart(2, "0").replace(/0+$/, "");
+  const fracFmt = String(frac).padStart(4, "0").replace(/0+$/, "");
   return `${intFmt}.${fracFmt}`;
 }
 
@@ -66,8 +66,7 @@ export function formatScFromRawWireInteger(wireRaw: string): string {
   if (!/^\d+$/.test(t)) return "—";
   try {
     const rawBig = BigInt(t);
-    const hundredthsRaw = rawBig / 100n;
-    return formatScTruncHundredthsBigInt(hundredthsRaw);
+    return formatScTruncTenThousandthsBigInt(rawBig);
   } catch {
     return "—";
   }
@@ -82,7 +81,12 @@ export function formatWithdrawHistoryFiatAmount(amountWire: string): string {
     .replace(/,/g, "");
   if (t === "") return "—";
   const n = Number(t);
-  return formatWalletScAmountForDisplay(Number.isFinite(n) ? n : undefined);
+  if (!Number.isFinite(n)) return "—";
+  const truncatedTowardZero = Math.trunc(n * 100) / 100;
+  return new Intl.NumberFormat(getActiveLocale(), {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(truncatedTowardZero);
 }
 
 /**
