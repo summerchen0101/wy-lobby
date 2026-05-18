@@ -14,6 +14,7 @@ import {
   decodeClaimReferralRewardRespBytes,
   decodeGetReferralInfoRespBytes,
   formatReferralRewardAmountsForMessage,
+  referralClaimResponseHasRewards,
   referralGcDisplayAmount,
   referralScDisplayAmount,
   type GetReferralInfoRespDecoded,
@@ -57,6 +58,7 @@ export function InviteFriendsModal({ open, onClose }: Props) {
   const { show } = useAlert()
   const { requestRef, gatewayRequestReady, refreshLobbyGet } = useGatewayLobby()
   const titleId = useId()
+  const claimQualifyHintId = useId()
 
   const [referralInfo, setReferralInfo] = useState<GetReferralInfoRespDecoded | null>(null)
   const [loadPhase, setLoadPhase] = useState<LoadPhase>('idle')
@@ -179,13 +181,17 @@ export function InviteFriendsModal({ open, onClose }: Props) {
         ? 'Loading referral…'
         : referralUrl.trim() || (wsOk ? 'Link unavailable' : referralUrl)
 
+  const claimBlockedNoQualifiedFriends =
+    wsOk && loadPhase === 'ready' && friendsQualified <= 0
+
   const claimDisabled =
     claiming ||
     !wsOk ||
     !gatewayRequestReady ||
     loadPhase === 'ws_wait' ||
     loadPhase === 'fetch' ||
-    (loadPhase === 'idle' && wsOk)
+    (loadPhase === 'idle' && wsOk) ||
+    claimBlockedNoQualifiedFriends
 
   const copyUrl = useCallback(() => {
     const url = referralUrl.trim()
@@ -237,6 +243,10 @@ export function InviteFriendsModal({ open, onClose }: Props) {
         return
       }
       const { rewards: claimed } = decodeClaimReferralRewardRespBytes(r.data)
+      if (!referralClaimResponseHasRewards(claimed)) {
+        show('No referral rewards to claim', { variant: 'error' })
+        return
+      }
       show(formatReferralRewardAmountsForMessage(claimed), { variant: 'success' })
       await refreshLobbyGet()
       void fetchReferralInfo({ quiet: true })
@@ -360,6 +370,11 @@ export function InviteFriendsModal({ open, onClose }: Props) {
           ) : null}
 
           <div className="invite-friends-modal__actions">
+            {claimBlockedNoQualifiedFriends && !claiming ? (
+              <span id={claimQualifyHintId} className="invite-friends-modal__sr-only">
+                You need at least one qualified friend to claim rewards.
+              </span>
+            ) : null}
             <button type="button" className="invite-friends-modal__btn-invite" onClick={onInvite}>
               INVITE
             </button>
@@ -367,6 +382,14 @@ export function InviteFriendsModal({ open, onClose }: Props) {
               type="button"
               className="invite-friends-modal__btn-claim"
               disabled={claimDisabled}
+              title={
+                claimBlockedNoQualifiedFriends && !claiming
+                  ? 'You need at least one qualified friend to claim rewards.'
+                  : undefined
+              }
+              aria-describedby={
+                claimBlockedNoQualifiedFriends && !claiming ? claimQualifyHintId : undefined
+              }
               onClick={() => void onClaimRewards()}
             >
               {claiming ? 'CLAIMING…' : 'CLAIM REWARDS'}
