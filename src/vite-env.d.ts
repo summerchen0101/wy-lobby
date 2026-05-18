@@ -30,6 +30,11 @@ interface ImportMetaEnv {
   readonly VITE_UNITY_WEBENTRY_GAME_ID?: string;
   /** 選填：Cursor/本機 NDJSON ingest 完整 URL（含 path）；未設或空字串時不發任何 POST */
   readonly VITE_AGENT_DEBUG_INGEST_URL?: string;
+  /**
+   * 應用程式開發診斷用 console（`[gateway-ws][dev]`、`[game-shell][dev]` 等）。
+   * `"false"` 關閉；`"true"` 強制開啟（含 production/preview）；未設則等同 `import.meta.env.DEV`。
+   */
+  readonly VITE_DEV_CONSOLE?: string;
 
   /**
    * 僅 dev：`LandingPage` 是否自動連 Gateway WS 並 `console` 記錄。

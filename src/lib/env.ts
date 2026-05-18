@@ -9,6 +9,14 @@ export function isMockMode(): boolean {
   return import.meta.env.VITE_API_USE_MOCK === "true";
 }
 
+/** 應用程式主動輸出的開發診斷 console（非瀏覽器／第三方套件 log）。 */
+export function isDevConsoleEnabled(): boolean {
+  const v = import.meta.env.VITE_DEV_CONSOLE?.trim();
+  if (v === "false") return false;
+  if (v === "true") return true;
+  return import.meta.env.DEV;
+}
+
 export function getApiBase(): string {
   const raw = (import.meta.env.VITE_API_BASE ?? "").trim();
   return raw.replace(/\/$/, "");
