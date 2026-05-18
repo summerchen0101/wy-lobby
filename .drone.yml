@@ -46,6 +46,7 @@ steps:
       VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://nas01.ffglobaltech.com/us-game-lobby"
       VITE_DEV_CONSOLE: "true"
+      VITE_GATEWAY_WS_TRACE: "true"
     commands:
       - npm run build
       - ls -lah dist/
@@ -99,6 +100,7 @@ steps:
       VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://nas01.ffglobaltech.com/us-game-lobby"
       VITE_DEV_CONSOLE: "true"
+      VITE_GATEWAY_WS_TRACE: "true"
     commands:
       - npm run build
       - ls -lah dist/
@@ -211,6 +213,7 @@ steps:
       VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://unityweb-cdn.boss-fun.com/us-game-lobby"
       VITE_DEV_CONSOLE: "true"
+      VITE_GATEWAY_WS_TRACE: "true"
     commands:
       - npm run build
       - ls -lah dist/
