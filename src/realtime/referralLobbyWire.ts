@@ -99,12 +99,3 @@ export function formatReferralRewardAmountsForMessage(
     parts.push(`${formatWalletScAmountForDisplay(sc)} SC`);
   return parts.length ? parts.join(", ") : "Rewards claimed";
 }
-
-/** True when a claim response includes any strictly positive GC or SC payout. */
-export function referralClaimResponseHasRewards(
-  rewards: ReferralRewardDecoded[] | undefined,
-): boolean {
-  const gc = referralGcDisplayAmount(rewards);
-  const sc = referralScDisplayAmount(rewards);
-  return (gc !== null && gc > 0) || (sc !== null && sc > 0);
-}
