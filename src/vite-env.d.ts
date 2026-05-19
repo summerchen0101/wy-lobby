@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_API_PATH_AUTH_REGISTER?: string;
   readonly VITE_API_PATH_AUTH_LOGIN?: string;
   readonly VITE_API_PATH_AUTH_TOKEN?: string;
+  /** access 到期前主動 refresh 的提前秒數（預設 300；需後端回 expiresIn） */
+  readonly VITE_TOKEN_REFRESH_LEAD_SEC?: string;
   /** 僅 dev：Vite 將 /api 代理到此目標 */
   readonly VITE_DEV_PROXY: string;
   /** 大廳「Single1 (Alpha)」內嵌試玩 URL（可覆寫預設 alpha 站） */
