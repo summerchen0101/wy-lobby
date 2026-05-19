@@ -306,6 +306,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [setSessionFromAuth],
   );
 
+  const ensureFreshAccessForGame = useCallback(async (): Promise<string | null> => {
+    if (isMockMode()) {
+      return token?.trim() || getStoredAccessToken()?.trim() || null;
+    }
+    const rt = getStoredRefreshToken()?.trim();
+    if (!rt) {
+      return token?.trim() || getStoredAccessToken()?.trim() || null;
+    }
+    const res = await refreshSession();
+    if (!res) {
+      handleRefreshFailed();
+      return null;
+    }
+    applyAuthResponse(res);
+    return res.accessToken.trim() || null;
+  }, [token, applyAuthResponse, handleRefreshFailed]);
+
   const value = useMemo(
     () => ({
       user,
@@ -318,6 +335,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       refreshUser,
       mergeUser,
+      ensureFreshAccessForGame,
     }),
     [
       user,
@@ -330,6 +348,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       refreshUser,
       mergeUser,
+      ensureFreshAccessForGame,
     ],
   );
 
