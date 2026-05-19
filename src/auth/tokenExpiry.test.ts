@@ -1,20 +1,30 @@
 import { describe, expect, it } from "vitest";
 import {
-  computeExpiresAtMs,
   computeRefreshDelayMs,
   isWithinRefreshLeadWindow,
+  resolveAccessExpiresAtMs,
 } from "./tokenExpiry";
 
-describe("computeExpiresAtMs", () => {
-  it("adds expiresIn seconds to now", () => {
-    const now = 1_000_000;
-    expect(computeExpiresAtMs(3600, now)).toBe(now + 3_600_000);
+describe("resolveAccessExpiresAtMs", () => {
+  const now = 1_771_360_000_000; // ~2026-05-19
+
+  it("treats IAM expiresIn as absolute Unix seconds", () => {
+    const expiresIn = 1_779_420_046; // 2026-05-22T03:20:46Z
+    expect(resolveAccessExpiresAtMs(expiresIn, now)).toBe(expiresIn * 1000);
+  });
+
+  it("treats large values as absolute Unix milliseconds", () => {
+    const expiresAtMs = 1_779_420_046_000;
+    expect(resolveAccessExpiresAtMs(expiresAtMs, now)).toBe(expiresAtMs);
+  });
+
+  it("treats small values as OAuth remaining lifetime seconds (mock)", () => {
+    expect(resolveAccessExpiresAtMs(3600, now)).toBe(now + 3_600_000);
   });
 
   it("returns now for invalid expiresIn", () => {
-    const now = 1_000_000;
-    expect(computeExpiresAtMs(0, now)).toBe(now);
-    expect(computeExpiresAtMs(-1, now)).toBe(now);
+    expect(resolveAccessExpiresAtMs(0, now)).toBe(now);
+    expect(resolveAccessExpiresAtMs(-1, now)).toBe(now);
   });
 });
 

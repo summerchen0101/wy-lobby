@@ -1,6 +1,7 @@
 import { refreshAccessToken } from "../lib/api/auth";
 import type { AuthResponse } from "../lib/api/types";
 import {
+  getStoredAccessToken,
   getStoredRefreshToken,
   persistAuthResponseFull,
 } from "./sessionPersist";
@@ -21,7 +22,7 @@ export async function refreshSession(): Promise<AuthResponse | null> {
   }
   refreshInFlight = (async () => {
     try {
-      const res = await refreshAccessToken(rt);
+      const res = await refreshAccessToken(rt, getStoredAccessToken());
       persistAuthResponseFull(res);
       return res;
     } catch {

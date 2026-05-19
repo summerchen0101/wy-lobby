@@ -1,6 +1,9 @@
 /** Default seconds before access expiry to call POST /api/v1/token. */
 export const DEFAULT_TOKEN_REFRESH_LEAD_SEC = 300;
 
+/** Values below this are treated as OAuth-style remaining lifetime (seconds). */
+export const ABSOLUTE_EXPIRY_UNIX_SEC_THRESHOLD = 1_000_000_000;
+
 export function tokenRefreshLeadSecFromEnv(): number {
   const raw = import.meta.env.VITE_TOKEN_REFRESH_LEAD_SEC?.trim();
   if (!raw) return DEFAULT_TOKEN_REFRESH_LEAD_SEC;
@@ -9,15 +12,27 @@ export function tokenRefreshLeadSecFromEnv(): number {
   return Math.floor(n);
 }
 
-/** Absolute expiry (ms) from OAuth-style `expiresIn` seconds. */
-export function computeExpiresAtMs(
-  expiresInSec: number,
+/**
+ * Map login/refresh `expiresIn` to absolute expiry (ms).
+ *
+ * - IAM / production API: **Unix expiry in seconds** (e.g. `1779420046`).
+ * - Values >= 1e12: treated as Unix expiry in **milliseconds**.
+ * - Small values (e.g. mock `3600`): OAuth-style **remaining lifetime in seconds**.
+ */
+export function resolveAccessExpiresAtMs(
+  expiresIn: number,
   nowMs: number = Date.now(),
 ): number {
-  if (!Number.isFinite(expiresInSec) || expiresInSec <= 0) {
+  if (!Number.isFinite(expiresIn) || expiresIn <= 0) {
     return nowMs;
   }
-  return nowMs + expiresInSec * 1000;
+  if (expiresIn >= 1_000_000_000_000) {
+    return expiresIn;
+  }
+  if (expiresIn >= ABSOLUTE_EXPIRY_UNIX_SEC_THRESHOLD) {
+    return expiresIn * 1000;
+  }
+  return nowMs + expiresIn * 1000;
 }
 
 /**

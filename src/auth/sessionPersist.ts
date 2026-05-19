@@ -4,7 +4,7 @@ import {
   REFRESH_TOKEN_STORAGE_KEY,
   TOKEN_STORAGE_KEY,
 } from "./storage";
-import { computeExpiresAtMs } from "./tokenExpiry";
+import { resolveAccessExpiresAtMs } from "./tokenExpiry";
 import { writePersistedUser } from "./userPersist";
 
 export function getStoredAccessToken(): string | null {
@@ -35,7 +35,7 @@ export function persistAuthResponse(res: {
     localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, res.refreshToken);
   }
   if (res.expiresIn != null && Number.isFinite(res.expiresIn) && res.expiresIn > 0) {
-    const expiresAtMs = computeExpiresAtMs(res.expiresIn);
+    const expiresAtMs = resolveAccessExpiresAtMs(res.expiresIn);
     localStorage.setItem(ACCESS_EXPIRES_AT_MS_KEY, String(expiresAtMs));
   } else {
     localStorage.removeItem(ACCESS_EXPIRES_AT_MS_KEY);
