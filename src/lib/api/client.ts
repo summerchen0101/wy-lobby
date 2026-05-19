@@ -27,7 +27,10 @@ export class ClientVersionError extends Error {
 
 type JsonRequestInit = Omit<RequestInit, 'body'> & {
   body?: unknown
-  /** 為 true 時 401 不觸發全域 `unauthorizedHandler`（例如 refresh token 失敗需自行處理） */
+  /**
+   * 為 true 時 401 不觸發全域 `unauthorizedHandler`，且不遞迴 `on401RefreshToken`
+   * （用於 `POST /api/v1/token` 本身失敗，避免與 `refreshSession` single-flight 死鎖）。
+   */
   skipUnauthorizedOn401?: boolean
   /**
    * 為 true 時以 `json-bigint` 解析回應，避免大整數經 `JSON.parse` 捲成 IEEE double（登入／refresh 用）。
@@ -97,8 +100,13 @@ export async function apiRequest<T>(
   })
 
   if (res.status === 401) {
-    if (token && on401RefreshToken && !_didRefresh) {
-      const newAccess = await on401RefreshToken()
+    const mayRetryViaRefresh =
+      Boolean(token) &&
+      on401RefreshToken != null &&
+      !_didRefresh &&
+      !skipUnauthorizedOn401
+    if (mayRetryViaRefresh) {
+      const newAccess = await on401RefreshToken!()
       if (newAccess) {
         return apiRequest<T>(
           path,
@@ -110,6 +118,7 @@ export async function apiRequest<T>(
     if (!skipUnauthorizedOn401) {
       unauthorizedHandler?.()
     }
+    throw new ApiError('Session expired', 401)
   }
 
   const text = await res.text()

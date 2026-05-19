@@ -2,7 +2,10 @@ import { useEffect, useRef } from "react";
 import { isMockMode } from "../lib/env";
 import type { AuthResponse } from "../lib/api/types";
 import { refreshSession } from "./refreshSession";
-import { getStoredAccessExpiresAtMs } from "./sessionPersist";
+import {
+  getStoredAccessExpiresAtMs,
+  getStoredRefreshToken,
+} from "./sessionPersist";
 import {
   computeRefreshDelayMs,
   isWithinRefreshLeadWindow,
@@ -63,7 +66,12 @@ export function useProactiveTokenRefresh({
       if (!token?.trim()) return;
 
       const expiresAtMs = getStoredAccessExpiresAtMs();
-      if (expiresAtMs == null) return;
+      if (expiresAtMs == null) {
+        if (getStoredRefreshToken()?.trim()) {
+          void runRefresh();
+        }
+        return;
+      }
 
       const leadSec = tokenRefreshLeadSecFromEnv();
       const delayMs = computeRefreshDelayMs(expiresAtMs, leadSec);
@@ -82,8 +90,13 @@ export function useProactiveTokenRefresh({
       if (document.visibilityState !== "visible") return;
       if (!token?.trim() || refreshingRef.current) return;
       const expiresAtMs = getStoredAccessExpiresAtMs();
-      if (expiresAtMs == null) return;
       const leadSec = tokenRefreshLeadSecFromEnv();
+      if (expiresAtMs == null) {
+        if (getStoredRefreshToken()?.trim()) {
+          void runRefresh();
+        }
+        return;
+      }
       if (isWithinRefreshLeadWindow(expiresAtMs, leadSec)) {
         void runRefresh();
       }

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -31,6 +32,9 @@ import {
   persistAuthResponse,
 } from "./sessionPersist";
 import { useProactiveTokenRefresh } from "./useProactiveTokenRefresh";
+import { AUTH_LOGIN_ENTRY_PATH } from "./loginEntry";
+import { shouldRefreshStoredSessionOnStartup } from "./sessionStartup";
+import { setOnSessionRefreshFailedHandler } from "./sessionRefreshNotify";
 import { readPersistedUser, writePersistedUser } from "./userPersist";
 
 function getInitialToken(): string | null {
@@ -51,11 +55,11 @@ function initialReadyState(): boolean {
   return !t;
 }
 
-/** 有 session 憑證時從 storage 還原 user，避免 refresh bootstrap 期間誤顯示訪客大廳。 */
+/** 僅在 storage 有 access 時還原 user；僅 refresh 時由 bootstrap 驗證，不顯示幽靈已登入。 */
 function getInitialUser(): User | null {
   if (typeof localStorage === "undefined") return null;
   if (isMockMode()) return null;
-  if (!getInitialRefresh() && !getInitialToken()) return null;
+  if (!getInitialToken()?.trim()) return null;
   return readPersistedUser() ?? minimalSessionUser();
 }
 
@@ -88,20 +92,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(null);
       setUser(null);
       setReady(true);
-      navigate(options?.redirectTo === "login" ? "/login" : "/", {
-        replace: true,
-      });
+      navigate(
+        options?.redirectTo === "login" ? AUTH_LOGIN_ENTRY_PATH : "/",
+        { replace: true },
+      );
     },
     [navigate],
   );
 
-  const handleRefreshFailed = useCallback(() => {
-    clearStoredSession();
-    setToken(null);
-    setUser(null);
-    setReady(true);
-    navigate("/login", { replace: true });
-  }, [navigate]);
+  const invalidateSessionToLogin = useCallback(() => {
+    logout({ redirectTo: "login" });
+  }, [logout]);
+
+  const handleRefreshFailed = invalidateSessionToLogin;
+
+  useLayoutEffect(() => {
+    setOnSessionRefreshFailedHandler(invalidateSessionToLogin);
+    return () => setOnSessionRefreshFailedHandler(null);
+  }, [invalidateSessionToLogin]);
 
   useProactiveTokenRefresh({
     token,
@@ -147,42 +155,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      clearStoredSession();
-      setToken(null);
-      setUser(null);
-      setReady(true);
-      navigate("/login", { replace: true });
+      handleRefreshFailed();
     });
     return () => setUnauthorizedHandler(null);
-  }, [navigate]);
+  }, [handleRefreshFailed]);
 
   useEffect(() => {
     setOn401RefreshTokenHandler(async () => {
       const res = await refreshSession();
-      if (!res) return null;
+      if (!res?.accessToken?.trim()) {
+        handleRefreshFailed();
+        return null;
+      }
       applyAuthResponse(res);
       return res.accessToken;
     });
     return () => setOn401RefreshTokenHandler(null);
-  }, [applyAuthResponse]);
+  }, [applyAuthResponse, handleRefreshFailed]);
 
-  // 非 mock：重整時若已有 access 則不先打 /token，直接以 storage 內 access 讓下層重連 WS（過期則 proactive refresh 或 401 換發）
-  // 僅在 storage 無 access、仍有 refresh 時才啟動換發
+  // 啟動驗證：無 access、access 已過期、或缺 expiresAt 時以 refresh 換發；失敗清 session 並導向大廳登入
   useEffect(() => {
     if (isMockMode()) return;
-    const initialT = getInitialToken();
-    const initialRt = getInitialRefresh();
-    if (initialT || !initialRt) return;
+    const initialRt = getStoredRefreshToken()?.trim();
+    if (!initialRt) return;
+    if (!shouldRefreshStoredSessionOnStartup()) return;
+
     let cancelled = false;
     setReady(false);
     void refreshSession()
       .then((res) => {
         if (cancelled) return;
-        if (!res) {
-          clearStoredSession();
-          setToken(null);
-          setUser(null);
-          setReady(true);
+        if (!res?.accessToken?.trim()) {
+          handleRefreshFailed();
           return;
         }
         applyAuthResponse(res);
@@ -190,32 +194,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         if (!cancelled) {
-          clearStoredSession();
-          setToken(null);
-          setUser(null);
-          setReady(true);
+          handleRefreshFailed();
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [applyAuthResponse]);
+  }, [applyAuthResponse, handleRefreshFailed]);
 
   // 依 `token` 還原使用者：mock 用內建假資料；其餘用登入／refresh 已寫入之持久化，大廳則由 LOBBY_GET 之 playerInfo 經 mergeUser 併入
   useEffect(() => {
     if (token == null) {
+      setUser(null);
       const noStoredSession =
-        getInitialToken() == null && getInitialRefresh() == null;
+        getStoredAccessToken() == null && getStoredRefreshToken() == null;
       if (noStoredSession) {
-        setUser(null);
         setReady(true);
-      } else {
-        let u = readPersistedUser();
-        if (!u) {
-          u = minimalSessionUser();
-          writePersistedUser(u);
-        }
-        setUser(u);
       }
       return;
     }
@@ -311,21 +305,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [setSessionFromAuth],
   );
 
+  const tryRefreshSession = useCallback(async (): Promise<boolean> => {
+    if (isMockMode()) return false;
+    const rt = getStoredRefreshToken()?.trim();
+    if (!rt) {
+      invalidateSessionToLogin();
+      return false;
+    }
+    const res = await refreshSession();
+    if (!res) {
+      return false;
+    }
+    applyAuthResponse(res);
+    return true;
+  }, [applyAuthResponse, invalidateSessionToLogin]);
+
   const ensureFreshAccessForGame = useCallback(async (): Promise<string | null> => {
     if (isMockMode()) {
       return token?.trim() || getStoredAccessToken()?.trim() || null;
     }
     const rt = getStoredRefreshToken()?.trim();
     if (!rt) {
-      return token?.trim() || getStoredAccessToken()?.trim() || null;
+      handleRefreshFailed();
+      return null;
     }
     const res = await refreshSession();
-    if (!res) {
+    if (!res?.accessToken?.trim()) {
       handleRefreshFailed();
       return null;
     }
     applyAuthResponse(res);
-    return res.accessToken.trim() || null;
+    return res.accessToken.trim();
   }, [token, applyAuthResponse, handleRefreshFailed]);
 
   const value = useMemo(
@@ -338,9 +348,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       ingestAuthResponse,
       logout,
+      invalidateSessionToLogin,
       refreshUser,
       mergeUser,
       ensureFreshAccessForGame,
+      tryRefreshSession,
     }),
     [
       user,
@@ -351,9 +363,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       ingestAuthResponse,
       logout,
+      invalidateSessionToLogin,
       refreshUser,
       mergeUser,
       ensureFreshAccessForGame,
+      tryRefreshSession,
     ],
   );
 

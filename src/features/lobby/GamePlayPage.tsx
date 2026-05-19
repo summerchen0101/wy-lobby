@@ -1,6 +1,12 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { AUTH_LOGIN_ENTRY_PATH } from "../../auth/loginEntry";
+import { useAuth } from "../../auth/useAuth";
 import { GameOverlay } from "../../components/GameOverlay";
+import {
+  getStoredAccessToken,
+  getStoredRefreshToken,
+} from "../../auth/sessionPersist";
 import {
   clearGamePopoutUrlByKey,
   parseSafeHttpGameUrl,
@@ -12,8 +18,17 @@ import {
 } from "../../lib/gameShellTelemetry";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 
+function launchUrlHadToken(url: string): boolean {
+  try {
+    return Boolean(new URL(url).searchParams.get("token")?.trim());
+  } catch {
+    return false;
+  }
+}
+
 export function GamePlayPage() {
   const navigate = useNavigate();
+  const { ready } = useAuth();
   const { refreshLobbyGet } = useGatewayLobby();
   const [params] = useSearchParams();
   const k = params.get("k")?.trim();
@@ -24,6 +39,21 @@ export function GamePlayPage() {
     if (rawUrlParam) return parseSafeHttpGameUrl(rawUrlParam);
     return null;
   }, [k, rawUrlParam]);
+
+  const requiresStoredSession = useMemo(
+    () => (frameUrl ? launchUrlHadToken(frameUrl) : false),
+    [frameUrl],
+  );
+
+  useEffect(() => {
+    if (!ready || !requiresStoredSession) return;
+    const hasSession =
+      Boolean(getStoredAccessToken()?.trim()) ||
+      Boolean(getStoredRefreshToken()?.trim());
+    if (!hasSession) {
+      navigate(AUTH_LOGIN_ENTRY_PATH, { replace: true });
+    }
+  }, [ready, requiresStoredSession, navigate]);
 
   const handleClose = useCallback(() => {
     if (k) clearGamePopoutUrlByKey(k);
