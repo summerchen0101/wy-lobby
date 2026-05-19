@@ -11,6 +11,7 @@ import {
 } from './gatewayWsTrace'
 import { getGatewayWsUrl, isDevConsoleEnabled } from '../lib/env'
 import { agentDebugPostJson } from '../debug/agentDebugIngest'
+import { resolveGatewayWsShutdown } from './gatewayWsShutdown'
 
 export type GatewayWsConnectionState = 'idle' | 'connecting' | 'open' | 'closed'
 
@@ -21,6 +22,8 @@ export type GatewayWsStateMeta = {
     | 'transport'
     | 'reconnect_exhausted'
     | 'auth_rejected'
+  /** `closed` 時：本 client 生命週期內從未成功 `open`（常為握手 token 失效） */
+  handshakeNeverSucceeded?: boolean
   closeCode?: number
   closeReason?: string
   wasClean?: boolean
@@ -141,6 +144,8 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   let handshakeWatchTimer: ReturnType<typeof setTimeout> | null = null
   let closedByUser = false
   let attempt = 0
+  /** 本 client 生命週期內是否曾成功 `open`（重連後仍為 true） */
+  let hasOpenedOnce = false
   const pending = new Map<string, PendingEntry>()
 
   const heartbeatIntervalMs = options.heartbeatIntervalMs ?? 25_000
@@ -444,6 +449,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     socket.onopen = () => {
       if (ws !== socket) return
       clearHandshakeWatch()
+      hasOpenedOnce = true
       attempt = 0
       setState('open')
       if (!skipInitialPing) {
@@ -530,30 +536,26 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       clearHeartbeat()
       rejectAllPending(new Error('[gateway-ws] socket closed'))
 
-      let shutdownReason: NonNullable<GatewayWsStateMeta['shutdownReason']> =
-        closedByUser ? 'client_close' : 'transport'
-      if (!closedByUser && fatalReconnectSet.has(ev.code)) {
-        shutdownReason = 'auth_rejected'
-      } else if (
-        !closedByUser &&
-        maxReconnectAttempts != null &&
-        attempt >= maxReconnectAttempts
-      ) {
-        shutdownReason = 'reconnect_exhausted'
-      }
+      const closeReasonStr = String(ev.reason ?? '')
+      const resolved = resolveGatewayWsShutdown({
+        closedByUser,
+        hasOpenedOnce,
+        closeCode: ev.code,
+        closeReason: closeReasonStr,
+        fatalReconnectCloseCodes: fatalReconnectSet,
+        maxReconnectAttempts,
+        attempt,
+      })
 
       setState('closed', {
-        shutdownReason,
+        shutdownReason: resolved.shutdownReason,
+        handshakeNeverSucceeded: resolved.handshakeNeverSucceeded,
         closeCode: ev.code,
-        closeReason: ev.reason,
+        closeReason: closeReasonStr,
         wasClean: ev.wasClean,
       })
       ws = null
-      if (closedByUser || !reconnect) return
-      if (fatalReconnectSet.has(ev.code)) return
-      if (maxReconnectAttempts != null && attempt >= maxReconnectAttempts) {
-        return
-      }
+      if (closedByUser || !reconnect || !resolved.shouldReconnect) return
       const delay = Math.min(maxDelay, initialDelay * 2 ** attempt)
       attempt += 1
       reconnectTimer = setTimeout(() => {

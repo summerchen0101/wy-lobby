@@ -80,6 +80,10 @@
 
 表示在逾時時間內沒有收到 **可與該次 `RequestBasic.requestID` 配對** 的 `gateway.Response` 二進位訊息。請在 **DevTools → Network → 該 WebSocket → Messages** 檢查是否有進站二進位。開發模式下 [`gatewayWs`](../src/realtime/gatewayWs.ts) 在無法配對時可能 `console.warn`。
 
+### 3.5 WS 握手 token 失效 → 導向 `/login`
+
+已登入且帶 token 連線 Gateway 時，若 IAM 在握手階段拒絕（後端常見 `401001`、瀏覽器多為 `CloseEvent.code` **1006**），[`gatewayWs`](../src/realtime/gatewayWs.ts) 會在 **本 client 從未成功 `open`** 時將 `shutdownReason` 設為 `auth_rejected` 且 **不再重連**。[`GatewayLobbyProvider`](../src/realtime/GatewayLobbyProvider.tsx) 收到後清除 session 並 `navigate('/login')`（與 REST 401 一致）。連線已建立後的 `SERVER_LOGIN`／`LOBBY_GET` 等非成功 code 則依 `VITE_WS_SESSION_INVALID_CODES`（預設含 `401001`）處理。
+
 ---
 
 ## 4. 環境變數與行為速查
@@ -90,6 +94,8 @@
 | `VITE_API_USE_MOCK` | 為 `true` 時 REST 全走 mock。 |
 | `VITE_API_PATH_AUTH_REGISTER` / `LOGIN` / `LOBBY_GAMES` / `USER_ME` / `PAYMENT_DEPOSIT` | 覆寫預設 REST 路徑。 |
 | `VITE_WS_URL`、`VITE_WS_DEVICE_ID` | Gateway WebSocket 連線 URL（[`env.ts` `getGatewayWsUrl`](../src/lib/env.ts)）。 |
+| `VITE_WS_AUTH_FAILURE_CLOSE_CODES` | 握手／傳輸層：指定 Close code 視為 `auth_rejected`（逗號分隔）；未設時另以「從未 open」判定。 |
+| `VITE_WS_SESSION_INVALID_CODES` | 連線已 open 後：Gateway 業務 `code` 視為 session 失效並導向登入（預設 `401,403,401001`）。 |
 | `VITE_USE_WS_LOBBY_GAMES` | 為 `true`：啟用 WS、並以 `LOBBY_GET` 解出來的列表作為大廳遊戲來源（可含訪客）。 |
 | `VITE_DEV_GATEWAY_WS` / `VITE_DEV_LOBBY_GET` | 開發用：方便連上 Gateway / 送 `LOBBY_GET` 除錯。 |
 | `VITE_CLIENT_VER` | 寫入每則 `RequestBasic.clientVer`。 |

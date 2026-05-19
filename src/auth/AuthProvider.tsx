@@ -82,13 +82,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u);
   }, []);
 
-  const logout = useCallback(() => {
-    clearStoredSession();
-    setToken(null);
-    setUser(null);
-    setReady(true);
-    navigate("/", { replace: true });
-  }, [navigate]);
+  const logout = useCallback(
+    (options?: { redirectTo?: "home" | "login" }) => {
+      clearStoredSession();
+      setToken(null);
+      setUser(null);
+      setReady(true);
+      navigate(options?.redirectTo === "login" ? "/login" : "/", {
+        replace: true,
+      });
+    },
+    [navigate],
+  );
 
   const handleRefreshFailed = useCallback(() => {
     clearStoredSession();

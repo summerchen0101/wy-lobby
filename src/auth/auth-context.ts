@@ -11,7 +11,7 @@ export type AuthContextValue = {
   register: (body: RegisterBody) => Promise<void>
   /** 已取得的 `AuthResponse`（如註冊首輪即回 token）寫入 session */
   ingestAuthResponse: (res: AuthResponse) => void
-  logout: () => void
+  logout: (options?: { redirectTo?: 'home' | 'login' }) => void
   refreshUser: () => Promise<void>
   /** 與 LOBBY_GET 等來源合併玩家欄位並持久化 */
   mergeUser: (patch: Partial<User>) => void
