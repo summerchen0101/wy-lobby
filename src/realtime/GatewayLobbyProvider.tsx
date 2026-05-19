@@ -67,7 +67,7 @@ const LOBBY_GET_POLL_MS = 15_000;
 
 function wsSessionInvalidCodesFromEnv(): Set<string> {
   const raw = (
-    import.meta.env.VITE_WS_SESSION_INVALID_CODES ?? "401,403"
+    import.meta.env.VITE_WS_SESSION_INVALID_CODES ?? "401,403,401001"
   ).trim();
   const parts = raw
     .split(",")
@@ -240,6 +240,24 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const forceReLogin = useCallback(
+    (message = "Please log in again.") => {
+      if (wsHandshakeAuthLockRef.current) return;
+      wsHandshakeAuthLockRef.current = true;
+      if (gateActive) setLobbyWsBootstrapDone(true);
+      setLobbyError(null);
+      const api = getAlertApi();
+      if (api) {
+        api.showBlockingAlert(message, {
+          onConfirm: () => logout({ redirectTo: "login" }),
+        });
+      } else {
+        logout({ redirectTo: "login" });
+      }
+    },
+    [gateActive, logout],
+  );
+
   const runLobbyGetRequest = useCallback(
     async (
       request: GatewayWsRequestFn,
@@ -296,7 +314,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             sessionTokenRef.current &&
             isGatewaySessionInvalidCode(codeStr)
           ) {
-            logout();
+            logout({ redirectTo: "login" });
             return;
           }
           setLobbyGet(null);
@@ -468,15 +486,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         gatewayWsEnabled
       ) {
         if (meta?.shutdownReason === "auth_rejected") {
-          if (wsHandshakeAuthLockRef.current) return;
-          wsHandshakeAuthLockRef.current = true;
-          if (gateActive) setLobbyWsBootstrapDone(true);
-          const api = getAlertApi();
-          if (api) {
-            api.showBlockingAlert("Please log in again.", { onConfirm: logout });
-          } else {
-            logout();
-          }
+          forceReLogin();
+          return;
+        }
+        if (
+          meta?.shutdownReason === "reconnect_exhausted" &&
+          meta?.handshakeNeverSucceeded
+        ) {
+          forceReLogin();
           return;
         }
         if (meta?.shutdownReason === "reconnect_exhausted") {
@@ -553,9 +570,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         if (gateActive) setLobbyWsBootstrapDone(true);
         const api = getAlertApi();
         if (api) {
-          api.showBlockingAlert(text, { onConfirm: logout });
+          api.showBlockingAlert(text, {
+            onConfirm: () => logout({ redirectTo: "login" }),
+          });
         } else {
-          logout();
+          logout({ redirectTo: "login" });
         }
         return;
       }
@@ -643,7 +662,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             sessionTokenRef.current &&
             isGatewaySessionInvalidCode(loginRes.code)
           ) {
-            logout();
+            logout({ redirectTo: "login" });
             return;
           }
           console.warn("[gateway-ws] SERVER_LOGIN non-success", {
@@ -680,6 +699,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         timestamp: Date.now(),
       });
       // #endregion
+      if (wsHandshakeAuthLockRef.current) return;
+      if (
+        token?.trim() &&
+        gatewayWsEnabled &&
+        gatewayWsSessionStartAtMsRef.current === 0
+      ) {
+        return;
+      }
       if (gateActive) {
         setLobbyWsBootstrapDone(true);
       }
@@ -697,7 +724,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       }
       const codeStr = String(msg.code ?? "");
       if (sessionTokenRef.current && isGatewaySessionInvalidCode(codeStr)) {
-        logout();
+        logout({ redirectTo: "login" });
       }
     },
   });
