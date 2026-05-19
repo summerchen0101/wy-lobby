@@ -58,6 +58,14 @@ export default defineConfig(({ mode }) => {
   const proxyTarget = env.VITE_DEV_PROXY;
   return {
     base: "/",
+    resolve: {
+      alias: {
+        "@protobufjs/inquire": path.resolve(
+          __dirname,
+          "src/shims/protobufInquire.cjs",
+        ),
+      },
+    },
     plugins: [react(), publicImageCdnBuildPlugin(env)],
     test: {
       environment: "node",

@@ -32,8 +32,10 @@ export function useProactiveTokenRefresh({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshingRef = useRef(false);
 
-  onRefreshedRef.current = onRefreshed;
-  onRefreshFailedRef.current = onRefreshFailed;
+  useEffect(() => {
+    onRefreshedRef.current = onRefreshed;
+    onRefreshFailedRef.current = onRefreshFailed;
+  }, [onRefreshed, onRefreshFailed]);
 
   useEffect(() => {
     if (isMockMode()) return;
