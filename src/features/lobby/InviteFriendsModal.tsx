@@ -13,7 +13,8 @@ import { useGatewayLobby } from '../../realtime/useGatewayLobby'
 import {
   decodeClaimReferralRewardRespBytes,
   decodeGetReferralInfoRespBytes,
-  formatReferralRewardAmountsForMessage,
+  formatClaimedReferralRewardsMessage,
+  hasReferralRewardEntries,
   referralGcDisplayAmount,
   referralScDisplayAmount,
   type GetReferralInfoRespDecoded,
@@ -26,6 +27,9 @@ type Props = {
 }
 
 const DEMO_REFERRAL_URL = 'https://www.wncogames.com?referrercode=demo'
+
+const CLAIM_REFERRAL_NO_REWARDS_INFO =
+  'No rewards to claim yet. Your friend must complete registration successfully before you can receive referral rewards.'
 
 const WS_WAIT_SLOW_MS = 16_000
 
@@ -237,9 +241,13 @@ export function InviteFriendsModal({ open, onClose }: Props) {
         return
       }
       const { rewards: claimed } = decodeClaimReferralRewardRespBytes(r.data)
-      show(formatReferralRewardAmountsForMessage(claimed), { variant: 'success' })
-      await refreshLobbyGet()
-      void fetchReferralInfo({ quiet: true })
+      if (hasReferralRewardEntries(claimed)) {
+        show(formatClaimedReferralRewardsMessage(claimed), { variant: 'success' })
+        await refreshLobbyGet()
+        void fetchReferralInfo({ quiet: true })
+      } else {
+        show(CLAIM_REFERRAL_NO_REWARDS_INFO, { variant: 'info' })
+      }
     } catch {
       show('Could not claim rewards', { variant: 'error' })
     } finally {

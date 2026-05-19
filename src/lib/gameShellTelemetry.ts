@@ -6,6 +6,8 @@
  * 2. DevTools → ⋮ → More tools → Performance monitor: JS heap, DOM, GPU over repeated open/close cycles.
  */
 
+import { isDevConsoleEnabled } from './env'
+
 type PerformanceWithMemory = Performance & {
   memory?: {
     usedJSHeapSize: number
@@ -15,7 +17,7 @@ type PerformanceWithMemory = Performance & {
 }
 
 export function logGameOverlayOpened(url: string): void {
-  if (!import.meta.env.DEV) return
+  if (!isDevConsoleEnabled()) return
   const payload = {
     event: 'overlay_open',
     url,
@@ -26,7 +28,7 @@ export function logGameOverlayOpened(url: string): void {
 }
 
 export function logGameOverlayClosed(): void {
-  if (!import.meta.env.DEV) return
+  if (!isDevConsoleEnabled()) return
   const payload = {
     event: 'overlay_close',
     ts: Date.now(),
@@ -36,7 +38,7 @@ export function logGameOverlayClosed(): void {
 }
 
 export function logGameOpenedNewTab(url: string): void {
-  if (!import.meta.env.DEV) return
+  if (!isDevConsoleEnabled()) return
   console.info('[game-shell][dev]', {
     event: 'game_new_tab',
     url: url.trim(),
@@ -47,7 +49,7 @@ export function logGameOpenedNewTab(url: string): void {
 
 /** Chrome exposes `performance.memory` when launched with `--enable-precise-memory-info` (optional). */
 export function logPerfMemorySnapshot(label: string): void {
-  if (!import.meta.env.DEV) return
+  if (!isDevConsoleEnabled()) return
   const m =
     typeof performance !== 'undefined'
       ? (performance as PerformanceWithMemory).memory

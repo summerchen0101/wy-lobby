@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_API_PATH_AUTH_REGISTER?: string;
   readonly VITE_API_PATH_AUTH_LOGIN?: string;
   readonly VITE_API_PATH_AUTH_TOKEN?: string;
+  /** access 到期前主動 refresh 的提前秒數（預設 300；需後端回 expiresIn） */
+  readonly VITE_TOKEN_REFRESH_LEAD_SEC?: string;
   /** 僅 dev：Vite 將 /api 代理到此目標 */
   readonly VITE_DEV_PROXY: string;
   /** 大廳「Single1 (Alpha)」內嵌試玩 URL（可覆寫預設 alpha 站） */
@@ -30,6 +32,11 @@ interface ImportMetaEnv {
   readonly VITE_UNITY_WEBENTRY_GAME_ID?: string;
   /** 選填：Cursor/本機 NDJSON ingest 完整 URL（含 path）；未設或空字串時不發任何 POST */
   readonly VITE_AGENT_DEBUG_INGEST_URL?: string;
+  /**
+   * 應用程式開發診斷用 console（`[gateway-ws][dev]`、`[game-shell][dev]` 等）。
+   * `"false"` 關閉；`"true"` 強制開啟（含 production/preview）；未設則等同 `import.meta.env.DEV`。
+   */
+  readonly VITE_DEV_CONSOLE?: string;
 
   /**
    * 僅 dev：`LandingPage` 是否自動連 Gateway WS 並 `console` 記錄。

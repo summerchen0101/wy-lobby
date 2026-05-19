@@ -25,13 +25,21 @@ function buildV1LoginBody(body: LoginBody) {
   }
 }
 
-/** 僅送 `refreshToken`（與 `docs/api-spec.md`／`docs/login_flow.md` 之 `POST /api/v1/token` 一致）。 */
+/**
+ * 換發 body：與登入相同帶 `deviceID`／`app_meta`（IAM 常要求）；`refreshToken` 為必填。
+ * 部分環境另認 `aRefreshToken`，一併帶相同值以相容。
+ */
 function buildV1RefreshBody(refreshToken: string) {
   const rt = refreshToken.trim()
   if (!rt) {
     throw new ApiError('Missing refresh token', 400)
   }
-  return { refreshToken: rt }
+  return {
+    refreshToken: rt,
+    aRefreshToken: rt,
+    deviceID: getOrCreateWebDeviceId(),
+    app_meta: buildAppMetaPayload(),
+  }
 }
 
 export async function signUp(body: SignUpRequest): Promise<SignupResult> {
@@ -62,13 +70,19 @@ export async function completeSignUp(body: SignUpRequest): Promise<AuthResponse>
   throw new ApiError('Sign-up incomplete: enter the verification code or try again', 400)
 }
 
-export async function refreshAccessToken(refreshToken: string): Promise<AuthResponse> {
+export async function refreshAccessToken(
+  refreshToken: string,
+  /** 若後端要求，可帶目前 access 作為 Bearer（文件未強制；IAM 實務常需要）。 */
+  accessToken?: string | null,
+): Promise<AuthResponse> {
   if (isMockMode()) {
     return mock.mockRefreshToken(refreshToken)
   }
+  const bearer = accessToken?.trim() || null
   const data = await apiRequest<unknown>(getApiPaths().token, {
     method: 'POST',
     body: buildV1RefreshBody(refreshToken),
+    token: bearer,
     skipUnauthorizedOn401: true,
     largeSafeUserIdsInJson: true,
   })

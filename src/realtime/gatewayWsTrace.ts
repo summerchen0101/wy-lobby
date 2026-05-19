@@ -1,13 +1,17 @@
+import { isDevConsoleEnabled } from '../lib/env'
 import { hexPreview } from './bytesHexPreview'
 import { decodeGatewayRequestDataForDevLog } from './gatewayRequestDevPayload'
 
 const DATA_HEX_PREVIEW_MAX_BYTES = 256
 const HEX_PREVIEW_LEN = 48
 
-/** `import.meta.env.DEV` 或 `VITE_GATEWAY_WS_TRACE=true` 時啟用（production build 預設關）。 */
+/**
+ * `VITE_GATEWAY_WS_TRACE=true` 時一律啟用（不因 `VITE_DEV_CONSOLE=false` 關閉）。
+ * 否則僅 `import.meta.env.DEV && isDevConsoleEnabled()` 時啟用。
+ */
 export function isGatewayWsTraceEnabled(): boolean {
-  if (import.meta.env.DEV) return true
-  return import.meta.env.VITE_GATEWAY_WS_TRACE === 'true'
+  if (import.meta.env.VITE_GATEWAY_WS_TRACE === 'true') return true
+  return import.meta.env.DEV && isDevConsoleEnabled()
 }
 
 /** 與 `getGatewayWsUrlForDevLog` 相同規則，避免完整 token 進 console。 */

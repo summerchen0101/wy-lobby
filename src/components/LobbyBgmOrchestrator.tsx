@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useAuth } from "../auth/useAuth";
 import type { User } from "../lib/api/types";
 import {
-  LOBBY_BGM_SRC,
+  assignRandomLobbyBgm,
   LOBBY_SOUND_PREF_EVENT,
   isLobbySoundEnabled,
 } from "../lib/lobbySound";
@@ -10,9 +10,9 @@ import { useGameShell } from "./useGameShell";
 
 /**
  * 全域大廳 BGM（不綁定特定路由）：
- * 1. 初次載入 SPA 播一次
- * 2. 訪客登入成功（null → user）再播一次；還原既有 session 不做「登入成功」
- * refocus／已播完不重播；與 Profile 靜音、遊戲殼層、分頁可見度同步。
+ * 1. 初次載入 SPA 開始循環播放
+ * 2. 訪客登入成功（null → user）再載入並播；還原既有 session 不做「登入成功」
+ * 循環直到靜音／遊戲殼開啟／分頁隱藏（暫停）；與 Profile 靜音、遊戲殼層、分頁可見度同步。
  */
 export function LobbyBgmOrchestrator() {
   const { user, ready } = useAuth();
@@ -23,8 +23,8 @@ export function LobbyBgmOrchestrator() {
 
   const getAudio = useCallback(() => {
     if (!audioRef.current) {
-      const a = new Audio(LOBBY_BGM_SRC);
-      a.loop = false;
+      const a = new Audio();
+      a.loop = true;
       a.preload = "auto";
       audioRef.current = a;
     }
@@ -52,7 +52,7 @@ export function LobbyBgmOrchestrator() {
     if (firstVisitPlayedRef.current) return;
     firstVisitPlayedRef.current = true;
     const audio = getAudio();
-    audio.currentTime = 0;
+    assignRandomLobbyBgm(audio);
     if (
       !isLobbySoundEnabled() ||
       gameShellOpen ||
@@ -85,7 +85,7 @@ export function LobbyBgmOrchestrator() {
     }
     if (prevUserRef.current === null && user !== null) {
       const audio = getAudio();
-      audio.currentTime = 0;
+      assignRandomLobbyBgm(audio);
       if (
         !isLobbySoundEnabled() ||
         gameShellOpen ||

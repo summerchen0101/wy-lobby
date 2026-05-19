@@ -9,7 +9,7 @@ import {
   isGatewayWsTraceEnabled,
   logGatewayRequestOut,
 } from './gatewayWsTrace'
-import { getGatewayWsUrl } from '../lib/env'
+import { getGatewayWsUrl, isDevConsoleEnabled } from '../lib/env'
 import { agentDebugPostJson } from '../debug/agentDebugIngest'
 
 export type GatewayWsConnectionState = 'idle' | 'connecting' | 'open' | 'closed'
@@ -34,7 +34,7 @@ export type GatewayWsRequestPayload = {
   /** 併入該次 Request 的 RequestBasic（會蓋過同鍵的 getRequestBasicExtras） */
   basicExtras?: Record<string, unknown>
   /**
-   * 僅 `import.meta.env.DEV`：console 上辨識用途（如 `LOBBY_GET`），不寫上線。
+   * 僅診斷用：`isDevConsoleEnabled()` 時經 WS trace／dev log 辨識用途（如 `LOBBY_GET`）；production 預設不輸出。
    */
   debugLabel?: string
 }
@@ -476,7 +476,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
             handleIncomingArrayBuffer(ab)
           },
           (e) => {
-            if (import.meta.env.DEV) {
+            if (isDevConsoleEnabled()) {
               console.warn('[gateway-ws] Blob.arrayBuffer() failed', e)
             }
           },
@@ -484,7 +484,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
         return
       }
       if (typeof d === 'string') {
-        if (import.meta.env.DEV) {
+        if (isDevConsoleEnabled()) {
           console.warn(
             '[gateway-ws] text WebSocket frame (ignored; expected binary gateway.Response)',
             d.length > 200 ? `${d.slice(0, 200)}…` : d,

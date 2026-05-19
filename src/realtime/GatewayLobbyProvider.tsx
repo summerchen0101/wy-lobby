@@ -11,6 +11,7 @@ import type { Game } from "../lib/api/types";
 import { useWallet } from "../wallet/walletContext";
 import {
   getGatewayWsUrlForDevLog,
+  isDevConsoleEnabled,
   isMockMode,
   isWsLobbyGamesEnabled,
 } from "../lib/env";
@@ -453,7 +454,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         lastWsClosedMetaRef.current = meta;
       }
 
-      if (import.meta.env.DEV) {
+      if (isDevConsoleEnabled()) {
         console.info("[gateway-ws][dev] state:", s, {
           wsUrl: getGatewayWsUrlForDevLog({ token: token ?? "" }),
           shutdownReason: meta?.shutdownReason,
@@ -499,7 +500,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       /** 伺服器主動推播 USER_KICK_BEFORE（2）；不依賴外層 `code`，避免被推播在非 200/201/204 時漏接致無法清除會話 */
       if (t === GATEWAY_API_USER_KICK_BEFORE) {
         if (!(raw instanceof Uint8Array && raw.byteLength > 0)) {
-          if (import.meta.env.DEV) {
+          if (isDevConsoleEnabled()) {
             console.info(
               "[gateway-ws][dev] ignored USER_KICK_BEFORE with empty body (protocol no-op; no logout)",
             );
@@ -507,7 +508,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           return;
         }
         if (
-          import.meta.env.DEV &&
+          isDevConsoleEnabled() &&
           codeStr.trim() !== "" &&
           !isGatewaySuccessCode(codeStr)
         ) {
@@ -540,7 +541,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           userKickLikelyStaleSurvivorConnNoise(ordinal) &&
           (withinFreshSession || withinPostLogin)
         ) {
-          if (import.meta.env.DEV) {
+          if (isDevConsoleEnabled()) {
             console.warn(
               "[gateway-ws][dev] suppressed stray USER_KICK_BEFORE (Default / DuplicateConn) during early session or shortly after SERVER_LOGIN",
             );
@@ -621,7 +622,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         const loginRaw = loginRes.data;
         const loginLen =
           loginRaw instanceof Uint8Array ? loginRaw.byteLength : 0;
-        if (import.meta.env.DEV) {
+        if (isDevConsoleEnabled()) {
           console.info("[gateway-ws][dev] SERVER_LOGIN", {
             code: loginRes.code,
             type: loginRes.type,
@@ -691,7 +692,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       }
     },
     onGatewayError: (msg) => {
-      if (import.meta.env.DEV) {
+      if (isDevConsoleEnabled()) {
         console.warn("[gateway-ws][dev] non-success code:", msg);
       }
       const codeStr = String(msg.code ?? "");

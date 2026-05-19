@@ -1,4 +1,5 @@
 import * as protobuf from "protobufjs/light.js";
+import { formatWalletScAmountForDisplay } from "../wallet/formatWalletAmount";
 import schema from "../gen/lobby_wire.schema.js";
 
 const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
@@ -87,6 +88,13 @@ export function referralScDisplayAmount(
   return raw / 10000;
 }
 
+/** ClaimReferralReward / proto：有回傳列即視為「有 rewards 資料」（空 repeated 為 []）。 */
+export function hasReferralRewardEntries(
+  rewards: ReferralRewardDecoded[] | undefined,
+): boolean {
+  return Array.isArray(rewards) && rewards.length > 0;
+}
+
 export function formatReferralRewardAmountsForMessage(
   rewards: ReferralRewardDecoded[] | undefined,
 ): string {
@@ -94,6 +102,22 @@ export function formatReferralRewardAmountsForMessage(
   const sc = referralScDisplayAmount(rewards);
   const parts: string[] = [];
   if (gc !== null) parts.push(`${gc} GC`);
-  if (sc !== null) parts.push(`${sc} SC`);
+  if (sc !== null)
+    parts.push(`${formatWalletScAmountForDisplay(sc)} SC`);
   return parts.length ? parts.join(", ") : "Rewards claimed";
+}
+
+/** Toast文案：541 回應 `rewards` 非空時，明確標示取得的 GC / SC。 */
+export function formatClaimedReferralRewardsMessage(
+  rewards: ReferralRewardDecoded[] | undefined,
+): string {
+  const gc = referralGcDisplayAmount(rewards);
+  const sc = referralScDisplayAmount(rewards);
+  const parts: string[] = [];
+  if (gc !== null) parts.push(`${gc} GC`);
+  if (sc !== null)
+    parts.push(`${formatWalletScAmountForDisplay(sc)} SC`);
+  if (parts.length === 1) return `You received ${parts[0]}.`;
+  if (parts.length === 2) return `You received ${parts[0]} and ${parts[1]}.`;
+  return "You received rewards.";
 }

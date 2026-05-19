@@ -12,7 +12,6 @@ import {
   completeSignUp,
   login as apiLogin,
   signUp as apiSignUp,
-  refreshAccessToken,
 } from "../lib/api/auth";
 import * as apiMock from "../lib/api/mock";
 import { nicknameFromEmail } from "../lib/appMeta";
@@ -22,34 +21,24 @@ import {
   setUnauthorizedHandler,
 } from "../lib/api/client";
 import type { AuthResponse, RegisterBody, User } from "../lib/api/types";
+import { minimalSessionUser, resolveUserAfterAuth } from "./applyAuthResponse";
 import { AuthContext } from "./auth-context";
-import { REFRESH_TOKEN_STORAGE_KEY, TOKEN_STORAGE_KEY } from "./storage";
+import { refreshSession } from "./refreshSession";
+import {
+  clearStoredSession,
+  getStoredAccessToken,
+  getStoredRefreshToken,
+  persistAuthResponse,
+} from "./sessionPersist";
+import { useProactiveTokenRefresh } from "./useProactiveTokenRefresh";
 import { readPersistedUser, writePersistedUser } from "./userPersist";
 
 function getInitialToken(): string | null {
-  if (typeof localStorage === "undefined") return null;
-  return localStorage.getItem(TOKEN_STORAGE_KEY);
+  return getStoredAccessToken();
 }
 
 function getInitialRefresh(): string | null {
-  if (typeof localStorage === "undefined") return null;
-  return localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
-}
-
-function persistAuthResponse(res: {
-  accessToken: string;
-  refreshToken?: string;
-}): void {
-  localStorage.setItem(TOKEN_STORAGE_KEY, res.accessToken);
-  if (res.refreshToken) {
-    localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, res.refreshToken);
-  }
-}
-
-function clearStoredSession(): void {
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
-  writePersistedUser(null);
+  return getStoredRefreshToken();
 }
 
 function initialReadyState(): boolean {
@@ -77,11 +66,6 @@ function syntheticUserFromAccount(account: string): User {
   return { id: "0", displayName };
 }
 
-/** 憑證仍在但 user json 缺失／無法解析時使用，避免 [token] effect 整段誤清 session。 */
-function minimalSessionUser(): User {
-  return { id: "0", displayName: "Player" };
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   /** 樂觀還原 access（即使同時有 refresh），避免 bootstrap 完成前 token 為 null 導致 RequireAuth／WS 誤判。 */
@@ -89,6 +73,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => getInitialUser());
   const [ready, setReady] = useState(initialReadyState);
   const prevTokenRef = useRef<string | null | undefined>(undefined);
+
+  const applyAuthResponse = useCallback((res: AuthResponse) => {
+    persistAuthResponse(res);
+    setToken(res.accessToken);
+    const u = resolveUserAfterAuth(res);
+    writePersistedUser(u);
+    setUser(u);
+  }, []);
+
+  const logout = useCallback(() => {
+    clearStoredSession();
+    setToken(null);
+    setUser(null);
+    setReady(true);
+    navigate("/", { replace: true });
+  }, [navigate]);
+
+  const handleRefreshFailed = useCallback(() => {
+    clearStoredSession();
+    setToken(null);
+    setUser(null);
+    setReady(true);
+    navigate("/login", { replace: true });
+  }, [navigate]);
+
+  useProactiveTokenRefresh({
+    token,
+    onRefreshed: applyAuthResponse,
+    onRefreshFailed: handleRefreshFailed,
+  });
 
   useEffect(() => {
     const prev = prevTokenRef.current;
@@ -110,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (res: {
       accessToken: string;
       refreshToken?: string;
+      expiresIn?: number;
       user?: User | null | undefined;
     }) => {
       persistAuthResponse(res);
@@ -125,14 +140,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const logout = useCallback(() => {
-    clearStoredSession();
-    setToken(null);
-    setUser(null);
-    setReady(true);
-    navigate("/", { replace: true });
-  }, [navigate]);
-
   useEffect(() => {
     setUnauthorizedHandler(() => {
       clearStoredSession();
@@ -146,32 +153,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setOn401RefreshTokenHandler(async () => {
-      const rt = getInitialRefresh();
-      if (!rt) return null;
-      try {
-        const res = await refreshAccessToken(rt);
-        persistAuthResponse(res);
-        if (res.user) {
-          writePersistedUser(res.user);
-          setUser(res.user);
-        } else {
-          let u = readPersistedUser();
-          if (!u) {
-            u = minimalSessionUser();
-            writePersistedUser(u);
-          }
-          setUser(u);
-        }
-        setToken(res.accessToken);
-        return res.accessToken;
-      } catch {
-        return null;
-      }
+      const res = await refreshSession();
+      if (!res) return null;
+      applyAuthResponse(res);
+      return res.accessToken;
     });
     return () => setOn401RefreshTokenHandler(null);
-  }, []);
+  }, [applyAuthResponse]);
 
-  // 非 mock：重整時若已有 access 則不先打 /token，直接以 storage 內 access 讓下層重連 WS（過期則交給 401 換發）
+  // 非 mock：重整時若已有 access 則不先打 /token，直接以 storage 內 access 讓下層重連 WS（過期則 proactive refresh 或 401 換發）
   // 僅在 storage 無 access、仍有 refresh 時才啟動換發
   useEffect(() => {
     if (isMockMode()) return;
@@ -180,22 +170,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (initialT || !initialRt) return;
     let cancelled = false;
     setReady(false);
-    void refreshAccessToken(initialRt)
+    void refreshSession()
       .then((res) => {
         if (cancelled) return;
-        persistAuthResponse(res);
-        setToken(res.accessToken);
-        if (res.user) {
-          writePersistedUser(res.user);
-          setUser(res.user);
-        } else {
-          let u = readPersistedUser();
-          if (!u) {
-            u = minimalSessionUser();
-            writePersistedUser(u);
-          }
-          setUser(u);
+        if (!res) {
+          clearStoredSession();
+          setToken(null);
+          setUser(null);
+          setReady(true);
+          return;
         }
+        applyAuthResponse(res);
         setReady(true);
       })
       .catch(() => {
@@ -209,7 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [applyAuthResponse]);
 
   // 依 `token` 還原使用者：mock 用內建假資料；其餘用登入／refresh 已寫入之持久化，大廳則由 LOBBY_GET 之 playerInfo 經 mergeUser 併入
   useEffect(() => {
