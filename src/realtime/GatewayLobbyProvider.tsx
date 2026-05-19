@@ -127,7 +127,8 @@ function wsDupConnKickSuppressAlertMsFromEnv(): number {
 }
 
 export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
-  const { token, user, mergeUser, logout } = useAuth();
+  const { token, user, mergeUser, logout, tryRefreshSession, invalidateSessionToLogin } =
+    useAuth();
   const { setActiveWallet, activeWallet } = useWallet();
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const gatewayWsEnabled =
@@ -186,6 +187,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const hadTokenRef = useRef(Boolean(token?.trim()));
   /** 避免 `auth_rejected` 連續觸發多次 alert + logout */
   const wsHandshakeAuthLockRef = useRef(false);
+  /** 本輪 access token 是否已試過 refresh（換 token 後重置） */
+  const wsSessionRefreshAttemptedRef = useRef(false);
+  /** 本輪 session 恢復已結束（refresh 失敗後已導向登入，避免重複 logout） */
+  const wsSessionRecoveryDoneRef = useRef(false);
   /** 避免 `USER_KICK_BEFORE` 連續觸發多次 alert + logout */
   const userKickLockRef = useRef(false);
   /** 本次 Gateway WS `onOpen` 時間戳（毫秒）；換 token / 新一輪連線重置 — 用以覆蓋 SERVER_LOGIN 完成前的 stray kick */
@@ -199,6 +204,8 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     wsHandshakeAuthLockRef.current = false;
+    wsSessionRefreshAttemptedRef.current = false;
+    wsSessionRecoveryDoneRef.current = false;
     userKickLockRef.current = false;
     gatewayWsSessionStartAtMsRef.current = 0;
     serverLoginSucceededAtMsRef.current = 0;
@@ -211,7 +218,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   }, [gateActive]);
 
   useEffect(() => {
+    if (!token?.trim()) {
+      setLobbyWsBootstrapDone(true);
+    }
+  }, [token]);
+
+  useEffect(() => {
     if (!gateActive) return;
+    if (!token?.trim()) return;
     setLobbyWsBootstrapDone(false);
     lastWsClosedMetaRef.current = undefined;
   }, [gateActive, token]);
@@ -240,23 +254,43 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const forceReLogin = useCallback(
-    (message = "Please log in again.") => {
-      if (wsHandshakeAuthLockRef.current) return;
-      wsHandshakeAuthLockRef.current = true;
-      if (gateActive) setLobbyWsBootstrapDone(true);
-      setLobbyError(null);
-      const api = getAlertApi();
-      if (api) {
-        api.showBlockingAlert(message, {
-          onConfirm: () => logout({ redirectTo: "login" }),
-        });
-      } else {
-        logout({ redirectTo: "login" });
-      }
-    },
-    [gateActive, logout],
-  );
+  const endWsSessionRecovery = useCallback(() => {
+    if (wsSessionRecoveryDoneRef.current) return;
+    wsSessionRecoveryDoneRef.current = true;
+    if (gateActive) setLobbyWsBootstrapDone(true);
+    setLobbyError(null);
+  }, [gateActive]);
+
+  const handleWsSessionInvalid = useCallback(async () => {
+    if (wsSessionRecoveryDoneRef.current) return;
+
+    if (wsSessionRefreshAttemptedRef.current) {
+      endWsSessionRecovery();
+      invalidateSessionToLogin();
+      return;
+    }
+
+    if (gateActive) setLobbyWsBootstrapDone(true);
+    wsSessionRefreshAttemptedRef.current = true;
+
+    let recovered = false;
+    try {
+      recovered = await tryRefreshSession();
+    } catch {
+      recovered = false;
+    }
+
+    endWsSessionRecovery();
+
+    if (!recovered) {
+      invalidateSessionToLogin();
+    }
+  }, [
+    endWsSessionRecovery,
+    gateActive,
+    invalidateSessionToLogin,
+    tryRefreshSession,
+  ]);
 
   const runLobbyGetRequest = useCallback(
     async (
@@ -314,7 +348,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             sessionTokenRef.current &&
             isGatewaySessionInvalidCode(codeStr)
           ) {
-            logout({ redirectTo: "login" });
+            void handleWsSessionInvalid();
             return;
           }
           setLobbyGet(null);
@@ -344,7 +378,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         if (options?.bootstrap) setLobbyWsBootstrapDone(true);
       }
     },
-    [logout, mergeUser, setActiveWallet, wsLobbyEnabled],
+    [handleWsSessionInvalid, mergeUser, setActiveWallet, wsLobbyEnabled],
   );
 
   const refreshLobbyGet = useCallback(async () => {
@@ -486,14 +520,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         gatewayWsEnabled
       ) {
         if (meta?.shutdownReason === "auth_rejected") {
-          forceReLogin();
+          void handleWsSessionInvalid();
           return;
         }
         if (
           meta?.shutdownReason === "reconnect_exhausted" &&
           meta?.handshakeNeverSucceeded
         ) {
-          forceReLogin();
+          void handleWsSessionInvalid();
           return;
         }
         if (meta?.shutdownReason === "reconnect_exhausted") {
@@ -662,7 +696,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             sessionTokenRef.current &&
             isGatewaySessionInvalidCode(loginRes.code)
           ) {
-            logout({ redirectTo: "login" });
+            void handleWsSessionInvalid();
             return;
           }
           console.warn("[gateway-ws] SERVER_LOGIN non-success", {
@@ -724,12 +758,13 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       }
       const codeStr = String(msg.code ?? "");
       if (sessionTokenRef.current && isGatewaySessionInvalidCode(codeStr)) {
-        logout({ redirectTo: "login" });
+        void handleWsSessionInvalid();
       }
     },
   });
 
-  const needsLobbyHydrationOverlay = gateActive && !lobbyWsBootstrapDone;
+  const needsLobbyHydrationOverlay =
+    gateActive && Boolean(token?.trim()) && !lobbyWsBootstrapDone;
 
   const value = useMemo<GatewayLobbyContextValue>(
     () => ({

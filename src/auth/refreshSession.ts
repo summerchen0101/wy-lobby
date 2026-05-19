@@ -1,5 +1,6 @@
 import { refreshAccessToken } from "../lib/api/auth";
 import type { AuthResponse } from "../lib/api/types";
+import { notifySessionRefreshFailed } from "./sessionRefreshNotify";
 import {
   getStoredAccessToken,
   getStoredRefreshToken,
@@ -18,6 +19,7 @@ export async function refreshSession(): Promise<AuthResponse | null> {
   }
   const rt = getStoredRefreshToken();
   if (!rt?.trim()) {
+    notifySessionRefreshFailed();
     return null;
   }
   refreshInFlight = (async () => {
@@ -26,6 +28,7 @@ export async function refreshSession(): Promise<AuthResponse | null> {
       persistAuthResponseFull(res);
       return res;
     } catch {
+      notifySessionRefreshFailed();
       return null;
     } finally {
       refreshInFlight = null;

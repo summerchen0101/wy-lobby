@@ -80,9 +80,9 @@
 
 表示在逾時時間內沒有收到 **可與該次 `RequestBasic.requestID` 配對** 的 `gateway.Response` 二進位訊息。請在 **DevTools → Network → 該 WebSocket → Messages** 檢查是否有進站二進位。開發模式下 [`gatewayWs`](../src/realtime/gatewayWs.ts) 在無法配對時可能 `console.warn`。
 
-### 3.5 WS 握手 token 失效 → 導向 `/login`
+### 3.5 WS 握手 token 失效 → 先 refresh，失敗再導向 `/login`
 
-已登入且帶 token 連線 Gateway 時，若 IAM 在握手階段拒絕（後端常見 `401001`、瀏覽器多為 `CloseEvent.code` **1006**），[`gatewayWs`](../src/realtime/gatewayWs.ts) 會在 **本 client 從未成功 `open`** 時將 `shutdownReason` 設為 `auth_rejected` 且 **不再重連**。[`GatewayLobbyProvider`](../src/realtime/GatewayLobbyProvider.tsx) 收到後清除 session 並 `navigate('/login')`（與 REST 401 一致）。連線已建立後的 `SERVER_LOGIN`／`LOBBY_GET` 等非成功 code 則依 `VITE_WS_SESSION_INVALID_CODES`（預設含 `401001`）處理。
+已登入且帶 token 連線 Gateway 時，若 IAM 在握手階段拒絕（後端常見 `401001`、瀏覽器多為 `CloseEvent.code` **1006**），[`gatewayWs`](../src/realtime/gatewayWs.ts) 會在 **本 client 從未成功 `open`** 時將 `shutdownReason` 設為 `auth_rejected` 且 **不再重連**。[`GatewayLobbyProvider`](../src/realtime/GatewayLobbyProvider.tsx) 收到後會先以 [`tryRefreshSession`](../src/auth/AuthProvider.tsx)（[`refreshSession`](../src/auth/refreshSession.ts) single-flight）換發 access；成功則 `useGatewayWs` 依新 `wsToken` 自動重連。同一輪 access 內僅嘗試一次 refresh；refresh 失敗或換發後仍被拒絕時，才清除 session 並 `navigate('/login')`。連線已建立後的 `SERVER_LOGIN`／`LOBBY_GET` 等非成功 code 則依 `VITE_WS_SESSION_INVALID_CODES`（預設含 `401001`）走相同流程。
 
 ---
 

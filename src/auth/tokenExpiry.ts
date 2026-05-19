@@ -1,5 +1,5 @@
 /** Default seconds before access expiry to call POST /api/v1/token. */
-export const DEFAULT_TOKEN_REFRESH_LEAD_SEC = 300;
+export const DEFAULT_TOKEN_REFRESH_LEAD_SEC = 0;
 
 /** Values below this are treated as OAuth-style remaining lifetime (seconds). */
 export const ABSOLUTE_EXPIRY_UNIX_SEC_THRESHOLD = 1_000_000_000;
