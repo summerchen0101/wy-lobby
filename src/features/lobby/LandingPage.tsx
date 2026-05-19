@@ -16,6 +16,7 @@ import { SupportFab } from "../../components/session/SupportFab";
 import { LobbyComplianceFooter } from "../../components/LobbyComplianceFooter";
 import { TrustpilotSection } from "../../components/TrustpilotSection";
 import { useGameShell } from "../../components/useGameShell";
+import { useBlockingLoad } from "../../components/loading/useBlockingLoad";
 import { useAuthModals } from "../auth/authModalsContext";
 import { ForgotPasswordModal } from "../auth/ForgotPasswordModal";
 import { LoginModal } from "../auth/LoginModal";
@@ -335,7 +336,8 @@ function LobbyGameCardThumb({
 }
 
 export function LandingPage() {
-  const { token, user, refreshUser } = useAuth();
+  const { token, user, refreshUser, ensureFreshAccessForGame } = useAuth();
+  const { withBlocking } = useBlockingLoad();
   const { activeWallet } = useWallet();
   const { open: openShell } = useGameShell();
   const {
@@ -657,43 +659,58 @@ export function LandingPage() {
 
   function onPlayGame(g?: Game) {
     const card = g ?? UNITY_DEMO_LOBBY_GAME;
-    if (card.thirdPartyLaunch) {
-      void launchThirdPartyGame(card);
-      return;
-    }
-    let url: string;
-    if (isSlotWebEntryEnabled()) {
-      const gameId = slotGameIdFromCard(card, unityWebEntryDefaultGameId());
-      url = buildSlotLaunchUrl({
-        gameId,
-        mode: activeWalletToSlotMode(activeWallet),
-        amount: amountForActiveWallet(user, activeWallet),
-        vipLevel: user?.vipLevel ?? 0,
-        token: user ? token?.trim() || undefined : undefined,
-        guestDemo: !user,
-      });
-    } else if (card.launchUrl?.trim()) {
-      url = card.launchUrl.trim();
-    } else {
-      url = unityDemoGameUrl();
-    }
-    if (isDevConsoleEnabled()) {
-      try {
-        console.log(
-          "[lobby] iframe game URL:",
-          new URL(url, window.location.href).href,
-        );
-      } catch {
-        console.log("[lobby] iframe game URL:", url);
+
+    const run = async () => {
+      let gameToken: string | undefined;
+      if (user) {
+        const fresh = await ensureFreshAccessForGame();
+        if (!fresh) return;
+        gameToken = fresh;
       }
+      if (card.thirdPartyLaunch) {
+        await launchThirdPartyGame(card);
+        return;
+      }
+      let url: string;
+      if (isSlotWebEntryEnabled()) {
+        const gameId = slotGameIdFromCard(card, unityWebEntryDefaultGameId());
+        url = buildSlotLaunchUrl({
+          gameId,
+          mode: activeWalletToSlotMode(activeWallet),
+          amount: amountForActiveWallet(user, activeWallet),
+          vipLevel: user?.vipLevel ?? 0,
+          token: gameToken,
+          guestDemo: !user,
+        });
+      } else if (card.launchUrl?.trim()) {
+        url = card.launchUrl.trim();
+      } else {
+        url = unityDemoGameUrl();
+      }
+      if (isDevConsoleEnabled()) {
+        try {
+          console.log(
+            "[lobby] iframe game URL:",
+            new URL(url, window.location.href).href,
+          );
+        } catch {
+          console.log("[lobby] iframe game URL:", url);
+        }
+      }
+      openShell({
+        url,
+        widthPercent: card.embedWidthPercent,
+        heightPercent: card.embedHeightPercent,
+        isPayment: false,
+        openInNewWindow: card.openInNewWindow,
+      });
+    };
+
+    if (user) {
+      void withBlocking(run);
+    } else {
+      void run();
     }
-    openShell({
-      url,
-      widthPercent: card.embedWidthPercent,
-      heightPercent: card.embedHeightPercent,
-      isPayment: false,
-      openInNewWindow: card.openInNewWindow,
-    });
   }
 
   function onGuestSignUp() {

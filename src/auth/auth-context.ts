@@ -15,6 +15,8 @@ export type AuthContextValue = {
   refreshUser: () => Promise<void>
   /** 與 LOBBY_GET 等來源合併玩家欄位並持久化 */
   mergeUser: (patch: Partial<User>) => void
+  /** 開局前以 refresh 換新 access；失敗回 null（已清 session 並導向登入） */
+  ensureFreshAccessForGame: () => Promise<string | null>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
