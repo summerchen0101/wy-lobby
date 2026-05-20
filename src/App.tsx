@@ -9,6 +9,7 @@ import { LobbyBgmOrchestrator } from "./components/LobbyBgmOrchestrator";
 import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
+import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
 import { PwaInstallBanner } from "./components/PwaInstallBanner";
 import { ZendeskLoader } from "./components/ZendeskLoader";
 import { AuthModalsProvider } from "./features/auth/AuthModalsProvider";
@@ -74,6 +75,7 @@ export default function App() {
                     <ZendeskLoader />
                     <PwaInstallBanner />
                     <IosInstallGuide />
+                    <NewbieTutorialGate />
                     <Suspense fallback={<FullScreenLoadingOverlay />}>
                       <LobbyUiSoundRoot />
                       <Routes>
