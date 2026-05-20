@@ -431,6 +431,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       try {
         await executeOnce();
       } catch (e) {
+        let finalError: unknown = e;
         if (isGatewayWsRequestTimeoutError(e) && wsLobbyEnabled) {
           console.warn("[gateway-ws] LOBBY_GET failed", e);
           setLobbyError(LOBBY_WS_TIMEOUT_RETRY_MSG);
@@ -442,7 +443,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             return;
           } catch (retryErr) {
             console.warn("[gateway-ws] LOBBY_GET retry failed", retryErr);
-            e = retryErr;
+            finalError = retryErr;
           }
         } else {
           console.warn("[gateway-ws] LOBBY_GET failed", e);
@@ -450,7 +451,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         setLobbyGet(null);
         if (wsLobbyEnabled) {
           setLobbyGames([]);
-          setLobbyError(lobbyErrorMessageFromCaught(e));
+          setLobbyError(lobbyErrorMessageFromCaught(finalError));
         } else {
           setLobbyGames(null);
         }
@@ -853,7 +854,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       if (socketErrorDebounceRef.current !== null) {
         clearTimeout(socketErrorDebounceRef.current);
       }
-      socketErrorDebounceRef.current = window.setTimeout(() => {
+      socketErrorDebounceRef.current = setTimeout(() => {
         socketErrorDebounceRef.current = null;
         if (wsConnectionStateRef.current === "open") return;
         setLobbyError((prev) => prev ?? LOBBY_WS_SOCKET_ERROR_MSG);
