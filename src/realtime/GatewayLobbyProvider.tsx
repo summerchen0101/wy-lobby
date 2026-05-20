@@ -137,6 +137,14 @@ function wsRequestTimeoutMsFromEnv(): number {
   return Math.floor(n);
 }
 
+/** PING_PONG 心跳間隔；<=0 關閉。預設 5000。 */
+function wsHeartbeatIntervalMsFromEnv(): number {
+  const raw = (import.meta.env.VITE_WS_HEARTBEAT_INTERVAL_MS ?? "5000").trim();
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 5_000;
+  return Math.floor(n);
+}
+
 /**
  * 大廳 `LOBBY_GET` 輪詢間隔。未設時為 `requestTimeoutMs + 5000`，避免與進行中請求逾時重疊。
  */
@@ -163,8 +171,14 @@ function wsDupConnKickSuppressAlertMsFromEnv(): number {
 }
 
 export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
-  const { token, user, mergeUser, logout, tryRefreshSession, invalidateSessionToLogin } =
-    useAuth();
+  const {
+    token,
+    user,
+    mergeUser,
+    logout,
+    tryRefreshSession,
+    invalidateSessionToLogin,
+  } = useAuth();
   const { setActiveWallet, activeWallet } = useWallet();
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const gatewayWsEnabled =
@@ -184,11 +198,12 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     () => wsAuthFailureCloseCodesFromEnv(),
     [],
   );
-  const wsHandshakeTimeoutMs = useMemo(
-    () => wsHandshakeTimeoutMsFromEnv(),
+  const wsHandshakeTimeoutMs = useMemo(() => wsHandshakeTimeoutMsFromEnv(), []);
+  const wsRequestTimeoutMs = useMemo(() => wsRequestTimeoutMsFromEnv(), []);
+  const wsHeartbeatIntervalMs = useMemo(
+    () => wsHeartbeatIntervalMsFromEnv(),
     [],
   );
-  const wsRequestTimeoutMs = useMemo(() => wsRequestTimeoutMsFromEnv(), []);
   const wsLobbyGetPollMs = useMemo(
     () => wsLobbyGetPollMsFromEnv(wsRequestTimeoutMs),
     [wsRequestTimeoutMs],
@@ -352,10 +367,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   ]);
 
   const runLobbyGetRequest = useCallback(
-    async (
-      request: GatewayWsRequestFn,
-      options?: { bootstrap?: boolean },
-    ) => {
+    async (request: GatewayWsRequestFn, options?: { bootstrap?: boolean }) => {
       const executeOnce = async () => {
         if (wsLobbyEnabled) setLobbyLoading(true);
         try {
@@ -366,7 +378,8 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           });
           const raw = r.data;
           const len = raw instanceof Uint8Array ? raw.byteLength : 0;
-          if (String(r.code) === "200") {
+          const codeStr = String(r.code ?? "");
+          if (isGatewaySuccessCode(codeStr)) {
             if (len > 0 && raw instanceof Uint8Array) {
               try {
                 const decoded = decodeLobbyGetResponseBytes(raw);
@@ -396,13 +409,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
                   setLobbyGames(null);
                 }
               }
+            } else if (codeStr === "204") {
+              if (wsLobbyEnabled) setLobbyError(null);
             } else {
               setLobbyGames([]);
               setLobbyGet(null);
               if (wsLobbyEnabled) setLobbyError(null);
             }
           } else {
-            const codeStr = String(r.code ?? "");
             if (
               wsLobbyEnabled &&
               sessionTokenRef.current &&
@@ -415,8 +429,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             if (wsLobbyEnabled) {
               setLobbyGames([]);
               setLobbyError(
-                r.errMessage?.trim() ||
-                  `Lobby request failed (${String(r.code ?? "")})`,
+                r.errMessage?.trim() || `Lobby request failed (${codeStr})`,
               );
             } else {
               setLobbyGames(null);
@@ -458,6 +471,55 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       }
     },
     [handleWsSessionInvalid, mergeUser, setActiveWallet, wsLobbyEnabled],
+  );
+
+  /** 每次 WS `open`（含重連）有 access token 時必跑；訪客跳過。回傳 false 表示 session 失效應中止 bootstrap。 */
+  const runServerLoginOnOpen = useCallback(
+    async (request: GatewayWsRequestFn): Promise<boolean> => {
+      const wsAccessToken = sessionTokenRef.current;
+      if (!wsAccessToken) return true;
+
+      try {
+        const loginRes = await request({
+          type: GATEWAY_API_SERVER_LOGIN,
+          data: new Uint8Array(0),
+          debugLabel: "SERVER_LOGIN",
+        });
+        const loginRaw = loginRes.data;
+        const loginLen =
+          loginRaw instanceof Uint8Array ? loginRaw.byteLength : 0;
+        if (isDevConsoleEnabled()) {
+          console.info("[gateway-ws][dev] SERVER_LOGIN", {
+            code: loginRes.code,
+            type: loginRes.type,
+            errMessage: loginRes.errMessage,
+            dataLength: loginLen,
+            dataHexPreview24:
+              loginLen > 0 && loginRaw instanceof Uint8Array
+                ? hexPreview(loginRaw, 24)
+                : "",
+          });
+        }
+        const loginCode = String(loginRes.code ?? "");
+        if (isGatewaySuccessCode(loginCode)) {
+          serverLoginSucceededAtMsRef.current = Date.now();
+        }
+        if (!isGatewaySuccessCode(loginCode)) {
+          if (isGatewaySessionInvalidCode(loginRes.code)) {
+            void handleWsSessionInvalid();
+            return false;
+          }
+          console.warn("[gateway-ws] SERVER_LOGIN non-success", {
+            code: loginRes.code,
+            errMessage: loginRes.errMessage,
+          });
+        }
+      } catch (e) {
+        console.warn("[gateway-ws] SERVER_LOGIN failed", e);
+      }
+      return true;
+    },
+    [handleWsSessionInvalid],
   );
 
   const refreshLobbyGet = useCallback(async () => {
@@ -567,7 +629,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     fatalReconnectCloseCodes: wsFatalReconnectCloseCodes,
     handshakeTimeoutMs: wsHandshakeTimeoutMs,
     requestTimeoutMs: wsRequestTimeoutMs,
-    skipInitialPing: true,
+    heartbeatIntervalMs: wsHeartbeatIntervalMs,
     pairUnmatchedSuccessToSinglePending: true,
     serializeRequests: true,
     getRequestBasicExtras,
@@ -615,11 +677,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      if (
-        s === "closed" &&
-        token?.trim() &&
-        gatewayWsEnabled
-      ) {
+      if (s === "closed" && token?.trim() && gatewayWsEnabled) {
         if (meta?.shutdownReason === "auth_rejected") {
           void handleWsSessionInvalid();
           return;
@@ -664,10 +722,13 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           codeStr.trim() !== "" &&
           !isGatewaySuccessCode(codeStr)
         ) {
-          console.warn("[gateway-ws][dev] USER_KICK_BEFORE with non-success code", {
-            code: codeStr,
-            errMessage: (msg as { errMessage?: string }).errMessage,
-          });
+          console.warn(
+            "[gateway-ws][dev] USER_KICK_BEFORE with non-success code",
+            {
+              code: codeStr,
+              errMessage: (msg as { errMessage?: string }).errMessage,
+            },
+          );
         }
         let text = messageForUserKickReason(0);
         let kickReasonField: string | number | undefined;
@@ -686,9 +747,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           sessionStartAt > 0 &&
           now - sessionStartAt <= suppressMs;
         const withinPostLogin =
-          suppressMs > 0 &&
-          loginOkAt > 0 &&
-          now - loginOkAt <= suppressMs;
+          suppressMs > 0 && loginOkAt > 0 && now - loginOkAt <= suppressMs;
         if (
           userKickLikelyStaleSurvivorConnNoise(ordinal) &&
           (withinFreshSession || withinPostLogin)
@@ -763,50 +822,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       requestRef.current = request;
       setGatewayRequestReady(true);
 
+      const continueBootstrap = await runServerLoginOnOpen(request);
+      if (!continueBootstrap) return;
+
       if (shouldRunLobbyGetOnOpen) {
         await runLobbyGetRequest(request, { bootstrap: true });
-      }
-
-      try {
-        const loginRes = await request({
-          type: GATEWAY_API_SERVER_LOGIN,
-          data: new Uint8Array(0),
-          debugLabel: "SERVER_LOGIN",
-        });
-        const loginRaw = loginRes.data;
-        const loginLen =
-          loginRaw instanceof Uint8Array ? loginRaw.byteLength : 0;
-        if (isDevConsoleEnabled()) {
-          console.info("[gateway-ws][dev] SERVER_LOGIN", {
-            code: loginRes.code,
-            type: loginRes.type,
-            errMessage: loginRes.errMessage,
-            dataLength: loginLen,
-            dataHexPreview24:
-              loginLen > 0 && loginRaw instanceof Uint8Array
-                ? hexPreview(loginRaw, 24)
-                : "",
-          });
-        }
-        const loginCode = String(loginRes.code ?? "");
-        if (isGatewaySuccessCode(loginCode)) {
-          serverLoginSucceededAtMsRef.current = Date.now();
-        }
-        if (!isGatewaySuccessCode(loginCode)) {
-          if (
-            sessionTokenRef.current &&
-            isGatewaySessionInvalidCode(loginRes.code)
-          ) {
-            void handleWsSessionInvalid();
-            return;
-          }
-          console.warn("[gateway-ws] SERVER_LOGIN non-success", {
-            code: loginRes.code,
-            errMessage: loginRes.errMessage,
-          });
-        }
-      } catch (e) {
-        console.warn("[gateway-ws] SERVER_LOGIN failed", e);
       }
 
       try {

@@ -61,6 +61,8 @@ interface ImportMetaEnv {
   readonly VITE_WS_HANDSHAKE_TIMEOUT_MS?: string;
   /** 單則 Gateway WS `request()` 逾時（毫秒）；0 關閉；預設 15000 */
   readonly VITE_WS_REQUEST_TIMEOUT_MS?: string;
+  /** PING_PONG 心跳間隔（毫秒）；<=0 關閉；預設 5000 */
+  readonly VITE_WS_HEARTBEAT_INTERVAL_MS?: string;
   /** 大廳 LOBBY_GET 輪詢間隔（毫秒）；未設則 request 逾時 + 5000 */
   readonly VITE_WS_LOBBY_GET_POLL_MS?: string;
   /** 大廳主視覺圖 URL（可覆寫預設 sample 圖） */
