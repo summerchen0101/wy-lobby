@@ -26,10 +26,11 @@ import {
   GATEWAY_API_WITHDRAW_SUCCESS_PUSH,
 } from "./gatewayApi";
 import { decodeLobbyJackpotDisplayTriple } from "./jackpotLobbyWire";
-import type {
-  GatewayWsConnectionState,
-  GatewayWsRequestFn,
-  GatewayWsStateMeta,
+import {
+  isGatewayWsRequestTimeoutError,
+  type GatewayWsConnectionState,
+  type GatewayWsRequestFn,
+  type GatewayWsStateMeta,
 } from "./gatewayWs";
 import { isGatewaySuccessCode } from "./gatewayWire";
 import { agentDebugPostJson } from "../debug/agentDebugIngest";
@@ -63,7 +64,22 @@ import { wireUInt64Field } from "./wireUint64";
 import { LobbyHydrationGate } from "./LobbyHydrationGate";
 import { getAlertApi } from "../components/alert/alertImperative";
 
-const LOBBY_GET_POLL_MS = 15_000;
+const LOBBY_WS_TIMEOUT_RETRY_MSG = "Lobby data timed out, retrying…";
+const LOBBY_WS_TIMEOUT_USER_MSG =
+  "Lobby data timed out. Pull to refresh or try again.";
+const LOBBY_WS_SOCKET_ERROR_MSG = "WebSocket connection error";
+const LOBBY_GET_TIMEOUT_RETRY_DELAY_MS = 1_500;
+const WS_SOCKET_ERROR_DEBOUNCE_MS = 2_000;
+
+function lobbyErrorMessageFromCaught(e: unknown): string {
+  if (isGatewayWsRequestTimeoutError(e)) {
+    return LOBBY_WS_TIMEOUT_USER_MSG;
+  }
+  if (e instanceof Error && e.message.includes("[gateway-ws] socket")) {
+    return LOBBY_WS_SOCKET_ERROR_MSG;
+  }
+  return "Lobby WebSocket request failed";
+}
 
 function wsSessionInvalidCodesFromEnv(): Set<string> {
   const raw = (
@@ -113,6 +129,26 @@ function wsHandshakeTimeoutMsFromEnv(): number {
   return Math.floor(n);
 }
 
+/** 單則 `gatewayWs.request()` 逾時；0 關閉。預設 15000（與 `gatewayWs` 預設一致）。 */
+function wsRequestTimeoutMsFromEnv(): number {
+  const raw = (import.meta.env.VITE_WS_REQUEST_TIMEOUT_MS ?? "15000").trim();
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 15_000;
+  return Math.floor(n);
+}
+
+/**
+ * 大廳 `LOBBY_GET` 輪詢間隔。未設時為 `requestTimeoutMs + 5000`，避免與進行中請求逾時重疊。
+ */
+function wsLobbyGetPollMsFromEnv(requestTimeoutMs: number): number {
+  const raw = (import.meta.env.VITE_WS_LOBBY_GET_POLL_MS ?? "").trim();
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  }
+  return requestTimeoutMs + 5_000;
+}
+
 /**
  * 成功 SERVER_LOGIN 後 N ms 內，對 Default / DuplicateConn / 空 body 類 kick 不彈窗（接替連線常被誤推；真正的遊戲關閉／刪帳仍照常提示）。
  * <=0 關閉。預設 2500。
@@ -151,6 +187,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const wsHandshakeTimeoutMs = useMemo(
     () => wsHandshakeTimeoutMsFromEnv(),
     [],
+  );
+  const wsRequestTimeoutMs = useMemo(() => wsRequestTimeoutMsFromEnv(), []);
+  const wsLobbyGetPollMs = useMemo(
+    () => wsLobbyGetPollMsFromEnv(wsRequestTimeoutMs),
+    [wsRequestTimeoutMs],
   );
 
   /** 視窗內對「接替端」誤推之 Default／Duplicate／空 body kick 略過彈窗（見 wsDupConnKickSuppressAlertMsFromEnv） */
@@ -201,6 +242,24 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const wsReconnectExhaustedNotifiedRef = useRef(false);
   /** 上一則 `closed` 的 meta（供 `connecting` 判斷是否為重試，避免全螢幕閘門反覆打開） */
   const lastWsClosedMetaRef = useRef<GatewayWsStateMeta | undefined>(undefined);
+  const wsConnectionStateRef = useRef<GatewayWsConnectionState>("idle");
+  const socketErrorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const lobbyWsBootstrapDoneRef = useRef(lobbyWsBootstrapDone);
+
+  useEffect(() => {
+    lobbyWsBootstrapDoneRef.current = lobbyWsBootstrapDone;
+  }, [lobbyWsBootstrapDone]);
+
+  useEffect(() => {
+    return () => {
+      if (socketErrorDebounceRef.current !== null) {
+        clearTimeout(socketErrorDebounceRef.current);
+        socketErrorDebounceRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     wsHandshakeAuthLockRef.current = false;
@@ -297,85 +356,104 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       request: GatewayWsRequestFn,
       options?: { bootstrap?: boolean },
     ) => {
-      if (wsLobbyEnabled) setLobbyLoading(true);
-      try {
-        const r = await request({
-          type: GATEWAY_API_LOBBY_GET,
-          data: new Uint8Array(0),
-          debugLabel: "LOBBY_GET",
-        });
-        const raw = r.data;
-        const len = raw instanceof Uint8Array ? raw.byteLength : 0;
-        if (String(r.code) === "200") {
-          if (len > 0 && raw instanceof Uint8Array) {
-            try {
-              const decoded = decodeLobbyGetResponseBytes(raw);
-              const items = lobbyDecodedGamesToApiGames(decoded);
-              if (sessionTokenRef.current) {
-                const userPatch = lobbyDecodedToUserPatch(decoded);
-                if (Object.keys(userPatch).length > 0) {
-                  mergeUser(userPatch);
-                  if (
-                    userPatch.lobbyWalletType === "GC" ||
-                    userPatch.lobbyWalletType === "SC"
-                  ) {
-                    setActiveWallet(userPatch.lobbyWalletType);
+      const executeOnce = async () => {
+        if (wsLobbyEnabled) setLobbyLoading(true);
+        try {
+          const r = await request({
+            type: GATEWAY_API_LOBBY_GET,
+            data: new Uint8Array(0),
+            debugLabel: "LOBBY_GET",
+          });
+          const raw = r.data;
+          const len = raw instanceof Uint8Array ? raw.byteLength : 0;
+          if (String(r.code) === "200") {
+            if (len > 0 && raw instanceof Uint8Array) {
+              try {
+                const decoded = decodeLobbyGetResponseBytes(raw);
+                const items = lobbyDecodedGamesToApiGames(decoded);
+                if (sessionTokenRef.current) {
+                  const userPatch = lobbyDecodedToUserPatch(decoded);
+                  if (Object.keys(userPatch).length > 0) {
+                    mergeUser(userPatch);
+                    if (
+                      userPatch.lobbyWalletType === "GC" ||
+                      userPatch.lobbyWalletType === "SC"
+                    ) {
+                      setActiveWallet(userPatch.lobbyWalletType);
+                    }
                   }
                 }
+                setLobbyGames(items);
+                setLobbyGet(decoded);
+                if (wsLobbyEnabled) setLobbyError(null);
+              } catch (decodeErr) {
+                console.warn("[gateway-ws] LOBBY_GET decode failed", decodeErr);
+                setLobbyGet(null);
+                if (wsLobbyEnabled) {
+                  setLobbyGames([]);
+                  setLobbyError("Could not decode lobby games");
+                } else {
+                  setLobbyGames(null);
+                }
               }
-              setLobbyGames(items);
-              setLobbyGet(decoded);
-              if (wsLobbyEnabled) setLobbyError(null);
-            } catch (decodeErr) {
-              console.warn("[gateway-ws] LOBBY_GET decode failed", decodeErr);
+            } else {
+              setLobbyGames([]);
               setLobbyGet(null);
-              if (wsLobbyEnabled) {
-                setLobbyGames([]);
-                setLobbyError("Could not decode lobby games");
-              } else {
-                setLobbyGames(null);
-              }
+              if (wsLobbyEnabled) setLobbyError(null);
             }
           } else {
-            setLobbyGames([]);
+            const codeStr = String(r.code ?? "");
+            if (
+              wsLobbyEnabled &&
+              sessionTokenRef.current &&
+              isGatewaySessionInvalidCode(codeStr)
+            ) {
+              void handleWsSessionInvalid();
+              return;
+            }
             setLobbyGet(null);
-            if (wsLobbyEnabled) setLobbyError(null);
+            if (wsLobbyEnabled) {
+              setLobbyGames([]);
+              setLobbyError(
+                r.errMessage?.trim() ||
+                  `Lobby request failed (${String(r.code ?? "")})`,
+              );
+            } else {
+              setLobbyGames(null);
+            }
+          }
+        } finally {
+          if (wsLobbyEnabled) setLobbyLoading(false);
+          if (options?.bootstrap) setLobbyWsBootstrapDone(true);
+        }
+      };
+
+      try {
+        await executeOnce();
+      } catch (e) {
+        if (isGatewayWsRequestTimeoutError(e) && wsLobbyEnabled) {
+          console.warn("[gateway-ws] LOBBY_GET failed", e);
+          setLobbyError(LOBBY_WS_TIMEOUT_RETRY_MSG);
+          await new Promise((resolve) => {
+            window.setTimeout(resolve, LOBBY_GET_TIMEOUT_RETRY_DELAY_MS);
+          });
+          try {
+            await executeOnce();
+            return;
+          } catch (retryErr) {
+            console.warn("[gateway-ws] LOBBY_GET retry failed", retryErr);
+            e = retryErr;
           }
         } else {
-          const codeStr = String(r.code ?? "");
-          if (
-            wsLobbyEnabled &&
-            sessionTokenRef.current &&
-            isGatewaySessionInvalidCode(codeStr)
-          ) {
-            void handleWsSessionInvalid();
-            return;
-          }
-          setLobbyGet(null);
-          if (wsLobbyEnabled) {
-            setLobbyGames([]);
-            setLobbyError(
-              r.errMessage?.trim() ||
-                `Lobby request failed (${String(r.code ?? "")})`,
-            );
-          } else {
-            setLobbyGames(null);
-          }
+          console.warn("[gateway-ws] LOBBY_GET failed", e);
         }
-      } catch (e) {
-        console.warn("[gateway-ws] LOBBY_GET failed", e);
         setLobbyGet(null);
         if (wsLobbyEnabled) {
           setLobbyGames([]);
-          setLobbyError(
-            e instanceof Error ? e.message : "Lobby WebSocket request failed",
-          );
+          setLobbyError(lobbyErrorMessageFromCaught(e));
         } else {
           setLobbyGames(null);
         }
-      } finally {
-        if (wsLobbyEnabled) setLobbyLoading(false);
-        if (options?.bootstrap) setLobbyWsBootstrapDone(true);
       }
     },
     [handleWsSessionInvalid, mergeUser, setActiveWallet, wsLobbyEnabled],
@@ -383,10 +461,17 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
   const refreshLobbyGet = useCallback(async () => {
     if (!shouldRunLobbyGetOnOpen) return;
+    if (!gatewayRequestReady) return;
+    if (gateActive && !lobbyWsBootstrapDoneRef.current) return;
     const request = requestRef.current;
     if (!request) return;
     await runLobbyGetRequest(request);
-  }, [runLobbyGetRequest, shouldRunLobbyGetOnOpen]);
+  }, [
+    gateActive,
+    gatewayRequestReady,
+    runLobbyGetRequest,
+    shouldRunLobbyGetOnOpen,
+  ]);
 
   useEffect(() => {
     if (!gatewayWsEnabled || !gatewayRequestReady || !shouldRunLobbyGetOnOpen) {
@@ -395,10 +480,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
     const tick = () => {
       if (document.visibilityState !== "visible") return;
+      if (gateActive && !lobbyWsBootstrapDoneRef.current) return;
       void refreshLobbyGet();
     };
 
-    const id = window.setInterval(tick, LOBBY_GET_POLL_MS);
+    const id = window.setInterval(tick, wsLobbyGetPollMs);
     const onVisibility = () => {
       if (document.visibilityState === "visible") void refreshLobbyGet();
     };
@@ -409,10 +495,12 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [
+    gateActive,
     gatewayRequestReady,
     gatewayWsEnabled,
     refreshLobbyGet,
     shouldRunLobbyGetOnOpen,
+    wsLobbyGetPollMs,
   ]);
 
   const getRequestBasicExtras = useCallback((): Record<string, unknown> => {
@@ -477,9 +565,21 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     maxReconnectAttempts: wsMaxReconnectAttempts,
     fatalReconnectCloseCodes: wsFatalReconnectCloseCodes,
     handshakeTimeoutMs: wsHandshakeTimeoutMs,
+    requestTimeoutMs: wsRequestTimeoutMs,
+    skipInitialPing: true,
+    pairUnmatchedSuccessToSinglePending: true,
+    serializeRequests: true,
     getRequestBasicExtras,
     onState: (s: GatewayWsConnectionState, meta?: GatewayWsStateMeta) => {
+      wsConnectionStateRef.current = s;
       if (s === "open") {
+        if (socketErrorDebounceRef.current !== null) {
+          clearTimeout(socketErrorDebounceRef.current);
+          socketErrorDebounceRef.current = null;
+        }
+        if (wsLobbyEnabled) {
+          setLobbyError(null);
+        }
         wsReconnectExhaustedNotifiedRef.current = false;
         lastWsClosedMetaRef.current = undefined;
       }
@@ -744,13 +844,20 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       if (gateActive) {
         setLobbyWsBootstrapDone(true);
       }
-      if (wsLobbyEnabled) {
-        setLobbyLoading(false);
-        setLobbyError((prev) => prev ?? "WebSocket connection error");
-      } else {
+      if (!wsLobbyEnabled) {
         setLobbyGames(null);
         setLobbyGet(null);
+        return;
       }
+      setLobbyLoading(false);
+      if (socketErrorDebounceRef.current !== null) {
+        clearTimeout(socketErrorDebounceRef.current);
+      }
+      socketErrorDebounceRef.current = window.setTimeout(() => {
+        socketErrorDebounceRef.current = null;
+        if (wsConnectionStateRef.current === "open") return;
+        setLobbyError((prev) => prev ?? LOBBY_WS_SOCKET_ERROR_MSG);
+      }, WS_SOCKET_ERROR_DEBOUNCE_MS);
     },
     onGatewayError: (msg) => {
       if (isDevConsoleEnabled()) {

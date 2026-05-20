@@ -59,6 +59,10 @@ interface ImportMetaEnv {
   readonly VITE_WS_AUTH_FAILURE_CLOSE_CODES?: string;
   /** 連線後若未在此毫秒內 open 則放棄此次嘗試；0 關閉；預設 15000 */
   readonly VITE_WS_HANDSHAKE_TIMEOUT_MS?: string;
+  /** 單則 Gateway WS `request()` 逾時（毫秒）；0 關閉；預設 15000 */
+  readonly VITE_WS_REQUEST_TIMEOUT_MS?: string;
+  /** 大廳 LOBBY_GET 輪詢間隔（毫秒）；未設則 request 逾時 + 5000 */
+  readonly VITE_WS_LOBBY_GET_POLL_MS?: string;
   /** 大廳主視覺圖 URL（可覆寫預設 sample 圖） */
   readonly VITE_LOBBY_HERO_IMAGE?: string;
   /** 訪客首頁 hero 圖；未設則沿用 VITE_LOBBY_HERO_IMAGE／預設 */

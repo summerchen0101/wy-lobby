@@ -33,7 +33,13 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     initialReconnectDelayMs,
     maxReconnectDelayMs,
     handshakeTimeoutMs,
+    skipInitialPing,
+    pairUnmatchedSuccessToSinglePending,
+    serializeRequests,
   } = params
+
+  /** Strict Mode 雙掛載：略延 open，讓 cleanup 先關閉短命連線 */
+  const OPEN_DELAY_MS = 75
 
   const onStateRef = useRef(onState)
   const onResponseRef = useRef(onResponse)
@@ -76,6 +82,9 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
         initialReconnectDelayMs,
         maxReconnectDelayMs,
         handshakeTimeoutMs,
+        skipInitialPing,
+        pairUnmatchedSuccessToSinglePending,
+        serializeRequests,
         getRequestBasicExtras: () =>
           (getExtrasRef.current?.() ?? {}) as Record<string, unknown>,
         onState: (s, m) => onStateRef.current?.(s, m),
@@ -86,7 +95,7 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
       })
 
       client.open()
-    }, 0)
+    }, OPEN_DELAY_MS)
 
     return () => {
       clearTimeout(openTicket)
@@ -105,5 +114,8 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     initialReconnectDelayMs,
     maxReconnectDelayMs,
     handshakeTimeoutMs,
+    skipInitialPing,
+    pairUnmatchedSuccessToSinglePending,
+    serializeRequests,
   ])
 }

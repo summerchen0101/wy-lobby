@@ -80,8 +80,8 @@ export type GatewayWsOptions = {
   getRequestBasicExtras?: () => Record<string, unknown>
   onState?: (s: GatewayWsConnectionState, meta?: GatewayWsStateMeta) => void
   onResponse?: (msg: GatewayWsResponseObject) => void
-  /** 連線成功（open）後呼叫；可在此發 LOBBY_GET 等 */
-  onOpen?: (ctx: { request: GatewayWsRequestFn }) => void
+  /** 連線成功（open）後呼叫；可在此發 LOBBY_GET 等；完成後才啟動心跳 */
+  onOpen?: (ctx: { request: GatewayWsRequestFn }) => void | Promise<void>
   /** WebSocket 層錯誤 */
   onSocketError?: (ev: Event) => void
   /** 業務 code 非 200/204 時觸發（仍會先呼叫 onResponse） */
@@ -96,6 +96,10 @@ export type GatewayWsOptions = {
    * 仍將該則回應配給那筆請求（因部分後端不會回寫與 Request 相同之 requestID）。
    */
   pairUnmatchedSuccessToSinglePending?: boolean
+  /**
+   * 若為 true：`request()` 排隊執行，同一時間僅一筆 pending（大廳 bootstrap／輪詢適用）。
+   */
+  serializeRequests?: boolean
 }
 
 const PING_PONG = 0
@@ -104,8 +108,17 @@ type PendingEntry = {
   resolve: (v: GatewayWsResponseObject) => void
   reject: (e: Error) => void
   timer: ReturnType<typeof setTimeout> | null
+  apiType: number
   /** 僅 DEV；與 `GatewayWsRequestPayload.debugLabel` 相同 */
   debugLabel?: string
+}
+
+/** 供上層判斷是否為 `request()` 逾時（含自動重試邏輯）。 */
+export function isGatewayWsRequestTimeoutError(e: unknown): boolean {
+  return (
+    e instanceof Error &&
+    e.message.includes('[gateway-ws] request timeout')
+  )
 }
 
 /** WebSocket `send` 在 DOM 型別上要求 `ArrayBuffer`，避免 `Uint8Array<ArrayBufferLike>` 不相容。 */
@@ -147,6 +160,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   /** 本 client 生命週期內是否曾成功 `open`（重連後仍為 true） */
   let hasOpenedOnce = false
   const pending = new Map<string, PendingEntry>()
+  let requestSerialChain: Promise<unknown> = Promise.resolve()
 
   const heartbeatIntervalMs = options.heartbeatIntervalMs ?? 25_000
   const reconnect = options.reconnect !== false
@@ -156,6 +170,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   const defaultClientVer = options.clientVer?.trim() || 'web-alpha'
   const skipInitialPing = options.skipInitialPing === true
   const pairUnmatchedSuccessToSinglePending = options.pairUnmatchedSuccessToSinglePending === true
+  const serializeRequests = options.serializeRequests === true
   const fatalReconnectCodes = options.fatalReconnectCloseCodes ?? []
   const fatalReconnectSet = new Set(fatalReconnectCodes)
   const maxReconnectAttempts = options.maxReconnectAttempts
@@ -174,6 +189,19 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       entry.reject(reason)
     }
     pending.clear()
+    requestSerialChain = Promise.resolve()
+  }
+
+  function findUniquePendingByApiType(
+    responseType: number,
+  ): [string, PendingEntry] | null {
+    let found: [string, PendingEntry] | null = null
+    for (const [id, entry] of pending) {
+      if (entry.apiType !== responseType) continue
+      if (found) return null
+      found = [id, entry]
+    }
+    return found
   }
 
   function setState(
@@ -284,13 +312,44 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     if (rid && pending.has(rid)) {
       const entry = pending.get(rid)!
       completeEntry(rid, entry)
-    } else if (
-      pairUnmatchedSuccessToSinglePending &&
-      success &&
-      pending.size === 1
-    ) {
-      const [onlyId, entry] = pending.entries().next().value!
-      completeEntry(onlyId, entry)
+    } else if (success) {
+      const responseType = Number(obj.type)
+      const byType =
+        Number.isFinite(responseType) && responseType >= 0
+          ? findUniquePendingByApiType(responseType)
+          : null
+      if (byType) {
+        if (isGatewayWsTraceEnabled()) {
+          console.warn(
+            '[gateway-ws] paired response by api type (requestID mismatch)',
+            {
+              responseRequestId: rid || '(empty)',
+              apiType: responseType,
+              pendingKey: byType[0],
+              debugLabel: byType[1].debugLabel,
+            },
+          )
+        }
+        completeEntry(byType[0], byType[1])
+      } else if (
+        pairUnmatchedSuccessToSinglePending &&
+        pending.size === 1
+      ) {
+        const [onlyId, entry] = pending.entries().next().value!
+        completeEntry(onlyId, entry)
+      } else if (isGatewayWsTraceEnabled() && pending.size > 0) {
+        const pendingSample =
+          pending.size <= 3
+            ? [...pending.keys()].join(', ')
+            : `${pending.size} keys`
+        console.warn('[gateway-ws] response did not match any pending request', {
+          responseRequestId: rid || '(empty)',
+          pendingKeysSample: pendingSample,
+          type: obj.type,
+          code: codeStr,
+          errMessage: (obj as { errMessage?: string }).errMessage,
+        })
+      }
     } else if (isGatewayWsTraceEnabled() && pending.size > 0) {
       const pendingSample = pending.size <= 3 ? [...pending.keys()].join(', ') : `${pending.size} keys`
       console.warn('[gateway-ws] response did not match any pending request', {
@@ -316,7 +375,9 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     return getGatewayWsUrl()
   }
 
-  function request(req: GatewayWsRequestPayload): Promise<GatewayWsResponseObject> {
+  function performRequest(
+    req: GatewayWsRequestPayload,
+  ): Promise<GatewayWsResponseObject> {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       return Promise.reject(new Error('[gateway-ws] socket not open'))
     }
@@ -362,6 +423,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
         resolve,
         reject,
         timer,
+        apiType: req.type,
         debugLabel: req.debugLabel,
       })
       try {
@@ -383,6 +445,19 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
         )
       }
     })
+  }
+
+  function request(req: GatewayWsRequestPayload): Promise<GatewayWsResponseObject> {
+    if (!serializeRequests) {
+      return performRequest(req)
+    }
+    const run = () => performRequest(req)
+    const chained = requestSerialChain.then(run, run)
+    requestSerialChain = chained.then(
+      () => undefined,
+      () => undefined,
+    )
+    return chained
   }
 
   function connectNow() {
@@ -452,10 +527,6 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       hasOpenedOnce = true
       attempt = 0
       setState('open')
-      if (!skipInitialPing) {
-        sendPing()
-      }
-      startHeartbeat()
       // #region agent log
       agentDebugPostJson({
         sessionId: 'b5f9ce',
@@ -465,7 +536,18 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
         timestamp: Date.now(),
       })
       // #endregion
-      options.onOpen?.({ request })
+      void (async () => {
+        try {
+          await options.onOpen?.({ request })
+        } catch (e) {
+          console.warn('[gateway-ws] onOpen handler failed', e)
+        }
+        if (ws !== socket || socket.readyState !== WebSocket.OPEN) return
+        if (!skipInitialPing) {
+          sendPing()
+        }
+        startHeartbeat()
+      })()
     }
 
     socket.onmessage = (ev) => {

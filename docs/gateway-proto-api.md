@@ -68,9 +68,11 @@ flowchart LR
 
 | 欄位        | 型別   | 說明 |
 | ----------- | ------ | ---- |
-| `requestID` | string |      |
+| `requestID` | string | **必須**與對應 `Request.basic.requestID` 相同；Web 端 [`gatewayWs`](../src/realtime/gatewayWs.ts) 依此配對 `pending`，否則約 15s 後出現 `[gateway-ws] request timeout` |
 | `timestamp` | int64  |      |
 | `serverVer` | string |      |
+
+> **後端實作注意**：每則請求回應（含 `PING_PONG`、`LOBBY_GET`、`SERVER_LOGIN` 等）都應回寫客戶端送出的 `requestID`。若漏填或填錯，瀏覽器 Network 仍可能顯示 WebSocket 已連線，但前端無法完成該次 `request()`。
 
 ### 2.4 `Response`
 
