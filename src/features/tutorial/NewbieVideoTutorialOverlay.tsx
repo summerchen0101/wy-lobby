@@ -9,12 +9,20 @@ type Props = {
   onClose: () => void;
 };
 
+function releaseVideos(videos: readonly (HTMLVideoElement | null)[]) {
+  for (const video of videos) {
+    if (!video) continue;
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+  }
+}
+
 export function NewbieVideoTutorialOverlay({ open, onClose }: Props) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const resumePlayOnTapRef = useRef(false);
   const [index, setIndex] = useState(0);
 
-  const src = NEWBIE_VIDEO_TUTORIAL_SOURCES[index];
   const lastClip = index >= NEWBIE_VIDEO_TUTORIAL_SOURCES.length - 1;
 
   useEffect(() => {
@@ -23,8 +31,15 @@ export function NewbieVideoTutorialOverlay({ open, onClose }: Props) {
     resumePlayOnTapRef.current = false;
   }, [open]);
 
-  const tryPlay = useCallback(async () => {
-    const video = videoRef.current;
+  const pauseAllExcept = useCallback((activeIndex: number) => {
+    videoRefs.current.forEach((video, i) => {
+      if (!video || i === activeIndex) return;
+      video.pause();
+    });
+  }, []);
+
+  const tryPlayActive = useCallback(async () => {
+    const video = videoRefs.current[index];
     if (!video) return true;
     try {
       await video.play();
@@ -34,29 +49,23 @@ export function NewbieVideoTutorialOverlay({ open, onClose }: Props) {
       resumePlayOnTapRef.current = true;
       return false;
     }
+  }, [index]);
+
+  useEffect(() => {
+    if (!open) return;
+    pauseAllExcept(index);
+    void tryPlayActive();
+  }, [open, index, pauseAllExcept, tryPlayActive]);
+
+  const releaseAllVideos = useCallback(() => {
+    releaseVideos(videoRefs.current);
   }, []);
 
-  useEffect(() => {
-    if (!open || !src) return;
-    const video = videoRef.current;
-    if (!video) return;
-    video.load();
-    void tryPlay();
-  }, [open, src, tryPlay]);
-
-  useEffect(() => {
-    if (open) return;
-    const video = videoRef.current;
-    if (!video) return;
-    video.pause();
-    video.removeAttribute("src");
-    video.load();
-  }, [open]);
-
   const finish = useCallback(() => {
+    releaseAllVideos();
     markNewbieTutorialDone();
     onClose();
-  }, [onClose]);
+  }, [onClose, releaseAllVideos]);
 
   const advance = useCallback(() => {
     if (lastClip) {
@@ -69,13 +78,13 @@ export function NewbieVideoTutorialOverlay({ open, onClose }: Props) {
   const onTap = useCallback(() => {
     if (resumePlayOnTapRef.current) {
       resumePlayOnTapRef.current = false;
-      void tryPlay();
+      void tryPlayActive();
       return;
     }
     advance();
-  }, [tryPlay, advance]);
+  }, [tryPlayActive, advance]);
 
-  if (!open || !src) return null;
+  if (!open) return null;
 
   return createPortal(
     <div
@@ -84,14 +93,28 @@ export function NewbieVideoTutorialOverlay({ open, onClose }: Props) {
       aria-modal="true"
       aria-label="New player tutorial"
       onClick={onTap}>
-      <video
-        ref={videoRef}
-        className="newbie-video-tutorial__video"
-        src={src}
-        playsInline
-        autoPlay
-        preload="auto"
-      />
+      <div className="newbie-video-tutorial__stack">
+        {NEWBIE_VIDEO_TUTORIAL_SOURCES.map((src, i) => {
+          const active = i === index;
+          return (
+            <video
+              key={src}
+              ref={(el) => {
+                videoRefs.current[i] = el;
+              }}
+              className={
+                active
+                  ? "newbie-video-tutorial__video"
+                  : "newbie-video-tutorial__video newbie-video-tutorial__video--hidden"
+              }
+              src={src}
+              playsInline
+              preload="auto"
+              aria-hidden={!active}
+            />
+          );
+        })}
+      </div>
     </div>,
     document.body,
   );
