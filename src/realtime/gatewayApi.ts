@@ -7,10 +7,8 @@
 export const GATEWAY_API_PING_PONG = 0
 /**
  * Gateway `ApiType` **USER_KICK_BEFORE** (`UserKickBefore` = 2) — 伺服器主動推送，非 Request/Response 配對請求。
- * `data` 為 `gateway.UserKickBeforeReason`：`reason` enum 對應 C#/Rust —
- * Default(0)、DuplicateConn 重複登入(1)、GameIsClose 遊戲關閉(2)、AccountStatusDeleted 帳號已刪(3)。
- * **`data` 為空長度時客戶端約定為不執行踢人**（不切登入、不彈窗）。
- * 有 payload 時：收到後應清空本機會話並導回首頁／登入流程（被踢端提示；接替登入的那一條不應收到此推播）。
+ * `data` 理想為 `gateway.UserKickBeforeReason`（reason 0–3）；alpha 後端亦常送 `code=204` 且 `data` 空，仍視為踢人。
+ * 收到後應清空本機會話並導向登入（被踢端提示）。
  */
 export const GATEWAY_API_USER_KICK_BEFORE = 2
 /** 連線後伺服器登入；對應 ApiType ServerLogin / SERVER_LOGIN；`data` 為空 */

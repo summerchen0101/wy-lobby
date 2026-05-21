@@ -54,8 +54,6 @@ import {
 import {
   decodeUserKickBeforeReasonBytes,
   messageForUserKickReason,
-  userKickLikelyStaleSurvivorConnNoise,
-  userKickReasonOrdinal,
 } from "./userKickWire";
 import { decodeWithdrawSuccessPushBytes } from "./withdrawLobbyWire";
 import type { WithdrawSuccessPushListener } from "./gatewayLobbyContext";
@@ -157,19 +155,6 @@ function wsLobbyGetPollMsFromEnv(requestTimeoutMs: number): number {
   return requestTimeoutMs + 5_000;
 }
 
-/**
- * 成功 SERVER_LOGIN 後 N ms 內，對 Default / DuplicateConn / 空 body 類 kick 不彈窗（接替連線常被誤推；真正的遊戲關閉／刪帳仍照常提示）。
- * <=0 關閉。預設 2500。
- */
-function wsDupConnKickSuppressAlertMsFromEnv(): number {
-  const raw = (
-    import.meta.env.VITE_WS_DUPCONN_KICK_SUPPRESS_ALERT_MS ?? "2500"
-  ).trim();
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0) return 2500;
-  return Math.floor(n);
-}
-
 export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const {
     token,
@@ -213,12 +198,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     [wsRequestTimeoutMs],
   );
 
-  /** 視窗內對「接替端」誤推之 Default／Duplicate／空 body kick 略過彈窗（見 wsDupConnKickSuppressAlertMsFromEnv） */
-  const wsDupConnKickSuppressAlertMs = useMemo(
-    () => wsDupConnKickSuppressAlertMsFromEnv(),
-    [],
-  );
-
   const [lobbyGames, setLobbyGames] = useState<Game[] | null>(null);
   const [lobbyLoading, setLobbyLoading] = useState(false);
   const [lobbyError, setLobbyError] = useState<string | null>(null);
@@ -253,10 +232,8 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const wsSessionRecoveryDoneRef = useRef(false);
   /** 避免 `USER_KICK_BEFORE` 連續觸發多次 alert + logout */
   const userKickLockRef = useRef(false);
-  /** 本次 Gateway WS `onOpen` 時間戳（毫秒）；換 token / 新一輪連線重置 — 用以覆蓋 SERVER_LOGIN 完成前的 stray kick */
+  /** 本次 Gateway WS `onOpen` 時間戳（毫秒）；換 token / 新一輪連線重置 */
   const gatewayWsSessionStartAtMsRef = useRef(0);
-  /** 本條連線最近一次成功 SERVER_LOGIN 的時間戳（毫秒）；換 token / 新一輪連線重置 */
-  const serverLoginSucceededAtMsRef = useRef(0);
   /** 同一次連線週期內 `reconnect_exhausted` 只通知一次 */
   const wsReconnectExhaustedNotifiedRef = useRef(false);
   /** 上一則 `closed` 的 meta（供 `connecting` 判斷是否為重試，避免全螢幕閘門反覆打開） */
@@ -286,7 +263,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     wsSessionRecoveryDoneRef.current = false;
     userKickLockRef.current = false;
     gatewayWsSessionStartAtMsRef.current = 0;
-    serverLoginSucceededAtMsRef.current = 0;
     wsReconnectExhaustedNotifiedRef.current = false;
     lastWsClosedMetaRef.current = undefined;
   }, [wsAuthScope]);
@@ -510,9 +486,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           });
         }
         const loginCode = String(loginRes.code ?? "");
-        if (isGatewaySuccessCode(loginCode)) {
-          serverLoginSucceededAtMsRef.current = Date.now();
-        }
         if (!isGatewaySuccessCode(loginCode)) {
           if (isGatewaySessionInvalidCode(loginRes.code)) {
             void handleWsSessionInvalid();
@@ -739,14 +712,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       const raw = msg.data;
       /** 伺服器主動推播 USER_KICK_BEFORE（2）；不依賴外層 `code`，避免被推播在非 200/201/204 時漏接致無法清除會話 */
       if (t === GATEWAY_API_USER_KICK_BEFORE) {
-        if (!(raw instanceof Uint8Array && raw.byteLength > 0)) {
-          if (isDevConsoleEnabled()) {
-            console.info(
-              "[gateway-ws][dev] ignored USER_KICK_BEFORE with empty body (protocol no-op; no logout)",
-            );
-          }
-          return;
-        }
         if (
           isDevConsoleEnabled() &&
           codeStr.trim() !== "" &&
@@ -760,34 +725,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             },
           );
         }
-        let text = messageForUserKickReason(0);
-        let kickReasonField: string | number | undefined;
-        {
+        let text = messageForUserKickReason(undefined);
+        if (raw instanceof Uint8Array && raw.byteLength > 0) {
           const decoded = decodeUserKickBeforeReasonBytes(raw);
-          kickReasonField = decoded?.reason;
           text = messageForUserKickReason(decoded?.reason);
-        }
-        const ordinal = userKickReasonOrdinal(kickReasonField);
-        const suppressMs = wsDupConnKickSuppressAlertMs;
-        const loginOkAt = serverLoginSucceededAtMsRef.current;
-        const sessionStartAt = gatewayWsSessionStartAtMsRef.current;
-        const now = Date.now();
-        const withinFreshSession =
-          suppressMs > 0 &&
-          sessionStartAt > 0 &&
-          now - sessionStartAt <= suppressMs;
-        const withinPostLogin =
-          suppressMs > 0 && loginOkAt > 0 && now - loginOkAt <= suppressMs;
-        if (
-          userKickLikelyStaleSurvivorConnNoise(ordinal) &&
-          (withinFreshSession || withinPostLogin)
-        ) {
-          if (isDevConsoleEnabled()) {
-            console.warn(
-              "[gateway-ws][dev] suppressed stray USER_KICK_BEFORE (Default / DuplicateConn) during early session or shortly after SERVER_LOGIN",
-            );
-          }
-          return;
+        } else if (isDevConsoleEnabled()) {
+          console.info(
+            "[gateway-ws][dev] USER_KICK_BEFORE with empty body; treating as kick (Default message)",
+          );
         }
         if (userKickLockRef.current) return;
         userKickLockRef.current = true;
@@ -848,7 +793,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     },
     onOpen: async ({ request }) => {
       gatewayWsSessionStartAtMsRef.current = Date.now();
-      serverLoginSucceededAtMsRef.current = 0;
       requestRef.current = request;
       setGatewayRequestReady(true);
 

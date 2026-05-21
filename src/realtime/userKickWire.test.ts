@@ -4,7 +4,7 @@ import schema from "../gen/gateway_wire.schema.js";
 import {
   decodeUserKickBeforeReasonBytes,
   messageForUserKickReason,
-  userKickLikelyStaleSurvivorConnNoise,
+  userKickReasonIsKnownEnum,
   userKickReasonOrdinal,
 } from "./userKickWire";
 
@@ -64,12 +64,20 @@ describe("userKickReasonOrdinal", () => {
   });
 });
 
-describe("userKickLikelyStaleSurvivorConnNoise", () => {
-  it("僅對 Default／Duplicate／NaN 視為接替端無害類型", () => {
-    expect(userKickLikelyStaleSurvivorConnNoise(Number.NaN)).toBe(true);
-    expect(userKickLikelyStaleSurvivorConnNoise(0)).toBe(true);
-    expect(userKickLikelyStaleSurvivorConnNoise(1)).toBe(true);
-    expect(userKickLikelyStaleSurvivorConnNoise(2)).toBe(false);
-    expect(userKickLikelyStaleSurvivorConnNoise(3)).toBe(false);
+describe("userKickReasonIsKnownEnum", () => {
+  it("0–3 數字與 OriginalName 字串皆為已知 enum", () => {
+    for (const n of [0, 1, 2, 3] as const) {
+      expect(userKickReasonIsKnownEnum(n)).toBe(true);
+    }
+    expect(userKickReasonIsKnownEnum("Default")).toBe(true);
+    expect(userKickReasonIsKnownEnum("DuplicateConn")).toBe(true);
+    expect(userKickReasonIsKnownEnum("GameIsClose")).toBe(true);
+    expect(userKickReasonIsKnownEnum("AccountStatusDeleted")).toBe(true);
+  });
+
+  it("未知 reason 回 false", () => {
+    expect(userKickReasonIsKnownEnum(undefined)).toBe(false);
+    expect(userKickReasonIsKnownEnum(99)).toBe(false);
+    expect(userKickReasonIsKnownEnum("Unknown")).toBe(false);
   });
 });
