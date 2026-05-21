@@ -9,14 +9,50 @@ export const LOBBY_SFX_MENU_SRC = "/voices/US_MenuBtn.mp3";
 
 export const LOBBY_BGM_VARIANTS = ["/voices/lobbybpm106_loop.mp3"] as const;
 
+export const LOBBY_WELCOME_VOICE_VARIANTS = [
+  "/voices/Us_LobbyVoice_F1.mp3",
+  "/voices/Us_LobbyVoice_F3.mp3",
+] as const;
+
 export function pickLobbyBgmSrc(): string {
   const i = Math.floor(Math.random() * LOBBY_BGM_VARIANTS.length);
   return LOBBY_BGM_VARIANTS[i]!;
 }
 
-export function assignRandomLobbyBgm(audio: HTMLAudioElement): void {
+export function pickLobbyWelcomeVoiceSrc(): string {
+  const i = Math.floor(Math.random() * LOBBY_WELCOME_VOICE_VARIANTS.length);
+  return LOBBY_WELCOME_VOICE_VARIANTS[i]!;
+}
+
+export function assignLobbyBgm(audio: HTMLAudioElement): void {
   audio.src = pickLobbyBgmSrc();
   audio.load();
+}
+
+let welcomeVoice: HTMLAudioElement | null = null;
+
+function getWelcomeVoiceAudio(): HTMLAudioElement {
+  if (!welcomeVoice) {
+    welcomeVoice = new Audio();
+    welcomeVoice.preload = "auto";
+    welcomeVoice.loop = false;
+  }
+  return welcomeVoice;
+}
+
+export function playLobbyWelcomeVoice(): void {
+  if (!isLobbySoundEnabled()) return;
+  try {
+    const a = getWelcomeVoiceAudio();
+    a.src = pickLobbyWelcomeVoiceSrc();
+    a.currentTime = 0;
+    a.load();
+    void a.play().catch(() => {
+      /* autoplay / decode */
+    });
+  } catch {
+    /* ignore */
+  }
 }
 
 export function isLobbySoundEnabled(): boolean {
