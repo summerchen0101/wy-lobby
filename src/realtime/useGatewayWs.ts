@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { isDevConsoleEnabled } from '../lib/env'
 import {
   createGatewayWs,
+  type GatewayWsClient,
   type GatewayWsOptions,
 } from './gatewayWs'
 
@@ -14,6 +15,8 @@ export type UseGatewayWsParams = GatewayWsOptions & {
    */
   wsAuthScope?: boolean
 }
+
+let activeGatewayWsClient: GatewayWsClient | null = null
 
 /**
  * 以 ref 保留最新 callback，避免 effect 過度重跑。
@@ -85,8 +88,12 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     if (!enabled) return
 
     /** 延後到下一個 macrotask，讓 Strict Mode「掛載 → 同步 cleanup → 再掛載」可先 clearTimeout，避免短命期開兩條同 token 連線而被 Gateway 判 DuplicateConn（後登入端誤彈踢人提示）。 */
-    let client: ReturnType<typeof createGatewayWs> | null = null
+    let client: GatewayWsClient | null = null
     const openTicket = setTimeout(() => {
+      if (activeGatewayWsClient) {
+        activeGatewayWsClient.close()
+        activeGatewayWsClient = null
+      }
       client = createGatewayWs({
         url,
         clientVer,
@@ -117,6 +124,7 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
         onGatewayError: (m) => onGatewayErrorRef.current?.(m),
       })
 
+      activeGatewayWsClient = client
       client.open()
     }, OPEN_DELAY_MS)
 
@@ -126,6 +134,9 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
         console.info('[gateway-ws][dev] closing ws client (auth_scope_change or unmount)')
       }
       client?.close()
+      if (activeGatewayWsClient === client) {
+        activeGatewayWsClient = null
+      }
     }
   }, [
     enabled,

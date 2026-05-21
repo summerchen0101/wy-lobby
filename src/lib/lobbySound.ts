@@ -29,6 +29,46 @@ export function assignLobbyBgm(audio: HTMLAudioElement): void {
   audio.load();
 }
 
+/** 等 canplay 再 play；供大廳 BGM 避免 load 未完成就 play 失敗後無聲。 */
+export async function resumeLobbyBgm(audio: HTMLAudioElement): Promise<void> {
+  if (!isLobbySoundEnabled()) {
+    audio.pause();
+    return;
+  }
+  if (
+    typeof document !== "undefined" &&
+    document.visibilityState !== "visible"
+  ) {
+    audio.pause();
+    return;
+  }
+  if (audio.ended) return;
+
+  try {
+    if (audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = () => {
+          audio.removeEventListener("canplay", onCanPlay);
+          audio.removeEventListener("error", onError);
+        };
+        const onCanPlay = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = () => {
+          cleanup();
+          reject(new Error("[lobby-sound] BGM load failed"));
+        };
+        audio.addEventListener("canplay", onCanPlay, { once: true });
+        audio.addEventListener("error", onError, { once: true });
+      });
+    }
+    await audio.play();
+  } catch {
+    /* autoplay policy / decode */
+  }
+}
+
 let welcomeVoice: HTMLAudioElement | null = null;
 
 function getWelcomeVoiceAudio(): HTMLAudioElement {

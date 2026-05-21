@@ -112,6 +112,11 @@ export type GatewayWsOptions = {
    * 若為 true：`request()` 排隊執行，同一時間僅一筆 pending（大廳 bootstrap／輪詢適用）。
    */
   serializeRequests?: boolean;
+  /**
+   * 分頁 hidden 超過此毫秒後回 visible 時，關閉舊 socket 並 hard reconnect（避免僵死連線＋自動重連變兩條 WS）。
+   * <=0 關閉；預設 30_000。
+   */
+  visibilityHardReconnectMs?: number;
 };
 
 const PING_PONG = 0;
@@ -160,11 +165,47 @@ function extractBasicRequestId(basic: unknown): string {
   return normalizeResponseRequestId(o.requestID ?? o.requestId);
 }
 
+/** 全進程唯一 active socket；開新連線前關閉上一條，避免多 client 短暫並存 DuplicateConn。 */
+let activeGatewaySocket: WebSocket | null = null;
+/** 全進程唯一 active client；關閉整個 client（含 reconnect timer），避免僅 close socket 後舊 client 又重連。 */
+let activeGatewayWsClientInstance: { close: () => void } | null = null;
+
+function retireActiveGatewaySocket(except?: WebSocket | null): void {
+  const stale = activeGatewaySocket;
+  if (!stale || stale === except) return;
+  activeGatewaySocket = null;
+  if (stale.readyState !== WebSocket.CLOSED) {
+    try {
+      stale.close();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function supersedeOtherGatewayClients(next: { close: () => void }): void {
+  const prev = activeGatewayWsClientInstance;
+  if (prev && prev !== next) {
+    prev.close();
+  }
+}
+
+/** @internal vitest only */
+export function getActiveGatewaySocketForTest(): WebSocket | null {
+  return activeGatewaySocket;
+}
+
+/** @internal vitest only */
+export function getActiveGatewayWsClientForTest(): { close: () => void } | null {
+  return activeGatewayWsClientInstance;
+}
+
 export function createGatewayWs(options: GatewayWsOptions = {}) {
   let ws: WebSocket | null = null;
   let state: GatewayWsConnectionState = "idle";
   let heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
-  let heartbeatVisibilityListener: (() => void) | null = null;
+  let pageVisibilityListener: (() => void) | null = null;
+  let lastDocumentHiddenAtMs = 0;
   let lastPingAtMs = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let handshakeWatchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -189,6 +230,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   const fatalReconnectSet = new Set(fatalReconnectCodes);
   const maxReconnectAttempts = options.maxReconnectAttempts;
   const handshakeTimeoutMs = options.handshakeTimeoutMs ?? 0;
+  const visibilityHardReconnectMs = options.visibilityHardReconnectMs ?? 30_000;
 
   function resolveWsToken(): string {
     if (options.getWsToken) {
@@ -234,16 +276,87 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     options.onState?.(next, meta);
   }
 
-  function clearHeartbeatVisibilityListener() {
-    if (
-      heartbeatVisibilityListener !== null &&
-      typeof document !== "undefined"
-    ) {
+  function clearPageVisibilityListener() {
+    if (pageVisibilityListener !== null && typeof document !== "undefined") {
       document.removeEventListener(
         "visibilitychange",
-        heartbeatVisibilityListener,
+        pageVisibilityListener,
       );
-      heartbeatVisibilityListener = null;
+      pageVisibilityListener = null;
+    }
+  }
+
+  function ensurePageVisibilityListener() {
+    if (pageVisibilityListener !== null || typeof document === "undefined") {
+      return;
+    }
+    pageVisibilityListener = onPageVisibilityChange;
+    document.addEventListener("visibilitychange", pageVisibilityListener);
+  }
+
+  function hardReconnect() {
+    if (closedByUser || !reconnect) return;
+    clearReconnect();
+    clearHandshakeWatch();
+    const socket = ws;
+    if (socket) {
+      ws = null;
+      if (activeGatewaySocket === socket) {
+        activeGatewaySocket = null;
+      }
+      rejectAllPending(new Error("[gateway-ws] reconnecting after tab resume"));
+      try {
+        socket.close();
+      } catch {
+        /* ignore */
+      }
+    }
+    retireActiveGatewaySocket();
+    if (hasOpenedOnce) {
+      attempt = 0;
+    }
+    connectNow();
+  }
+
+  function onPageVisibilityChange() {
+    if (typeof document === "undefined") return;
+
+    if (document.visibilityState === "hidden") {
+      lastDocumentHiddenAtMs = Date.now();
+      if (ws?.readyState === WebSocket.OPEN) {
+        sendPing();
+      }
+      return;
+    }
+
+    const hiddenAt = lastDocumentHiddenAtMs;
+    lastDocumentHiddenAtMs = 0;
+
+    if (
+      hiddenAt > 0 &&
+      visibilityHardReconnectMs > 0 &&
+      Date.now() - hiddenAt >= visibilityHardReconnectMs &&
+      !closedByUser &&
+      reconnect
+    ) {
+      hardReconnect();
+      return;
+    }
+
+    if (ws?.readyState === WebSocket.OPEN) {
+      sendPingIfOverdue();
+      return;
+    }
+
+    /** 背景斷線（onclose 已 defer）或短暫切走後回 foreground：只連一次。 */
+    if (
+      !closedByUser &&
+      reconnect &&
+      reconnectTimer === null &&
+      !ws &&
+      (state === "closed" || state === "idle")
+    ) {
+      connectNow();
     }
   }
 
@@ -252,7 +365,6 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       clearTimeout(heartbeatTimer);
       heartbeatTimer = null;
     }
-    clearHeartbeatVisibilityListener();
     lastPingAtMs = 0;
   }
 
@@ -319,18 +431,6 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     }
   }
 
-  function onHeartbeatVisibilityChange() {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    if (typeof document === "undefined") return;
-    if (document.visibilityState === "hidden") {
-      sendPing();
-      return;
-    }
-    if (document.visibilityState === "visible") {
-      sendPingIfOverdue();
-    }
-  }
-
   function startHeartbeat() {
     clearHeartbeat();
     if (heartbeatIntervalMs <= 0) return;
@@ -345,14 +445,6 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
         scheduleHeartbeatTick();
       }, tickMs);
     };
-
-    if (typeof document !== "undefined") {
-      heartbeatVisibilityListener = onHeartbeatVisibilityChange;
-      document.addEventListener(
-        "visibilitychange",
-        heartbeatVisibilityListener,
-      );
-    }
 
     scheduleHeartbeatTick();
   }
@@ -542,6 +634,9 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   }
 
   function connectNow() {
+    supersedeOtherGatewayClients(clientApi);
+    ensurePageVisibilityListener();
+
     const url = resolveConnectUrl();
     closedByUser = false;
     clearReconnect();
@@ -552,6 +647,20 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     ) {
       return;
     }
+
+    if (ws && ws.readyState !== WebSocket.CLOSED) {
+      const staleLocal = ws;
+      ws = null;
+      if (activeGatewaySocket === staleLocal) {
+        activeGatewaySocket = null;
+      }
+      try {
+        staleLocal.close();
+      } catch {
+        /* ignore */
+      }
+    }
+    retireActiveGatewaySocket();
 
     // #region agent log
     (() => {
@@ -582,6 +691,8 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     setState("connecting");
     clearHandshakeWatch();
     const socket = new WebSocket(url);
+    activeGatewaySocket = socket;
+    activeGatewayWsClientInstance = clientApi;
     ws = socket;
     socket.binaryType = "arraybuffer";
 
@@ -683,6 +794,9 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     };
 
     socket.onclose = (ev: CloseEvent) => {
+      if (activeGatewaySocket === socket) {
+        activeGatewaySocket = null;
+      }
       if (ws !== socket) return;
       // #region agent log
       agentDebugPostJson({
@@ -722,6 +836,15 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       });
       ws = null;
       if (closedByUser || !reconnect || !resolved.shouldReconnect) return;
+
+      /** 分頁在背景時不排程重連，避免與回 foreground 的 hardReconnect 叠成兩條 WS。 */
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden"
+      ) {
+        return;
+      }
+
       const delay = Math.min(maxDelay, initialDelay * 2 ** attempt);
       attempt += 1;
       reconnectTimer = setTimeout(() => {
@@ -730,7 +853,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     };
   }
 
-  return {
+  const clientApi: GatewayWsClient = {
     getState: () => state,
 
     open: () => {
@@ -759,12 +882,36 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       clearHandshakeWatch();
       clearHeartbeat();
       clearReconnect();
+      clearPageVisibilityListener();
+      lastDocumentHiddenAtMs = 0;
       rejectAllPending(new Error("[gateway-ws] closed by client"));
-      ws?.close();
+      const socket = ws;
+      if (socket) {
+        if (activeGatewaySocket === socket) {
+          activeGatewaySocket = null;
+        }
+        try {
+          socket.close();
+        } catch {
+          /* ignore */
+        }
+      }
       ws = null;
+      if (activeGatewayWsClientInstance === clientApi) {
+        activeGatewayWsClientInstance = null;
+      }
       setState("closed", { shutdownReason: "client_close" });
     },
   };
+
+  return clientApi;
 }
 
-export type GatewayWsClient = ReturnType<typeof createGatewayWs>;
+export type GatewayWsClient = {
+  getState: () => GatewayWsConnectionState;
+  open: () => void;
+  request: GatewayWsRequestFn;
+  sendRaw: (payload: Uint8Array) => void;
+  sendRequest: (fields: Parameters<typeof encodeGatewayRequest>[0]) => void;
+  close: () => void;
+};

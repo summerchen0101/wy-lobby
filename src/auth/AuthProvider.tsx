@@ -214,9 +214,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     let cancelled = false;
-    setReady(false);
 
     if (isMockMode()) {
+      setReady(false);
       void apiMock
         .mockGetMe()
         .then((u) => {
@@ -246,6 +246,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       writePersistedUser(u);
     }
     setUser(u);
+
+    /** 啟動 refresh 進行中時 ready 由下方 effect 統一置 true；勿在此 setReady(false/true) 以免 WS 連兩次。 */
+    if (
+      getStoredRefreshToken()?.trim() &&
+      shouldRefreshStoredSessionOnStartup()
+    ) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setReady(true);
     return () => {
       cancelled = true;

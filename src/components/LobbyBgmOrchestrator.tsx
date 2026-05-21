@@ -4,8 +4,8 @@ import type { User } from "../lib/api/types";
 import {
   assignLobbyBgm,
   LOBBY_SOUND_PREF_EVENT,
-  isLobbySoundEnabled,
   playLobbyWelcomeVoice,
+  resumeLobbyBgm,
 } from "../lib/lobbySound";
 import { useGameShell } from "./useGameShell";
 
@@ -35,39 +35,19 @@ export function LobbyBgmOrchestrator() {
   const syncPlayback = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (!isLobbySoundEnabled() || gameShellOpen) {
+    if (gameShellOpen) {
       audio.pause();
       return;
     }
-    if (document.visibilityState !== "visible") {
-      audio.pause();
-      return;
-    }
-    if (audio.ended) return;
-    void audio.play().catch(() => {
-      /* autoplay policy */
-    });
+    void resumeLobbyBgm(audio);
   }, [gameShellOpen]);
 
   useEffect(() => {
     if (firstVisitPlayedRef.current) return;
     firstVisitPlayedRef.current = true;
-    const audio = getAudio();
-    assignLobbyBgm(audio);
-    if (
-      !isLobbySoundEnabled() ||
-      gameShellOpen ||
-      document.visibilityState !== "visible"
-    ) {
-      audio.pause();
-    } else {
-      playLobbyWelcomeVoice();
-      void audio.play().catch(() => {
-        /* autoplay policy */
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 僅首次掛載觸發入站 BGM
-  }, []);
+    assignLobbyBgm(getAudio());
+    playLobbyWelcomeVoice();
+  }, [getAudio]);
 
   useEffect(() => {
     syncPlayback();
@@ -79,6 +59,23 @@ export function LobbyBgmOrchestrator() {
     };
   }, [syncPlayback]);
 
+  /** Auth bootstrap 完成後重試（startup refresh 期間 ready=false，初次 autoplay 常失敗）。 */
+  useEffect(() => {
+    if (!ready) return;
+    syncPlayback();
+  }, [ready, syncPlayback]);
+
+  /** 行動裝置 autoplay 政策：首次使用者手勢後再試播 BGM。 */
+  useEffect(() => {
+    const unlock = () => {
+      syncPlayback();
+    };
+    document.addEventListener("pointerdown", unlock, { capture: true });
+    return () => {
+      document.removeEventListener("pointerdown", unlock, { capture: true });
+    };
+  }, [syncPlayback]);
+
   useEffect(() => {
     if (!ready) return;
     if (prevUserRef.current === undefined) {
@@ -86,22 +83,11 @@ export function LobbyBgmOrchestrator() {
       return;
     }
     if (prevUserRef.current === null && user !== null) {
-      const audio = getAudio();
-      if (
-        !isLobbySoundEnabled() ||
-        gameShellOpen ||
-        document.visibilityState !== "visible"
-      ) {
-        audio.pause();
-      } else {
-        playLobbyWelcomeVoice();
-        void audio.play().catch(() => {
-          /* autoplay policy */
-        });
-      }
+      playLobbyWelcomeVoice();
+      syncPlayback();
     }
     prevUserRef.current = user;
-  }, [ready, user, gameShellOpen, getAudio]);
+  }, [ready, user, syncPlayback]);
 
   return null;
 }
