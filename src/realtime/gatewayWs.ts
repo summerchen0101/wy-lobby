@@ -58,8 +58,14 @@ export type GatewayWsOptions = {
   /**
    * 併入連線 URL 的 query `token`（試玩可空字串）。
    * 未設定時沿用 `getGatewayWsUrl()` 規則（可保留 `VITE_WS_URL` 內既有 token）。
+   * 若同時提供 `getWsToken`，以 getter 為準（供 access token 輪換時不重握手）。
    */
   wsToken?: string | null;
+  /**
+   * 動態讀取 RequestBasic.token 與重連 URL query `token`。
+   * 約定：access token 輪換僅更新 getter 並重送 `SERVER_LOGIN`，不必重建 WebSocket。
+   */
+  getWsToken?: () => string | null;
   /** 寫入 RequestBasic.clientVer；預設 web-alpha */
   clientVer?: string;
   /** `request()` 逾時毫秒；預設 15000；<=0 則不設逾時 */
@@ -184,6 +190,17 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   const maxReconnectAttempts = options.maxReconnectAttempts;
   const handshakeTimeoutMs = options.handshakeTimeoutMs ?? 0;
 
+  function resolveWsToken(): string {
+    if (options.getWsToken) {
+      return (options.getWsToken() ?? "").trim();
+    }
+    if (options.wsToken !== undefined) {
+      return (options.wsToken ?? "").trim();
+    }
+    const extras = options.getRequestBasicExtras?.() ?? {};
+    return String((extras as { token?: string }).token ?? "").trim();
+  }
+
   function clearHandshakeWatch() {
     if (handshakeWatchTimer !== null) {
       clearTimeout(handshakeWatchTimer);
@@ -258,10 +275,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     basicPlain: Record<string, unknown>;
   } {
     const extras = options.getRequestBasicExtras?.() ?? {};
-    const tokenBasic =
-      options.wsToken !== undefined
-        ? (options.wsToken ?? "")
-        : String((extras as { token?: string }).token ?? "");
+    const tokenBasic = resolveWsToken();
     const requestID = randomRequestId();
     const basicPlain: Record<string, unknown> = {
       ...extras,
@@ -440,8 +454,8 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   function resolveConnectUrl(): string {
     const explicit = options.url?.trim();
     if (explicit) return explicit;
-    if (options.wsToken !== undefined) {
-      return getGatewayWsUrl({ token: options.wsToken ?? "" });
+    if (options.getWsToken || options.wsToken !== undefined) {
+      return getGatewayWsUrl({ token: resolveWsToken() });
     }
     return getGatewayWsUrl();
   }
@@ -457,10 +471,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       ...(options.getRequestBasicExtras?.() ?? {}),
       ...(req.basicExtras ?? {}),
     };
-    const tokenBasic =
-      options.wsToken !== undefined
-        ? (options.wsToken ?? "")
-        : String((extras as { token?: string }).token ?? "");
+    const tokenBasic = resolveWsToken();
     const basicPlain: Record<string, unknown> = {
       ...extras,
       clientVer:

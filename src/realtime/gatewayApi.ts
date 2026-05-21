@@ -1,6 +1,7 @@
 /**
  * 對應 proto/gateway/gateway.proto ApiType。
  * HTTP `/api/v1/login` 為身分驗證；WebSocket 連線後另送 `ServerLogin`(4) 完成 Gateway 會話。
+ * access token refresh 時前端約定：保持 WS 不重握手，以 RequestBasic.token + 再次 `SERVER_LOGIN` 更新 Gateway 會話。
  */
 
 export const GATEWAY_API_PING_PONG = 0

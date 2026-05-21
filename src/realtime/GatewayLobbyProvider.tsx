@@ -174,6 +174,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const {
     token,
     user,
+    ready: authReady,
     mergeUser,
     logout,
     tryRefreshSession,
@@ -183,6 +184,9 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const gatewayWsEnabled =
     !isMockMode() && (devGatewayWsProbeEnabled() || wsLobbyEnabled);
+  /** 等 Auth bootstrap（startup refresh）完成再連 WS，避免舊 token → 新 token 連兩次 */
+  const gatewayWsConnectEnabled = gatewayWsEnabled && authReady;
+  const wsAuthScope = Boolean(token?.trim());
   const shouldRunLobbyGetOnOpen =
     (import.meta.env.DEV && import.meta.env.VITE_DEV_LOBBY_GET !== "false") ||
     wsLobbyEnabled;
@@ -285,6 +289,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     serverLoginSucceededAtMsRef.current = 0;
     wsReconnectExhaustedNotifiedRef.current = false;
     lastWsClosedMetaRef.current = undefined;
+  }, [wsAuthScope]);
+
+  useEffect(() => {
+    wsSessionRefreshAttemptedRef.current = false;
+    wsSessionRecoveryDoneRef.current = false;
   }, [token]);
 
   useEffect(() => {
@@ -299,10 +308,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!gateActive) return;
-    if (!token?.trim()) return;
+    if (!wsAuthScope) return;
     setLobbyWsBootstrapDone(false);
     lastWsClosedMetaRef.current = undefined;
-  }, [gateActive, token]);
+  }, [gateActive, wsAuthScope]);
 
   useEffect(() => {
     sessionTokenRef.current = token?.trim() ?? "";
@@ -522,6 +531,25 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     [handleWsSessionInvalid],
   );
 
+  /** access token 輪換（refresh）時保持 WS，僅重送 SERVER_LOGIN */
+  const prevAccessTokenForWsRef = useRef<string | null>(null);
+  useEffect(() => {
+    const current = token?.trim() ?? "";
+    const prev = prevAccessTokenForWsRef.current;
+    prevAccessTokenForWsRef.current = current;
+    if (prev === null) return;
+    if (!prev || !current || prev === current) return;
+    if (wsConnectionStateRef.current !== "open") return;
+    const request = requestRef.current;
+    if (!request) return;
+    if (isDevConsoleEnabled()) {
+      console.info(
+        "[gateway-ws][dev] access token rotated; re-running SERVER_LOGIN without reconnect",
+      );
+    }
+    void runServerLoginOnOpen(request);
+  }, [token, runServerLoginOnOpen]);
+
   const refreshLobbyGet = useCallback(async () => {
     if (!shouldRunLobbyGetOnOpen) return;
     if (!gatewayRequestReady) return;
@@ -622,8 +650,9 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   }, [activeWallet, gatewayRequestReady, gatewayWsEnabled, token]);
 
   useGatewayWs({
-    enabled: gatewayWsEnabled,
-    wsToken: token?.trim() ?? "",
+    enabled: gatewayWsConnectEnabled,
+    wsAuthScope,
+    getWsToken: () => sessionTokenRef.current,
     clientVer: import.meta.env.VITE_CLIENT_VER?.trim() || undefined,
     maxReconnectAttempts: wsMaxReconnectAttempts,
     fatalReconnectCloseCodes: wsFatalReconnectCloseCodes,
@@ -671,13 +700,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
       if (isDevConsoleEnabled()) {
         console.info("[gateway-ws][dev] state:", s, {
-          wsUrl: getGatewayWsUrlForDevLog({ token: token ?? "" }),
+          wsUrl: getGatewayWsUrlForDevLog({ token: sessionTokenRef.current }),
           shutdownReason: meta?.shutdownReason,
           closeCode: meta?.closeCode,
+          wsAuthScope,
         });
       }
 
-      if (s === "closed" && token?.trim() && gatewayWsEnabled) {
+      if (s === "closed" && wsAuthScope && gatewayWsConnectEnabled) {
         if (meta?.shutdownReason === "auth_rejected") {
           void handleWsSessionInvalid();
           return;

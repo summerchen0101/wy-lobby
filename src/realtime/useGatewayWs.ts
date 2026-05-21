@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { isDevConsoleEnabled } from '../lib/env'
 import {
   createGatewayWs,
   type GatewayWsOptions,
@@ -7,6 +8,11 @@ import {
 export type UseGatewayWsParams = GatewayWsOptions & {
   /** false 時不連線（預設 false，避免干擾未就緒後端） */
   enabled?: boolean
+  /**
+   * 訪客 vs 已登入；僅在此 boolean 切換時重建 WS。
+   * access token 字串輪換（refresh）不應觸發重連。
+   */
+  wsAuthScope?: boolean
 }
 
 /**
@@ -16,12 +22,14 @@ export type UseGatewayWsParams = GatewayWsOptions & {
 export function useGatewayWs(params: UseGatewayWsParams): void {
   const {
     enabled = false,
+    wsAuthScope,
     onState,
     onResponse,
     onOpen,
     onSocketError,
     onGatewayError,
     getRequestBasicExtras,
+    getWsToken,
     url,
     wsToken,
     clientVer,
@@ -47,6 +55,11 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
   const onSocketErrorRef = useRef(onSocketError)
   const onGatewayErrorRef = useRef(onGatewayError)
   const getExtrasRef = useRef(getRequestBasicExtras)
+  const getWsTokenRef = useRef(getWsToken)
+  const wsTokenRef = useRef(wsToken)
+
+  const resolvedAuthScope =
+    wsAuthScope ?? Boolean((wsToken ?? '').trim())
 
   useEffect(() => {
     onStateRef.current = onState
@@ -55,6 +68,8 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     onSocketErrorRef.current = onSocketError
     onGatewayErrorRef.current = onGatewayError
     getExtrasRef.current = getRequestBasicExtras
+    getWsTokenRef.current = getWsToken
+    wsTokenRef.current = wsToken
   }, [
     onState,
     onResponse,
@@ -62,6 +77,8 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     onSocketError,
     onGatewayError,
     getRequestBasicExtras,
+    getWsToken,
+    wsToken,
   ])
 
   useEffect(() => {
@@ -72,7 +89,6 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
     const openTicket = setTimeout(() => {
       client = createGatewayWs({
         url,
-        wsToken,
         clientVer,
         requestTimeoutMs,
         heartbeatIntervalMs,
@@ -85,6 +101,13 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
         skipInitialPing,
         pairUnmatchedSuccessToSinglePending,
         serializeRequests,
+        getWsToken: () => {
+          const fromGetter = getWsTokenRef.current?.()
+          if (fromGetter !== undefined) {
+            return (fromGetter ?? '').trim()
+          }
+          return (wsTokenRef.current ?? '').trim()
+        },
         getRequestBasicExtras: () =>
           (getExtrasRef.current?.() ?? {}) as Record<string, unknown>,
         onState: (s, m) => onStateRef.current?.(s, m),
@@ -99,12 +122,15 @@ export function useGatewayWs(params: UseGatewayWsParams): void {
 
     return () => {
       clearTimeout(openTicket)
+      if (isDevConsoleEnabled()) {
+        console.info('[gateway-ws][dev] closing ws client (auth_scope_change or unmount)')
+      }
       client?.close()
     }
   }, [
     enabled,
+    resolvedAuthScope,
     url,
-    wsToken,
     clientVer,
     requestTimeoutMs,
     heartbeatIntervalMs,
