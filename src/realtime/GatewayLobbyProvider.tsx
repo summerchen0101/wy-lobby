@@ -625,6 +625,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   useGatewayWs({
     enabled: gatewayWsConnectEnabled,
     wsAuthScope,
+    reconnect: false,
     getWsToken: () => sessionTokenRef.current,
     clientVer: import.meta.env.VITE_CLIENT_VER?.trim() || undefined,
     maxReconnectAttempts: wsMaxReconnectAttempts,

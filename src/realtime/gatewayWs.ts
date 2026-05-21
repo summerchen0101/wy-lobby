@@ -72,7 +72,7 @@ export type GatewayWsOptions = {
   requestTimeoutMs?: number;
   /** 預設 25s；<=0 則不送 PING_PONG */
   heartbeatIntervalMs?: number;
-  /** 斷線後自動重連；預設 true */
+  /** 斷線後自動重連；預設 false（僅首次連線；登入狀態切換由 useGatewayWs 重建 client） */
   reconnect?: boolean;
   /**
    * 未成功 `open` 前，累計 `onclose` 後最多再排程幾次重連（不含第一次 `connectNow`）。
@@ -112,11 +112,6 @@ export type GatewayWsOptions = {
    * 若為 true：`request()` 排隊執行，同一時間僅一筆 pending（大廳 bootstrap／輪詢適用）。
    */
   serializeRequests?: boolean;
-  /**
-   * 分頁 hidden 超過此毫秒後回 visible 時，關閉舊 socket 並 hard reconnect（避免僵死連線＋自動重連變兩條 WS）。
-   * <=0 關閉；預設 30_000。
-   */
-  visibilityHardReconnectMs?: number;
 };
 
 const PING_PONG = 0;
@@ -205,7 +200,6 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   let state: GatewayWsConnectionState = "idle";
   let heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
   let pageVisibilityListener: (() => void) | null = null;
-  let lastDocumentHiddenAtMs = 0;
   let lastPingAtMs = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let handshakeWatchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -217,7 +211,7 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   let requestSerialChain: Promise<unknown> = Promise.resolve();
 
   const heartbeatIntervalMs = options.heartbeatIntervalMs ?? 25_000;
-  const reconnect = options.reconnect !== false;
+  const reconnect = options.reconnect === true;
   const initialDelay = options.initialReconnectDelayMs ?? 1_000;
   const maxDelay = options.maxReconnectDelayMs ?? 30_000;
   const requestTimeoutMs = options.requestTimeoutMs ?? 15_000;
@@ -230,7 +224,6 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
   const fatalReconnectSet = new Set(fatalReconnectCodes);
   const maxReconnectAttempts = options.maxReconnectAttempts;
   const handshakeTimeoutMs = options.handshakeTimeoutMs ?? 0;
-  const visibilityHardReconnectMs = options.visibilityHardReconnectMs ?? 30_000;
 
   function resolveWsToken(): string {
     if (options.getWsToken) {
@@ -294,70 +287,14 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
     document.addEventListener("visibilitychange", pageVisibilityListener);
   }
 
-  function hardReconnect() {
-    if (closedByUser || !reconnect) return;
-    clearReconnect();
-    clearHandshakeWatch();
-    const socket = ws;
-    if (socket) {
-      ws = null;
-      if (activeGatewaySocket === socket) {
-        activeGatewaySocket = null;
-      }
-      rejectAllPending(new Error("[gateway-ws] reconnecting after tab resume"));
-      try {
-        socket.close();
-      } catch {
-        /* ignore */
-      }
-    }
-    retireActiveGatewaySocket();
-    if (hasOpenedOnce) {
-      attempt = 0;
-    }
-    connectNow();
-  }
-
   function onPageVisibilityChange() {
     if (typeof document === "undefined") return;
-
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
     if (document.visibilityState === "hidden") {
-      lastDocumentHiddenAtMs = Date.now();
-      if (ws?.readyState === WebSocket.OPEN) {
-        sendPing();
-      }
+      sendPing();
       return;
     }
-
-    const hiddenAt = lastDocumentHiddenAtMs;
-    lastDocumentHiddenAtMs = 0;
-
-    if (
-      hiddenAt > 0 &&
-      visibilityHardReconnectMs > 0 &&
-      Date.now() - hiddenAt >= visibilityHardReconnectMs &&
-      !closedByUser &&
-      reconnect
-    ) {
-      hardReconnect();
-      return;
-    }
-
-    if (ws?.readyState === WebSocket.OPEN) {
-      sendPingIfOverdue();
-      return;
-    }
-
-    /** 背景斷線（onclose 已 defer）或短暫切走後回 foreground：只連一次。 */
-    if (
-      !closedByUser &&
-      reconnect &&
-      reconnectTimer === null &&
-      !ws &&
-      (state === "closed" || state === "idle")
-    ) {
-      connectNow();
-    }
+    sendPingIfOverdue();
   }
 
   function clearHeartbeat() {
@@ -837,14 +774,6 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       ws = null;
       if (closedByUser || !reconnect || !resolved.shouldReconnect) return;
 
-      /** 分頁在背景時不排程重連，避免與回 foreground 的 hardReconnect 叠成兩條 WS。 */
-      if (
-        typeof document !== "undefined" &&
-        document.visibilityState === "hidden"
-      ) {
-        return;
-      }
-
       const delay = Math.min(maxDelay, initialDelay * 2 ** attempt);
       attempt += 1;
       reconnectTimer = setTimeout(() => {
@@ -883,7 +812,6 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       clearHeartbeat();
       clearReconnect();
       clearPageVisibilityListener();
-      lastDocumentHiddenAtMs = 0;
       rejectAllPending(new Error("[gateway-ws] closed by client"));
       const socket = ws;
       if (socket) {

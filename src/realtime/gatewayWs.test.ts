@@ -163,18 +163,11 @@ describe("createGatewayWs active socket mutex", () => {
     vi.advanceTimersByTime(5_000);
     expect(createdSockets).toHaveLength(2);
   });
-});
 
-describe("createGatewayWs visibility hard reconnect", () => {
-  let visibilityState: DocumentVisibilityState = "visible";
-  const visibilityListeners = new Set<() => void>();
-
-  beforeEach(() => {
-    createdSockets.length = 0;
-    visibilityState = "visible";
-    visibilityListeners.clear();
+  it("does not open a new socket on close or visibility when reconnect is false", () => {
     vi.useFakeTimers();
-    vi.stubGlobal("WebSocket", MockWebSocket);
+    let visibilityState: DocumentVisibilityState = "visible";
+    const visibilityListeners = new Set<() => void>();
     vi.stubGlobal("document", {
       get visibilityState() {
         return visibilityState;
@@ -186,22 +179,10 @@ describe("createGatewayWs visibility hard reconnect", () => {
         if (type === "visibilitychange") visibilityListeners.delete(fn);
       },
     });
-  });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.useRealTimers();
-  });
-
-  function fireVisibilityChange() {
-    for (const fn of visibilityListeners) fn();
-  }
-
-  it("replaces the socket after the tab was hidden longer than threshold", () => {
     const client = createGatewayWs({
       url: "ws://test.example/a",
-      reconnect: true,
-      visibilityHardReconnectMs: 30_000,
+      reconnect: false,
       skipInitialPing: true,
       heartbeatIntervalMs: 5_000,
     });
@@ -209,44 +190,18 @@ describe("createGatewayWs visibility hard reconnect", () => {
     const socketA = createdSockets[0]!;
     socketA.simulateOpen();
 
-    visibilityState = "hidden";
-    fireVisibilityChange();
-    vi.advanceTimersByTime(60_000);
-    visibilityState = "visible";
-    fireVisibilityChange();
-
-    expect(socketA.close).toHaveBeenCalledTimes(1);
-    expect(createdSockets).toHaveLength(2);
-    expect(getActiveGatewaySocketForTest()).toBe(createdSockets[1]);
-  });
-
-  it("defers transport reconnect while hidden until tab is visible", () => {
-    const client = createGatewayWs({
-      url: "ws://test.example/a",
-      reconnect: true,
-      initialReconnectDelayMs: 1_000,
-      visibilityHardReconnectMs: 60_000,
-      skipInitialPing: true,
-      heartbeatIntervalMs: 0,
-    });
-    client.open();
-    const socketA = createdSockets[0]!;
-    socketA.simulateOpen();
-
-    visibilityState = "hidden";
-    fireVisibilityChange();
     socketA.onclose?.({
       code: 1006,
       reason: "",
       wasClean: false,
     } as CloseEvent);
-    expect(client.getState()).toBe("closed");
+    vi.advanceTimersByTime(60_000);
 
-    vi.advanceTimersByTime(5_000);
-    expect(createdSockets).toHaveLength(1);
-
+    visibilityState = "hidden";
+    for (const fn of visibilityListeners) fn();
     visibilityState = "visible";
-    fireVisibilityChange();
-    expect(createdSockets).toHaveLength(2);
+    for (const fn of visibilityListeners) fn();
+
+    expect(createdSockets).toHaveLength(1);
   });
 });
