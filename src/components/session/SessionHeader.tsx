@@ -12,7 +12,7 @@ import {
   getCurrencyIconUrl,
   getCurrencyTextIconUrl,
 } from "../../lib/currencyIcons";
-import { publicImageUrl } from "../../lib/publicImageUrl";
+import { getHeaderBrandLogoUrl } from "../../lib/brandLogos";
 import { GATEWAY_API_WALLET_USE } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
@@ -21,8 +21,6 @@ import { getWalletDisplay } from "../../wallet/formatWalletAmount";
 import type { ActiveWallet } from "../../wallet/walletContext";
 import { useWallet } from "../../wallet/walletContext";
 import "./SessionChrome.css";
-
-const BRAND_LOGO = publicImageUrl("/images/brand/brand-logo.webp");
 
 export function SessionHeader() {
   const { user } = useAuth();
@@ -84,11 +82,10 @@ export function SessionHeader() {
       <div className="session-header__inner">
         <div className="session-header__left">
           <img
-            src={BRAND_LOGO}
+            key={activeWallet}
+            src={getHeaderBrandLogoUrl(activeWallet)}
             alt=""
             className="session-header__logo"
-            width={44}
-            height={44}
             decoding="async"
           />
           <Link
