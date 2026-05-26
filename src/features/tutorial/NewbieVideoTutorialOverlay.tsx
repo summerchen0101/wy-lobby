@@ -92,7 +92,8 @@ export function NewbieVideoTutorialOverlay({ open, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-label="New player tutorial"
-      onClick={onTap}>
+      onClick={onTap}
+      onContextMenu={(e) => e.preventDefault()}>
       <div className="newbie-video-tutorial__stack">
         {NEWBIE_VIDEO_TUTORIAL_SOURCES.map((src, i) => {
           const active = i === index;
@@ -110,6 +111,8 @@ export function NewbieVideoTutorialOverlay({ open, onClose }: Props) {
               src={src}
               playsInline
               preload="auto"
+              draggable={false}
+              controlsList="nodownload nofullscreen noremoteplayback"
               aria-hidden={!active}
             />
           );
