@@ -81,15 +81,27 @@ export function userKickReasonOrdinal(
   return n;
 }
 
+const REASON_NUM_TO_NAME: Record<0 | 1 | 2 | 3, keyof typeof REASON_NAME_TO_NUM> =
+  {
+    0: "Default",
+    1: "DuplicateConn",
+    2: "GameIsClose",
+    3: "AccountStatusDeleted",
+  };
+
 /**
- * 「接替連線」上短暫時間內常錯發的無害 kick：無欄位/解不出(ordinal NaN)、Default(0)、DuplicateConn(1)。
- * GameIsClose、AccountDeleted 仍一律照實提示。
+ * wire 上的 reason 是否為已知 enum（0–3 數字，或 OriginalName 字串）。
+ * 收到 USER_KICK_BEFORE 且 reason 為已知 enum 時應一律踢出。
  */
-export function userKickLikelyStaleSurvivorConnNoise(ordinal: number): boolean {
+export function userKickReasonIsKnownEnum(
+  reason: string | number | undefined,
+): boolean {
+  const ordinal = userKickReasonOrdinal(reason);
   return (
-    Number.isNaN(ordinal) ||
-    ordinal === USER_KICK_REASON_DEFAULT ||
-    ordinal === USER_KICK_REASON_DUPLICATE_CONN
+    Number.isFinite(ordinal) &&
+    ordinal >= 0 &&
+    ordinal <= 3 &&
+    REASON_NUM_TO_NAME[ordinal as 0 | 1 | 2 | 3] !== undefined
   );
 }
 

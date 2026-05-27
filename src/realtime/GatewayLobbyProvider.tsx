@@ -26,10 +26,11 @@ import {
   GATEWAY_API_WITHDRAW_SUCCESS_PUSH,
 } from "./gatewayApi";
 import { decodeLobbyJackpotDisplayTriple } from "./jackpotLobbyWire";
-import type {
-  GatewayWsConnectionState,
-  GatewayWsRequestFn,
-  GatewayWsStateMeta,
+import {
+  isGatewayWsRequestTimeoutError,
+  type GatewayWsConnectionState,
+  type GatewayWsRequestFn,
+  type GatewayWsStateMeta,
 } from "./gatewayWs";
 import { isGatewaySuccessCode } from "./gatewayWire";
 import { agentDebugPostJson } from "../debug/agentDebugIngest";
@@ -53,8 +54,6 @@ import {
 import {
   decodeUserKickBeforeReasonBytes,
   messageForUserKickReason,
-  userKickLikelyStaleSurvivorConnNoise,
-  userKickReasonOrdinal,
 } from "./userKickWire";
 import { decodeWithdrawSuccessPushBytes } from "./withdrawLobbyWire";
 import type { WithdrawSuccessPushListener } from "./gatewayLobbyContext";
@@ -63,7 +62,22 @@ import { wireUInt64Field } from "./wireUint64";
 import { LobbyHydrationGate } from "./LobbyHydrationGate";
 import { getAlertApi } from "../components/alert/alertImperative";
 
-const LOBBY_GET_POLL_MS = 15_000;
+const LOBBY_WS_TIMEOUT_RETRY_MSG = "Lobby data timed out, retrying…";
+const LOBBY_WS_TIMEOUT_USER_MSG =
+  "Lobby data timed out. Pull to refresh or try again.";
+const LOBBY_WS_SOCKET_ERROR_MSG = "WebSocket connection error";
+const LOBBY_GET_TIMEOUT_RETRY_DELAY_MS = 1_500;
+const WS_SOCKET_ERROR_DEBOUNCE_MS = 2_000;
+
+function lobbyErrorMessageFromCaught(e: unknown): string {
+  if (isGatewayWsRequestTimeoutError(e)) {
+    return LOBBY_WS_TIMEOUT_USER_MSG;
+  }
+  if (e instanceof Error && e.message.includes("[gateway-ws] socket")) {
+    return LOBBY_WS_SOCKET_ERROR_MSG;
+  }
+  return "Lobby WebSocket request failed";
+}
 
 function wsSessionInvalidCodesFromEnv(): Set<string> {
   const raw = (
@@ -113,26 +127,51 @@ function wsHandshakeTimeoutMsFromEnv(): number {
   return Math.floor(n);
 }
 
-/**
- * 成功 SERVER_LOGIN 後 N ms 內，對 Default / DuplicateConn / 空 body 類 kick 不彈窗（接替連線常被誤推；真正的遊戲關閉／刪帳仍照常提示）。
- * <=0 關閉。預設 2500。
- */
-function wsDupConnKickSuppressAlertMsFromEnv(): number {
-  const raw = (
-    import.meta.env.VITE_WS_DUPCONN_KICK_SUPPRESS_ALERT_MS ?? "2500"
-  ).trim();
+/** 單則 `gatewayWs.request()` 逾時；0 關閉。預設 15000（與 `gatewayWs` 預設一致）。 */
+function wsRequestTimeoutMsFromEnv(): number {
+  const raw = (import.meta.env.VITE_WS_REQUEST_TIMEOUT_MS ?? "15000").trim();
   const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0) return 2500;
+  if (!Number.isFinite(n) || n < 0) return 15_000;
   return Math.floor(n);
 }
 
+/** PING_PONG 心跳間隔；<=0 關閉。預設 5000。 */
+function wsHeartbeatIntervalMsFromEnv(): number {
+  const raw = (import.meta.env.VITE_WS_HEARTBEAT_INTERVAL_MS ?? "5000").trim();
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 5_000;
+  return Math.floor(n);
+}
+
+/**
+ * 大廳 `LOBBY_GET` 輪詢間隔。未設時為 `requestTimeoutMs + 5000`，避免與進行中請求逾時重疊。
+ */
+function wsLobbyGetPollMsFromEnv(requestTimeoutMs: number): number {
+  const raw = (import.meta.env.VITE_WS_LOBBY_GET_POLL_MS ?? "").trim();
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  }
+  return requestTimeoutMs + 5_000;
+}
+
 export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
-  const { token, user, mergeUser, logout, tryRefreshSession, invalidateSessionToLogin } =
-    useAuth();
+  const {
+    token,
+    user,
+    ready: authReady,
+    mergeUser,
+    logout,
+    tryRefreshSession,
+    invalidateSessionToLogin,
+  } = useAuth();
   const { setActiveWallet, activeWallet } = useWallet();
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const gatewayWsEnabled =
     !isMockMode() && (devGatewayWsProbeEnabled() || wsLobbyEnabled);
+  /** 等 Auth bootstrap（startup refresh）完成再連 WS，避免舊 token → 新 token 連兩次 */
+  const gatewayWsConnectEnabled = gatewayWsEnabled && authReady;
+  const wsAuthScope = Boolean(token?.trim());
   const shouldRunLobbyGetOnOpen =
     (import.meta.env.DEV && import.meta.env.VITE_DEV_LOBBY_GET !== "false") ||
     wsLobbyEnabled;
@@ -148,15 +187,15 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     () => wsAuthFailureCloseCodesFromEnv(),
     [],
   );
-  const wsHandshakeTimeoutMs = useMemo(
-    () => wsHandshakeTimeoutMsFromEnv(),
+  const wsHandshakeTimeoutMs = useMemo(() => wsHandshakeTimeoutMsFromEnv(), []);
+  const wsRequestTimeoutMs = useMemo(() => wsRequestTimeoutMsFromEnv(), []);
+  const wsHeartbeatIntervalMs = useMemo(
+    () => wsHeartbeatIntervalMsFromEnv(),
     [],
   );
-
-  /** 視窗內對「接替端」誤推之 Default／Duplicate／空 body kick 略過彈窗（見 wsDupConnKickSuppressAlertMsFromEnv） */
-  const wsDupConnKickSuppressAlertMs = useMemo(
-    () => wsDupConnKickSuppressAlertMsFromEnv(),
-    [],
+  const wsLobbyGetPollMs = useMemo(
+    () => wsLobbyGetPollMsFromEnv(wsRequestTimeoutMs),
+    [wsRequestTimeoutMs],
   );
 
   const [lobbyGames, setLobbyGames] = useState<Game[] | null>(null);
@@ -193,14 +232,30 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const wsSessionRecoveryDoneRef = useRef(false);
   /** 避免 `USER_KICK_BEFORE` 連續觸發多次 alert + logout */
   const userKickLockRef = useRef(false);
-  /** 本次 Gateway WS `onOpen` 時間戳（毫秒）；換 token / 新一輪連線重置 — 用以覆蓋 SERVER_LOGIN 完成前的 stray kick */
+  /** 本次 Gateway WS `onOpen` 時間戳（毫秒）；換 token / 新一輪連線重置 */
   const gatewayWsSessionStartAtMsRef = useRef(0);
-  /** 本條連線最近一次成功 SERVER_LOGIN 的時間戳（毫秒）；換 token / 新一輪連線重置 */
-  const serverLoginSucceededAtMsRef = useRef(0);
   /** 同一次連線週期內 `reconnect_exhausted` 只通知一次 */
   const wsReconnectExhaustedNotifiedRef = useRef(false);
   /** 上一則 `closed` 的 meta（供 `connecting` 判斷是否為重試，避免全螢幕閘門反覆打開） */
   const lastWsClosedMetaRef = useRef<GatewayWsStateMeta | undefined>(undefined);
+  const wsConnectionStateRef = useRef<GatewayWsConnectionState>("idle");
+  const socketErrorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const lobbyWsBootstrapDoneRef = useRef(lobbyWsBootstrapDone);
+
+  useEffect(() => {
+    lobbyWsBootstrapDoneRef.current = lobbyWsBootstrapDone;
+  }, [lobbyWsBootstrapDone]);
+
+  useEffect(() => {
+    return () => {
+      if (socketErrorDebounceRef.current !== null) {
+        clearTimeout(socketErrorDebounceRef.current);
+        socketErrorDebounceRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     wsHandshakeAuthLockRef.current = false;
@@ -208,9 +263,13 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     wsSessionRecoveryDoneRef.current = false;
     userKickLockRef.current = false;
     gatewayWsSessionStartAtMsRef.current = 0;
-    serverLoginSucceededAtMsRef.current = 0;
     wsReconnectExhaustedNotifiedRef.current = false;
     lastWsClosedMetaRef.current = undefined;
+  }, [wsAuthScope]);
+
+  useEffect(() => {
+    wsSessionRefreshAttemptedRef.current = false;
+    wsSessionRecoveryDoneRef.current = false;
   }, [token]);
 
   useEffect(() => {
@@ -225,10 +284,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!gateActive) return;
-    if (!token?.trim()) return;
+    if (!wsAuthScope) return;
     setLobbyWsBootstrapDone(false);
     lastWsClosedMetaRef.current = undefined;
-  }, [gateActive, token]);
+  }, [gateActive, wsAuthScope]);
 
   useEffect(() => {
     sessionTokenRef.current = token?.trim() ?? "";
@@ -293,100 +352,190 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   ]);
 
   const runLobbyGetRequest = useCallback(
-    async (
-      request: GatewayWsRequestFn,
-      options?: { bootstrap?: boolean },
-    ) => {
-      if (wsLobbyEnabled) setLobbyLoading(true);
-      try {
-        const r = await request({
-          type: GATEWAY_API_LOBBY_GET,
-          data: new Uint8Array(0),
-          debugLabel: "LOBBY_GET",
-        });
-        const raw = r.data;
-        const len = raw instanceof Uint8Array ? raw.byteLength : 0;
-        if (String(r.code) === "200") {
-          if (len > 0 && raw instanceof Uint8Array) {
-            try {
-              const decoded = decodeLobbyGetResponseBytes(raw);
-              const items = lobbyDecodedGamesToApiGames(decoded);
-              if (sessionTokenRef.current) {
-                const userPatch = lobbyDecodedToUserPatch(decoded);
-                if (Object.keys(userPatch).length > 0) {
-                  mergeUser(userPatch);
-                  if (
-                    userPatch.lobbyWalletType === "GC" ||
-                    userPatch.lobbyWalletType === "SC"
-                  ) {
-                    setActiveWallet(userPatch.lobbyWalletType);
+    async (request: GatewayWsRequestFn, options?: { bootstrap?: boolean }) => {
+      const executeOnce = async () => {
+        if (wsLobbyEnabled) setLobbyLoading(true);
+        try {
+          const r = await request({
+            type: GATEWAY_API_LOBBY_GET,
+            data: new Uint8Array(0),
+            debugLabel: "LOBBY_GET",
+          });
+          const raw = r.data;
+          const len = raw instanceof Uint8Array ? raw.byteLength : 0;
+          const codeStr = String(r.code ?? "");
+          if (isGatewaySuccessCode(codeStr)) {
+            if (len > 0 && raw instanceof Uint8Array) {
+              try {
+                const decoded = decodeLobbyGetResponseBytes(raw);
+                const items = lobbyDecodedGamesToApiGames(decoded);
+                if (sessionTokenRef.current) {
+                  const userPatch = lobbyDecodedToUserPatch(decoded);
+                  if (Object.keys(userPatch).length > 0) {
+                    mergeUser(userPatch);
+                    if (
+                      userPatch.lobbyWalletType === "GC" ||
+                      userPatch.lobbyWalletType === "SC"
+                    ) {
+                      setActiveWallet(userPatch.lobbyWalletType);
+                    }
                   }
                 }
+                setLobbyGames(items);
+                setLobbyGet(decoded);
+                if (wsLobbyEnabled) setLobbyError(null);
+              } catch (decodeErr) {
+                console.warn("[gateway-ws] LOBBY_GET decode failed", decodeErr);
+                setLobbyGet(null);
+                if (wsLobbyEnabled) {
+                  setLobbyGames([]);
+                  setLobbyError("Could not decode lobby games");
+                } else {
+                  setLobbyGames(null);
+                }
               }
-              setLobbyGames(items);
-              setLobbyGet(decoded);
+            } else if (codeStr === "204") {
               if (wsLobbyEnabled) setLobbyError(null);
-            } catch (decodeErr) {
-              console.warn("[gateway-ws] LOBBY_GET decode failed", decodeErr);
+            } else {
+              setLobbyGames([]);
               setLobbyGet(null);
-              if (wsLobbyEnabled) {
-                setLobbyGames([]);
-                setLobbyError("Could not decode lobby games");
-              } else {
-                setLobbyGames(null);
-              }
+              if (wsLobbyEnabled) setLobbyError(null);
             }
           } else {
-            setLobbyGames([]);
+            if (
+              wsLobbyEnabled &&
+              sessionTokenRef.current &&
+              isGatewaySessionInvalidCode(codeStr)
+            ) {
+              void handleWsSessionInvalid();
+              return;
+            }
             setLobbyGet(null);
-            if (wsLobbyEnabled) setLobbyError(null);
+            if (wsLobbyEnabled) {
+              setLobbyGames([]);
+              setLobbyError(
+                r.errMessage?.trim() || `Lobby request failed (${codeStr})`,
+              );
+            } else {
+              setLobbyGames(null);
+            }
+          }
+        } finally {
+          if (wsLobbyEnabled) setLobbyLoading(false);
+          if (options?.bootstrap) setLobbyWsBootstrapDone(true);
+        }
+      };
+
+      try {
+        await executeOnce();
+      } catch (e) {
+        let finalError: unknown = e;
+        if (isGatewayWsRequestTimeoutError(e) && wsLobbyEnabled) {
+          console.warn("[gateway-ws] LOBBY_GET failed", e);
+          setLobbyError(LOBBY_WS_TIMEOUT_RETRY_MSG);
+          await new Promise((resolve) => {
+            window.setTimeout(resolve, LOBBY_GET_TIMEOUT_RETRY_DELAY_MS);
+          });
+          try {
+            await executeOnce();
+            return;
+          } catch (retryErr) {
+            console.warn("[gateway-ws] LOBBY_GET retry failed", retryErr);
+            finalError = retryErr;
           }
         } else {
-          const codeStr = String(r.code ?? "");
-          if (
-            wsLobbyEnabled &&
-            sessionTokenRef.current &&
-            isGatewaySessionInvalidCode(codeStr)
-          ) {
-            void handleWsSessionInvalid();
-            return;
-          }
-          setLobbyGet(null);
-          if (wsLobbyEnabled) {
-            setLobbyGames([]);
-            setLobbyError(
-              r.errMessage?.trim() ||
-                `Lobby request failed (${String(r.code ?? "")})`,
-            );
-          } else {
-            setLobbyGames(null);
-          }
+          console.warn("[gateway-ws] LOBBY_GET failed", e);
         }
-      } catch (e) {
-        console.warn("[gateway-ws] LOBBY_GET failed", e);
         setLobbyGet(null);
         if (wsLobbyEnabled) {
           setLobbyGames([]);
-          setLobbyError(
-            e instanceof Error ? e.message : "Lobby WebSocket request failed",
-          );
+          setLobbyError(lobbyErrorMessageFromCaught(finalError));
         } else {
           setLobbyGames(null);
         }
-      } finally {
-        if (wsLobbyEnabled) setLobbyLoading(false);
-        if (options?.bootstrap) setLobbyWsBootstrapDone(true);
       }
     },
     [handleWsSessionInvalid, mergeUser, setActiveWallet, wsLobbyEnabled],
   );
 
+  /** 每次 WS `open`（含重連）有 access token 時必跑；訪客跳過。回傳 false 表示 session 失效應中止 bootstrap。 */
+  const runServerLoginOnOpen = useCallback(
+    async (request: GatewayWsRequestFn): Promise<boolean> => {
+      const wsAccessToken = sessionTokenRef.current;
+      if (!wsAccessToken) return true;
+
+      try {
+        const loginRes = await request({
+          type: GATEWAY_API_SERVER_LOGIN,
+          data: new Uint8Array(0),
+          debugLabel: "SERVER_LOGIN",
+        });
+        const loginRaw = loginRes.data;
+        const loginLen =
+          loginRaw instanceof Uint8Array ? loginRaw.byteLength : 0;
+        if (isDevConsoleEnabled()) {
+          console.info("[gateway-ws][dev] SERVER_LOGIN", {
+            code: loginRes.code,
+            type: loginRes.type,
+            errMessage: loginRes.errMessage,
+            dataLength: loginLen,
+            dataHexPreview24:
+              loginLen > 0 && loginRaw instanceof Uint8Array
+                ? hexPreview(loginRaw, 24)
+                : "",
+          });
+        }
+        const loginCode = String(loginRes.code ?? "");
+        if (!isGatewaySuccessCode(loginCode)) {
+          if (isGatewaySessionInvalidCode(loginRes.code)) {
+            void handleWsSessionInvalid();
+            return false;
+          }
+          console.warn("[gateway-ws] SERVER_LOGIN non-success", {
+            code: loginRes.code,
+            errMessage: loginRes.errMessage,
+          });
+        }
+      } catch (e) {
+        console.warn("[gateway-ws] SERVER_LOGIN failed", e);
+      }
+      return true;
+    },
+    [handleWsSessionInvalid],
+  );
+
+  /** access token 輪換（refresh）時保持 WS，僅重送 SERVER_LOGIN */
+  const prevAccessTokenForWsRef = useRef<string | null>(null);
+  useEffect(() => {
+    const current = token?.trim() ?? "";
+    const prev = prevAccessTokenForWsRef.current;
+    prevAccessTokenForWsRef.current = current;
+    if (prev === null) return;
+    if (!prev || !current || prev === current) return;
+    if (wsConnectionStateRef.current !== "open") return;
+    const request = requestRef.current;
+    if (!request) return;
+    if (isDevConsoleEnabled()) {
+      console.info(
+        "[gateway-ws][dev] access token rotated; re-running SERVER_LOGIN without reconnect",
+      );
+    }
+    void runServerLoginOnOpen(request);
+  }, [token, runServerLoginOnOpen]);
+
   const refreshLobbyGet = useCallback(async () => {
     if (!shouldRunLobbyGetOnOpen) return;
+    if (!gatewayRequestReady) return;
+    if (gateActive && !lobbyWsBootstrapDoneRef.current) return;
     const request = requestRef.current;
     if (!request) return;
     await runLobbyGetRequest(request);
-  }, [runLobbyGetRequest, shouldRunLobbyGetOnOpen]);
+  }, [
+    gateActive,
+    gatewayRequestReady,
+    runLobbyGetRequest,
+    shouldRunLobbyGetOnOpen,
+  ]);
 
   useEffect(() => {
     if (!gatewayWsEnabled || !gatewayRequestReady || !shouldRunLobbyGetOnOpen) {
@@ -395,10 +544,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
     const tick = () => {
       if (document.visibilityState !== "visible") return;
+      if (gateActive && !lobbyWsBootstrapDoneRef.current) return;
       void refreshLobbyGet();
     };
 
-    const id = window.setInterval(tick, LOBBY_GET_POLL_MS);
+    const id = window.setInterval(tick, wsLobbyGetPollMs);
     const onVisibility = () => {
       if (document.visibilityState === "visible") void refreshLobbyGet();
     };
@@ -409,10 +559,12 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [
+    gateActive,
     gatewayRequestReady,
     gatewayWsEnabled,
     refreshLobbyGet,
     shouldRunLobbyGetOnOpen,
+    wsLobbyGetPollMs,
   ]);
 
   const getRequestBasicExtras = useCallback((): Record<string, unknown> => {
@@ -471,15 +623,29 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   }, [activeWallet, gatewayRequestReady, gatewayWsEnabled, token]);
 
   useGatewayWs({
-    enabled: gatewayWsEnabled,
-    wsToken: token?.trim() ?? "",
+    enabled: gatewayWsConnectEnabled,
+    wsAuthScope,
+    reconnect: false,
+    getWsToken: () => sessionTokenRef.current,
     clientVer: import.meta.env.VITE_CLIENT_VER?.trim() || undefined,
     maxReconnectAttempts: wsMaxReconnectAttempts,
     fatalReconnectCloseCodes: wsFatalReconnectCloseCodes,
     handshakeTimeoutMs: wsHandshakeTimeoutMs,
+    requestTimeoutMs: wsRequestTimeoutMs,
+    heartbeatIntervalMs: wsHeartbeatIntervalMs,
+    pairUnmatchedSuccessToSinglePending: true,
+    serializeRequests: true,
     getRequestBasicExtras,
     onState: (s: GatewayWsConnectionState, meta?: GatewayWsStateMeta) => {
+      wsConnectionStateRef.current = s;
       if (s === "open") {
+        if (socketErrorDebounceRef.current !== null) {
+          clearTimeout(socketErrorDebounceRef.current);
+          socketErrorDebounceRef.current = null;
+        }
+        if (wsLobbyEnabled) {
+          setLobbyError(null);
+        }
         wsReconnectExhaustedNotifiedRef.current = false;
         lastWsClosedMetaRef.current = undefined;
       }
@@ -508,17 +674,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
       if (isDevConsoleEnabled()) {
         console.info("[gateway-ws][dev] state:", s, {
-          wsUrl: getGatewayWsUrlForDevLog({ token: token ?? "" }),
+          wsUrl: getGatewayWsUrlForDevLog({ token: sessionTokenRef.current }),
           shutdownReason: meta?.shutdownReason,
           closeCode: meta?.closeCode,
+          wsAuthScope,
         });
       }
 
-      if (
-        s === "closed" &&
-        token?.trim() &&
-        gatewayWsEnabled
-      ) {
+      if (s === "closed" && wsAuthScope && gatewayWsConnectEnabled) {
         if (meta?.shutdownReason === "auth_rejected") {
           void handleWsSessionInvalid();
           return;
@@ -550,54 +713,27 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       const raw = msg.data;
       /** 伺服器主動推播 USER_KICK_BEFORE（2）；不依賴外層 `code`，避免被推播在非 200/201/204 時漏接致無法清除會話 */
       if (t === GATEWAY_API_USER_KICK_BEFORE) {
-        if (!(raw instanceof Uint8Array && raw.byteLength > 0)) {
-          if (isDevConsoleEnabled()) {
-            console.info(
-              "[gateway-ws][dev] ignored USER_KICK_BEFORE with empty body (protocol no-op; no logout)",
-            );
-          }
-          return;
-        }
         if (
           isDevConsoleEnabled() &&
           codeStr.trim() !== "" &&
           !isGatewaySuccessCode(codeStr)
         ) {
-          console.warn("[gateway-ws][dev] USER_KICK_BEFORE with non-success code", {
-            code: codeStr,
-            errMessage: (msg as { errMessage?: string }).errMessage,
-          });
+          console.warn(
+            "[gateway-ws][dev] USER_KICK_BEFORE with non-success code",
+            {
+              code: codeStr,
+              errMessage: (msg as { errMessage?: string }).errMessage,
+            },
+          );
         }
-        let text = messageForUserKickReason(0);
-        let kickReasonField: string | number | undefined;
-        {
+        let text = messageForUserKickReason(undefined);
+        if (raw instanceof Uint8Array && raw.byteLength > 0) {
           const decoded = decodeUserKickBeforeReasonBytes(raw);
-          kickReasonField = decoded?.reason;
           text = messageForUserKickReason(decoded?.reason);
-        }
-        const ordinal = userKickReasonOrdinal(kickReasonField);
-        const suppressMs = wsDupConnKickSuppressAlertMs;
-        const loginOkAt = serverLoginSucceededAtMsRef.current;
-        const sessionStartAt = gatewayWsSessionStartAtMsRef.current;
-        const now = Date.now();
-        const withinFreshSession =
-          suppressMs > 0 &&
-          sessionStartAt > 0 &&
-          now - sessionStartAt <= suppressMs;
-        const withinPostLogin =
-          suppressMs > 0 &&
-          loginOkAt > 0 &&
-          now - loginOkAt <= suppressMs;
-        if (
-          userKickLikelyStaleSurvivorConnNoise(ordinal) &&
-          (withinFreshSession || withinPostLogin)
-        ) {
-          if (isDevConsoleEnabled()) {
-            console.warn(
-              "[gateway-ws][dev] suppressed stray USER_KICK_BEFORE (Default / DuplicateConn) during early session or shortly after SERVER_LOGIN",
-            );
-          }
-          return;
+        } else if (isDevConsoleEnabled()) {
+          console.info(
+            "[gateway-ws][dev] USER_KICK_BEFORE with empty body; treating as kick (Default message)",
+          );
         }
         if (userKickLockRef.current) return;
         userKickLockRef.current = true;
@@ -658,54 +794,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     },
     onOpen: async ({ request }) => {
       gatewayWsSessionStartAtMsRef.current = Date.now();
-      serverLoginSucceededAtMsRef.current = 0;
       requestRef.current = request;
       setGatewayRequestReady(true);
 
+      const continueBootstrap = await runServerLoginOnOpen(request);
+      if (!continueBootstrap) return;
+
       if (shouldRunLobbyGetOnOpen) {
         await runLobbyGetRequest(request, { bootstrap: true });
-      }
-
-      try {
-        const loginRes = await request({
-          type: GATEWAY_API_SERVER_LOGIN,
-          data: new Uint8Array(0),
-          debugLabel: "SERVER_LOGIN",
-        });
-        const loginRaw = loginRes.data;
-        const loginLen =
-          loginRaw instanceof Uint8Array ? loginRaw.byteLength : 0;
-        if (isDevConsoleEnabled()) {
-          console.info("[gateway-ws][dev] SERVER_LOGIN", {
-            code: loginRes.code,
-            type: loginRes.type,
-            errMessage: loginRes.errMessage,
-            dataLength: loginLen,
-            dataHexPreview24:
-              loginLen > 0 && loginRaw instanceof Uint8Array
-                ? hexPreview(loginRaw, 24)
-                : "",
-          });
-        }
-        const loginCode = String(loginRes.code ?? "");
-        if (isGatewaySuccessCode(loginCode)) {
-          serverLoginSucceededAtMsRef.current = Date.now();
-        }
-        if (!isGatewaySuccessCode(loginCode)) {
-          if (
-            sessionTokenRef.current &&
-            isGatewaySessionInvalidCode(loginRes.code)
-          ) {
-            void handleWsSessionInvalid();
-            return;
-          }
-          console.warn("[gateway-ws] SERVER_LOGIN non-success", {
-            code: loginRes.code,
-            errMessage: loginRes.errMessage,
-          });
-        }
-      } catch (e) {
-        console.warn("[gateway-ws] SERVER_LOGIN failed", e);
       }
 
       try {
@@ -744,13 +840,20 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       if (gateActive) {
         setLobbyWsBootstrapDone(true);
       }
-      if (wsLobbyEnabled) {
-        setLobbyLoading(false);
-        setLobbyError((prev) => prev ?? "WebSocket connection error");
-      } else {
+      if (!wsLobbyEnabled) {
         setLobbyGames(null);
         setLobbyGet(null);
+        return;
       }
+      setLobbyLoading(false);
+      if (socketErrorDebounceRef.current !== null) {
+        clearTimeout(socketErrorDebounceRef.current);
+      }
+      socketErrorDebounceRef.current = setTimeout(() => {
+        socketErrorDebounceRef.current = null;
+        if (wsConnectionStateRef.current === "open") return;
+        setLobbyError((prev) => prev ?? LOBBY_WS_SOCKET_ERROR_MSG);
+      }, WS_SOCKET_ERROR_DEBOUNCE_MS);
     },
     onGatewayError: (msg) => {
       if (isDevConsoleEnabled()) {

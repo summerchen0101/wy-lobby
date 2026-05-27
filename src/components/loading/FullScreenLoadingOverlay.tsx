@@ -1,7 +1,5 @@
-import { publicImageUrl } from "../../lib/publicImageUrl";
+import { LOBBY_LOADING_IMAGE } from "../../lib/brandLogos";
 import "./FullScreenLoadingOverlay.css";
-
-const BRAND_LOGO = publicImageUrl("/images/brand/brand-logo.webp");
 
 export function FullScreenLoadingOverlay() {
   return (
@@ -12,18 +10,14 @@ export function FullScreenLoadingOverlay() {
       aria-live="polite"
     >
       <span className="fullscreen-loading-overlay__sr-only">Loading</span>
-      <div className="fullscreen-loading-overlay__stage" aria-hidden>
-        <div className="fullscreen-loading-overlay__ring-soft" />
-        <div className="fullscreen-loading-overlay__ring" />
-        <img
-          src={BRAND_LOGO}
-          alt=""
-          width={96}
-          height={96}
-          decoding="async"
-          className="fullscreen-loading-overlay__logo"
-        />
-      </div>
+      <img
+        src={LOBBY_LOADING_IMAGE}
+        alt=""
+        width={348}
+        height={355}
+        decoding="async"
+        className="fullscreen-loading-overlay__animation"
+      />
     </div>
-  )
+  );
 }

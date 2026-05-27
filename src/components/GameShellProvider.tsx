@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   agentDebugLog,
   agentDebugUrlPreview,
@@ -19,8 +19,13 @@ import { useGatewayLobby } from '../realtime/useGatewayLobby'
 import { GameOverlay } from './GameOverlay'
 import { GameShellContext, type OpenShellOptions } from './game-shell-context'
 
+function isGameShellRoute(pathname: string): boolean {
+  return pathname === '/play' || pathname === '/game-popout'
+}
+
 export function GameShellProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { refreshLobbyGet } = useGatewayLobby()
   const [overlay, setOverlay] = useState<{
     url: string
@@ -141,9 +146,9 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
     () => ({
       open,
       close,
-      isOpen: overlay !== null,
+      isOpen: overlay !== null || isGameShellRoute(location.pathname),
     }),
-    [open, close, overlay],
+    [open, close, overlay, location.pathname],
   )
 
   return (

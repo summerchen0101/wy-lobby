@@ -1,9 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { publicImageUrl } from '../lib/publicImageUrl'
+import { HEADER_BRAND_LOGO_GC } from '../lib/brandLogos'
 import './MarketingTopBar.css'
-
-const BRAND_LOGO = publicImageUrl('/images/brand/brand-logo.webp')
 
 type NavBtn = { to: string; label: string }
 
@@ -18,11 +16,9 @@ export function MarketingTopBar({ primary, secondary }: Props) {
     <header className="marketing-top-bar">
       <Link to="/login" className="marketing-top-bar__brand">
         <img
-          src={BRAND_LOGO}
+          src={HEADER_BRAND_LOGO_GC}
           alt=""
           className="marketing-top-bar__mark"
-          width={40}
-          height={40}
           decoding="async"
         />
         <span className="marketing-top-bar__title">{t('brandName')}</span>

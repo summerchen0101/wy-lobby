@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { getCurrencyIconUrl } from '../lib/currencyIcons'
+import { formatScFromRaw, formatWalletPillAmount } from '../wallet/formatWalletAmount'
 import type { ActiveWallet } from '../wallet/walletContext'
 import './LobbyJackpotStrip.css'
 
-function formatAmount(n: number): string {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n)
+function formatJackpotDisplayAmount(wallet: ActiveWallet, raw: number): string {
+  return wallet === 'SC' ? formatScFromRaw(raw) : formatWalletPillAmount(raw)
 }
 
 const TICK_MS = 3000
@@ -196,7 +197,7 @@ export function LobbyJackpotStrip({ wallet, amounts, variant = 'demo' }: Props) 
                     'lobby-jackpot-strip__amount' + (scrambling ? ' is-scrambling' : '')
                   }
                 >
-                  {formatAmount(amount)}
+                  {formatJackpotDisplayAmount(wallet, amount)}
                 </span>
               </div>
             </div>

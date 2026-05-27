@@ -6,59 +6,18 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.75rem;
   padding: max(var(--page-pad), var(--safe-top)) var(--page-pad-inline)
     max(var(--page-pad), var(--safe-bottom));
   box-sizing: border-box;
-  background: color-mix(in srgb, var(--crown-surface-dark) 92%, #000000);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: #191e30;
 }
 
-.fullscreen-loading-overlay__stage {
-  position: relative;
-  width: 7.25rem;
-  height: 7.25rem;
-}
-
-.fullscreen-loading-overlay__logo {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: clamp(3.25rem, 36vw, 5.75rem);
-  height: clamp(3.25rem, 36vw, 5.75rem);
-  max-width: 96px;
-  max-height: 96px;
+.fullscreen-loading-overlay__animation {
+  display: block;
+  width: clamp(10rem, 42vw, 16rem);
+  height: auto;
   object-fit: contain;
-  z-index: 1;
   pointer-events: none;
-  animation: fullscreen-loading-logo-breathe 2s ease-in-out infinite;
-}
-
-.fullscreen-loading-overlay__ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  box-sizing: border-box;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0%,
-    rgb(107 76 255 / 12%) 18%,
-    #5eb8ff 42%,
-    #6b4cff 62%,
-    #8b5cf6 78%,
-    transparent 92%
-  );
-  mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));
-  animation: fullscreen-loading-spin 1.05s linear infinite;
-}
-
-.fullscreen-loading-overlay__ring-soft {
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  border: 2px solid rgb(107 76 255 / 22%);
-  animation: fullscreen-loading-breathe 1.8s ease-in-out infinite;
 }
 
 .fullscreen-loading-overlay__sr-only {
@@ -73,56 +32,8 @@
   border: 0;
 }
 
-@keyframes fullscreen-loading-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes fullscreen-loading-breathe {
-  0%,
-  100% {
-    opacity: 0.35;
-    transform: scale(0.94);
-  }
-  50% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-}
-
-@keyframes fullscreen-loading-logo-breathe {
-  0%,
-  100% {
-    opacity: 0.92;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.03);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .fullscreen-loading-overlay__ring {
-    animation-duration: 2.8s;
-  }
-
-  .fullscreen-loading-overlay__ring-soft {
-    animation: fullscreen-loading-soft-fade 1.8s ease-in-out infinite;
-  }
-
-  .fullscreen-loading-overlay__logo {
-    animation: fullscreen-loading-soft-fade 2s ease-in-out infinite;
-  }
-}
-
-@keyframes fullscreen-loading-soft-fade {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 0.9;
+  .fullscreen-loading-overlay__animation {
+    animation: none;
   }
 }

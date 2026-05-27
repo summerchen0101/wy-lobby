@@ -78,7 +78,26 @@
 
 ### 3.4 除錯：`[gateway-ws] request timeout`（`LOBBY_GET` 等 `request()`）
 
-表示在逾時時間內沒有收到 **可與該次 `RequestBasic.requestID` 配對** 的 `gateway.Response` 二進位訊息。請在 **DevTools → Network → 該 WebSocket → Messages** 檢查是否有進站二進位。開發模式下 [`gatewayWs`](../src/realtime/gatewayWs.ts) 在無法配對時可能 `console.warn`。
+表示在逾時時間內（預設 **15s**，可調 `VITE_WS_REQUEST_TIMEOUT_MS`）沒有收到 **可與該次 `RequestBasic.requestID` 配對** 的 `gateway.Response` 二進位訊息。WebSocket 在 Network 顯示已連線（101）仍可能發生——那是 **單一 RPC** 逾時，不是 HTTP 失敗。
+
+請在 **DevTools → Network → 該 WebSocket → Messages** 檢查是否有進站二進位（不要只看連線狀態列）。建議開啟 `VITE_GATEWAY_WS_TRACE=true`，對照 console：
+
+| 現象 | 較可能原因 |
+|------|------------|
+| 有 `[gateway-ws] ← response` 且緊接 `response did not match any pending request` | 後端未回寫相同 `ResponseBasic.requestID`（加長逾時無效；見 [gateway-proto-api.md §2.3](./gateway-proto-api.md)） |
+| 完全沒有對應 API 的 `← response` | 後端未回、環境／token 錯誤、或路由問題 |
+| 有 `← response` 且 requestID 正確但仍 timeout | 回應晚於逾時；可試加大 `VITE_WS_REQUEST_TIMEOUT_MS` |
+| 僅偶發、換網路改善 | 延遲或後端負載 |
+
+**Network 左側出現多條 `ws?token=...`：** 常為重連、Strict Mode 雙掛載或 token 變更；請點選**目前正在送 LOBBY_GET 的那一條**看 Messages。若某條只有 ↑ 沒有 ↓，表示該 socket 上的 RPC 未配對到回包（回包可能在另一條連線上）。
+
+**第二階段前端行為（大廳）：**
+
+- `onOpen`（bootstrap：`LOBBY_GET` → `SERVER_LOGIN` → `GET_JACKPOT`）**完成後**才啟動週期心跳與首包 PING。
+- `serializeRequests`：同一時間僅一筆 `request()` pending。
+- 回包配對：`requestID` → 唯一 `Response.type` → 單 pending fallback。
+- `skipInitialPing`、`pairUnmatchedSuccessToSinglePending`；輪詢預設為 request 逾時 **+5s**（`VITE_WS_LOBBY_GET_POLL_MS` 可覆寫）。
+- LOBBY_GET 逾時會自動重試一次；UI 不顯示 UUID。`WebSocket connection error` 在重連 `open` 後清除，傳輸層 `onerror` 延遲 2s 才顯示。
 
 ### 3.5 WS 握手 token 失效 → 先 refresh，失敗再導向 `/login`
 
@@ -94,8 +113,12 @@
 | `VITE_API_USE_MOCK` | 為 `true` 時 REST 全走 mock。 |
 | `VITE_API_PATH_AUTH_REGISTER` / `LOGIN` / `LOBBY_GAMES` / `USER_ME` / `PAYMENT_DEPOSIT` | 覆寫預設 REST 路徑。 |
 | `VITE_WS_URL`、`VITE_WS_DEVICE_ID` | Gateway WebSocket 連線 URL（[`env.ts` `getGatewayWsUrl`](../src/lib/env.ts)）。 |
+| `VITE_WS_HANDSHAKE_TIMEOUT_MS` | 握手：送出連線後若未 `open` 則放棄（預設 15000）。 |
+| `VITE_WS_REQUEST_TIMEOUT_MS` | 單則 `request()` 逾時（預設 15000）；0 關閉。 |
+| `VITE_WS_LOBBY_GET_POLL_MS` | 大廳 `LOBBY_GET` 輪詢；未設則 request 逾時 + 5000。 |
 | `VITE_WS_AUTH_FAILURE_CLOSE_CODES` | 握手／傳輸層：指定 Close code 視為 `auth_rejected`（逗號分隔）；未設時另以「從未 open」判定。 |
 | `VITE_WS_SESSION_INVALID_CODES` | 連線已 open 後：Gateway 業務 `code` 視為 session 失效並導向登入（預設 `401,403,401001`）。 |
+| `VITE_GATEWAY_WS_TRACE` | 輸出 `[gateway-ws] -> request` / `← response` 與配對失敗 warn；除錯 timeout 必開。 |
 | `VITE_USE_WS_LOBBY_GAMES` | 為 `true`：啟用 WS、並以 `LOBBY_GET` 解出來的列表作為大廳遊戲來源（可含訪客）。 |
 | `VITE_DEV_GATEWAY_WS` / `VITE_DEV_LOBBY_GET` | 開發用：方便連上 Gateway / 送 `LOBBY_GET` 除錯。 |
 | `VITE_CLIENT_VER` | 寫入每則 `RequestBasic.clientVer`。 |

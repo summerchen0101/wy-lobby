@@ -1,0 +1,38 @@
+.newbie-video-tutorial {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--modal-z-index) + 120);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background: #000;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.newbie-video-tutorial__stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.newbie-video-tutorial__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: top center;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.newbie-video-tutorial__video--hidden {
+  visibility: hidden;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}

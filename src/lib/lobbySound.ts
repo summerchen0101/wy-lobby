@@ -9,14 +9,90 @@ export const LOBBY_SFX_MENU_SRC = "/voices/US_MenuBtn.mp3";
 
 export const LOBBY_BGM_VARIANTS = ["/voices/lobbybpm106_loop.mp3"] as const;
 
+export const LOBBY_WELCOME_VOICE_VARIANTS = [
+  "/voices/Us_LobbyVoice_F1.mp3",
+  "/voices/Us_LobbyVoice_F3.mp3",
+] as const;
+
 export function pickLobbyBgmSrc(): string {
   const i = Math.floor(Math.random() * LOBBY_BGM_VARIANTS.length);
   return LOBBY_BGM_VARIANTS[i]!;
 }
 
-export function assignRandomLobbyBgm(audio: HTMLAudioElement): void {
+export function pickLobbyWelcomeVoiceSrc(): string {
+  const i = Math.floor(Math.random() * LOBBY_WELCOME_VOICE_VARIANTS.length);
+  return LOBBY_WELCOME_VOICE_VARIANTS[i]!;
+}
+
+export function assignLobbyBgm(audio: HTMLAudioElement): void {
   audio.src = pickLobbyBgmSrc();
   audio.load();
+}
+
+/** 等 canplay 再 play；供大廳 BGM 避免 load 未完成就 play 失敗後無聲。 */
+export async function resumeLobbyBgm(audio: HTMLAudioElement): Promise<void> {
+  if (!isLobbySoundEnabled()) {
+    audio.pause();
+    return;
+  }
+  if (
+    typeof document !== "undefined" &&
+    document.visibilityState !== "visible"
+  ) {
+    audio.pause();
+    return;
+  }
+  if (audio.ended) return;
+
+  try {
+    if (audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = () => {
+          audio.removeEventListener("canplay", onCanPlay);
+          audio.removeEventListener("error", onError);
+        };
+        const onCanPlay = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = () => {
+          cleanup();
+          reject(new Error("[lobby-sound] BGM load failed"));
+        };
+        audio.addEventListener("canplay", onCanPlay, { once: true });
+        audio.addEventListener("error", onError, { once: true });
+      });
+    }
+    await audio.play();
+  } catch {
+    /* autoplay policy / decode */
+  }
+}
+
+let welcomeVoice: HTMLAudioElement | null = null;
+
+function getWelcomeVoiceAudio(): HTMLAudioElement {
+  if (!welcomeVoice) {
+    welcomeVoice = new Audio();
+    welcomeVoice.preload = "auto";
+    welcomeVoice.loop = false;
+  }
+  return welcomeVoice;
+}
+
+export function playLobbyWelcomeVoice(): void {
+  if (!isLobbySoundEnabled()) return;
+  try {
+    const a = getWelcomeVoiceAudio();
+    a.src = pickLobbyWelcomeVoiceSrc();
+    a.currentTime = 0;
+    a.load();
+    void a.play().catch(() => {
+      /* autoplay / decode */
+    });
+  } catch {
+    /* ignore */
+  }
 }
 
 export function isLobbySoundEnabled(): boolean {
