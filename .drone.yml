@@ -44,7 +44,7 @@ steps:
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_THIRD_PARTY_GAME_THUMB_BASE: https://nas01.ffglobaltech.com
       VITE_CLIENT_VER: "web-alpha-${DRONE_COMMIT_SHA:0:8}"
-      VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
+      VITE_ZENDESK_KEY: "9720e0de-05e6-449b-be95-f5b42d5e7df4"
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://nas01.ffglobaltech.com/us-game-lobby"
       VITE_DEV_CONSOLE: "true"
       VITE_GATEWAY_WS_TRACE: "true"
@@ -98,7 +98,7 @@ steps:
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_THIRD_PARTY_GAME_THUMB_BASE: https://nas01.ffglobaltech.com
       VITE_CLIENT_VER: "web-alpha-${DRONE_COMMIT_SHA:0:8}"
-      VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
+      VITE_ZENDESK_KEY: "9720e0de-05e6-449b-be95-f5b42d5e7df4"
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://nas01.ffglobaltech.com/us-game-lobby"
       VITE_DEV_CONSOLE: "true"
       VITE_GATEWAY_WS_TRACE: "true"
@@ -157,7 +157,7 @@ steps:
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_CLIENT_VER: "web-us-${DRONE_TAG}"
-      VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
+      VITE_ZENDESK_KEY: "9720e0de-05e6-449b-be95-f5b42d5e7df4"
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://unityweb-cdn.luklokcasino.com/us-game-lobby"
       VITE_DEV_CONSOLE: "false"
     commands:
@@ -212,7 +212,7 @@ steps:
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_CLIENT_VER: "web-tw-${DRONE_TAG}"
-      VITE_ZENDESK_KEY: "31c8229d-8cb7-4d38-b502-0e2773fe7e9c"
+      VITE_ZENDESK_KEY: "9720e0de-05e6-449b-be95-f5b42d5e7df4"
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://unityweb-cdn.boss-fun.com/us-game-lobby"
       VITE_DEV_CONSOLE: "true"
       VITE_GATEWAY_WS_TRACE: "true"
