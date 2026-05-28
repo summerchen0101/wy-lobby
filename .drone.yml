@@ -204,8 +204,9 @@ steps:
       VITE_API_USE_MOCK: "false"
       VITE_API_BASE:
         from_secret: vite_api_base_tw
-      VITE_WS_URL:
-        from_secret: vite_ws_url_tw
+      VITE_WS_URL: wss://app-prod.wncocasino.com/ws
+      # VITE_WS_URL:
+      #   from_secret: vite_ws_url_tw
       VITE_USE_SLOT_WEBENTRY: "true"
       VITE_UNITY_WEBENTRY_URL:
         from_secret: vite_unity_webentry_tw
