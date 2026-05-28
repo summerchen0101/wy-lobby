@@ -202,8 +202,9 @@ steps:
     depends_on: [lint]
     environment:
       VITE_API_USE_MOCK: "false"
-      VITE_API_BASE:
-        from_secret: vite_api_base_tw
+      VITE_API_BASE: https://app-apis.wncocasino.com
+      # VITE_API_BASE:
+      #   from_secret: vite_api_base_tw
       VITE_WS_URL: wss://app-prod.wncocasino.com/ws
       # VITE_WS_URL:
       #   from_secret: vite_ws_url_tw
