@@ -13,6 +13,7 @@ import {
   dismissIosGameScrollHintPermanently,
   getFullscreenElement,
   hasDismissedIosGameScrollHint,
+  isDesktopLikeBrowser,
   shouldUseIosGameViewportWorkarounds,
   shouldUseTapToBrowserFullscreen,
 } from "../lib/iosGameFullscreen";
@@ -65,11 +66,13 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   /** 為 `/play`；實際顯示還需 playSwipeHintFeatureOn */
   const playSwipeHintConfigured = isPlayRoute;
   /**
-   * 生產環境僅真 iOS 分頁內需要上滑收合 chrome；本機 dev 允許任何 UA 預覽上滑示意。
+   * 僅真 iPhone Safari 分頁（非 DEV／DevTools 模擬）顯示上滑收合 chrome 示意。
    */
   const playSwipeHintFeatureOn =
     playSwipeHintConfigured &&
-    (shouldUseIosGameViewportWorkarounds() || import.meta.env.DEV);
+    !isDesktopLikeBrowser() &&
+    !import.meta.env.DEV &&
+    shouldUseIosGameViewportWorkarounds();
   const { t } = useTranslation("common");
   const allow = buildIframeAllow(isPayment);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -143,6 +146,7 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   }, [iosWorkarounds, playSwipeHintFeatureOn, layoutLandscape]);
 
   useGameVisualViewport(rootRef, {
+    applyLayoutFromVisualViewport: iosWorkarounds,
     adaptIosBottomGutter: iosWorkarounds,
     iosScrollEdgeLeftRef: iosWorkarounds ? iosScrollEdgeLeftRef : undefined,
     iosScrollEdgeRightRef: iosWorkarounds ? iosScrollEdgeRightRef : undefined,
@@ -353,8 +357,7 @@ export function GameOverlay({ url, isPayment, onClose }: GameOverlayProps) {
   const showPlaySwipeHintImage =
     playSwipeHintFeatureOn &&
     layoutLandscape &&
-    ((!iosWorkarounds && import.meta.env.DEV) ||
-      (iosWorkarounds && !iosToolbarHidden));
+    !iosToolbarHidden;
 
   useEffect(() => {
     if (!playSwipeHintFeatureOn) {
