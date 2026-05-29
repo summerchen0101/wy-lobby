@@ -6,6 +6,11 @@ import { GAME_OVERLAY_IOS_TOOLBAR_CONSUMER_RESET_EVENT } from '../lib/iosGameFul
 
 export type UseGameVisualViewportOpts = {
   /**
+   * 將 visualViewport 映射為 iframe 的 --game-visible-* / --game-vv-* CSS 變數。
+   * 僅 iPhone Safari 需要；Android／桌面應關閉，改由 CSS 100% 滿版，避免 Unity canvas 鎖在小尺寸。
+   */
+  applyLayoutFromVisualViewport?: boolean
+  /**
    * iOS Safari：偵測網址列／工具列已收合時把 --game-ios-bottom-gutter 設為 0px，
    * 解除捲動帶佔高；收起前交還給 CSS clamp。
    * 啟用時一併套用與 ios-fullscreen-sample fsm.js 對齊的 vv baseline、轉向同步與 scroll nudge。
@@ -103,7 +108,11 @@ export function useGameVisualViewport(
     const el = targetRef.current
     if (!el) return
 
+    const applyLayout = opts?.applyLayoutFromVisualViewport ?? true
     const adaptGutter = opts?.adaptIosBottomGutter ?? false
+    if (!applyLayout && !adaptGutter) {
+      return
+    }
     const edgeLeft = opts?.iosScrollEdgeLeftRef
     const edgeRight = opts?.iosScrollEdgeRightRef
     const blurTargetRef = opts?.blurTargetRef
@@ -202,10 +211,12 @@ export function useGameVisualViewport(
     }
 
     const clear = () => {
-      el.style.removeProperty('--game-visible-h')
-      el.style.removeProperty('--game-visible-w')
-      el.style.removeProperty('--game-vv-top')
-      el.style.removeProperty('--game-vv-left')
+      if (applyLayout) {
+        el.style.removeProperty('--game-visible-h')
+        el.style.removeProperty('--game-visible-w')
+        el.style.removeProperty('--game-vv-top')
+        el.style.removeProperty('--game-vv-left')
+      }
       if (adaptGutter) el.style.removeProperty('--game-ios-bottom-gutter')
     }
 
@@ -337,23 +348,25 @@ export function useGameVisualViewport(
         updateToolbarFromVvResize(h)
       }
 
-      const sizeChanged = h !== lastAppliedH || w !== lastAppliedW
-      const ot = Math.round(vv.offsetTop)
-      const ol = Math.round(vv.offsetLeft)
-      const offsetJump =
-        Math.abs(ot - lastAppliedTop) > VV_OFFSET_APPLY_EPS_PX ||
-        Math.abs(ol - lastAppliedLeft) > VV_OFFSET_APPLY_EPS_PX
+      if (applyLayout) {
+        const sizeChanged = h !== lastAppliedH || w !== lastAppliedW
+        const ot = Math.round(vv.offsetTop)
+        const ol = Math.round(vv.offsetLeft)
+        const offsetJump =
+          Math.abs(ot - lastAppliedTop) > VV_OFFSET_APPLY_EPS_PX ||
+          Math.abs(ol - lastAppliedLeft) > VV_OFFSET_APPLY_EPS_PX
 
-      el.style.setProperty('--game-visible-h', `${h}px`)
-      el.style.setProperty('--game-visible-w', `${w}px`)
-      lastAppliedH = h
-      lastAppliedW = w
+        el.style.setProperty('--game-visible-h', `${h}px`)
+        el.style.setProperty('--game-visible-w', `${w}px`)
+        lastAppliedH = h
+        lastAppliedW = w
 
-      if (sizeChanged || offsetJump) {
-        el.style.setProperty('--game-vv-top', `${ot}px`)
-        el.style.setProperty('--game-vv-left', `${ol}px`)
-        lastAppliedTop = ot
-        lastAppliedLeft = ol
+        if (sizeChanged || offsetJump) {
+          el.style.setProperty('--game-vv-top', `${ot}px`)
+          el.style.setProperty('--game-vv-left', `${ol}px`)
+          lastAppliedTop = ot
+          lastAppliedLeft = ol
+        }
       }
 
       if (adaptGutter) {
@@ -526,6 +539,7 @@ export function useGameVisualViewport(
     }
   }, [
     targetRef,
+    opts?.applyLayoutFromVisualViewport,
     opts?.adaptIosBottomGutter,
     opts?.iosScrollEdgeLeftRef,
     opts?.iosScrollEdgeRightRef,

@@ -37,6 +37,12 @@ export function isBrowserFullscreenCapable(): boolean {
   return d.webkitFullscreenEnabled === true
 }
 
+/** 典型電腦瀏覽器：有 hover 能力 + 精細指標（滑鼠） */
+export function isDesktopLikeBrowser(): boolean {
+  if (typeof window.matchMedia !== 'function') return false
+  return window.matchMedia('(hover: hover) and (pointer: fine)').matches
+}
+
 function hasTapFullscreenDeviceSignals(): boolean {
   const ua = navigator.userAgent
   if (/Android/i.test(ua)) return true
@@ -85,6 +91,7 @@ function isLikelyDesktopMouseOnly(): boolean {
  */
 export function shouldUseTapToBrowserFullscreen(): boolean {
   if (typeof document === 'undefined') return false
+  if (isDesktopLikeBrowser()) return false
   if (shouldUseIosGameViewportWorkarounds()) return false
   if (!isBrowserFullscreenCapable()) return false
   if (isLikelyDesktopMouseOnly()) return false
