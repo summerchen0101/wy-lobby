@@ -19,6 +19,7 @@ Vite + React + TypeScript。開發在 `web/`，產線請將 **`dist/` 內容部�
 - **新主站**：靜態托管根目錄 = `web/dist` 的檔案（`index.html`、雜湊化 js/css、`assets/`、`manifest.webmanifest` 等）。
 - **舊站**：倉庫根的 Unity `ServiceWorker.js` / 舊 `manifest.json` 是為 WebGL 快取設計的，**不要**拿來當此 SPA 的 Service Worker。若之後要 PWA 離線快取，請另建 Vite 相容的生成策略，並避免與舊 SW 衝突。
 - **內測舊 WebGL**（若仍需要）：可放在其他子路徑或子網域，勿與新站搶同一路徑的 SW。
+- **PWA `/sw.js`**：由 [`src/lib/spaServiceWorker.ts`](src/lib/spaServiceWorker.ts) 決定是否註冊；與 Unity 同 host（如 `unityweb-alpha`）時預設不註冊，避免 `scope: '/'` 影響 `/0001/...` 遊戲頁。見 [`docs/game-shell.md`](../docs/game-shell.md)。
 
 ## 專案結構（摘要）
 
