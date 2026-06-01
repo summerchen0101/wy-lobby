@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../auth/useAuth";
+import { setLobbyBgmSuppressed } from "../../lib/lobbySound";
 import { NewbieVideoTutorialOverlay } from "./NewbieVideoTutorialOverlay";
 import { isNewbieTutorialMarkedDone } from "./tutorialStorage";
 
@@ -14,6 +15,11 @@ export function NewbieTutorialGate() {
     }
     setOpen(true);
   }, [ready, user]);
+
+  useEffect(() => {
+    setLobbyBgmSuppressed(open);
+    return () => setLobbyBgmSuppressed(false);
+  }, [open]);
 
   return (
     <NewbieVideoTutorialOverlay open={open} onClose={() => setOpen(false)} />
