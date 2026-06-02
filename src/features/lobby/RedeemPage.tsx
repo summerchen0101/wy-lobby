@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { InfoPopover } from "../../components/InfoPopover";
 import { useAuth } from "../../auth/useAuth";
 import { CURRENCY_ICON_SC } from "../../lib/currencyIcons";
-import { isMockMode, isPaymentFeaturesEnabled } from "../../lib/env";
+import { isMockMode } from "../../lib/env";
 import {
   formatScFromRaw,
   formatScFromRawWireInteger,
@@ -69,13 +69,6 @@ function ScInlineIcon() {
 export const MIN_REDEEM_SC = MIN_REDEEM_SC_DISPLAY;
 
 export function RedeemPage() {
-  if (!isPaymentFeaturesEnabled()) {
-    return <Navigate to="/" replace />;
-  }
-  return <RedeemPageContent />;
-}
-
-function RedeemPageContent() {
   const { user } = useAuth();
   const {
     requestRef,

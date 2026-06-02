@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Navigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
+import { useAlert } from "../../components/alert/alertContext";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
-import { isMockMode, isPaymentFeaturesEnabled } from "../../lib/env";
+import { isMockMode, isThirdPartyPaymentEnabled } from "../../lib/env";
 import {
   GATEWAY_API_BUY_PRODUCT,
   GATEWAY_API_LIST_PRODUCTS,
@@ -36,6 +36,9 @@ import "./ShopPage.css";
 import "../lobby/SessionPageDecor.css";
 
 const PANEL = publicImageUrl("/images/shop");
+
+const THIRD_PARTY_PAYMENT_UNAVAILABLE_MSG =
+  "Payment is temporarily unavailable. A new payment provider is coming soon.";
 
 const MOCK_PACKS: ShopPack[] = [
   {
@@ -135,13 +138,7 @@ function coinPileSrc(n: 1 | 2 | 3 | 4 | 5) {
 }
 
 export function ShopPage() {
-  if (!isPaymentFeaturesEnabled()) {
-    return <Navigate to="/" replace />;
-  }
-  return <ShopPageContent />;
-}
-
-function ShopPageContent() {
+  const { show } = useAlert();
   const { token, user, mergeUser } = useAuth();
   const { requestRef, subscribePaymentFinish } = useGatewayLobby();
   const [packs, setPacks] = useState<ShopPack[]>([]);
@@ -292,6 +289,25 @@ function ShopPageContent() {
     setBindingError(null);
   }, []);
 
+  const notifyThirdPartyPaymentBlocked = useCallback(() => {
+    show(THIRD_PARTY_PAYMENT_UNAVAILABLE_MSG, { variant: "info" });
+  }, [show]);
+
+  const openThirdPartyPaymentPage = useCallback(
+    (url: string) => {
+      const trimmed = url.trim();
+      if (!trimmed) return false;
+      if (!isThirdPartyPaymentEnabled()) {
+        notifyThirdPartyPaymentBlocked();
+        return false;
+      }
+      const w = window.open(trimmed, "_blank");
+      if (!w) console.warn("[shop] payment window.open blocked");
+      return true;
+    },
+    [notifyThirdPartyPaymentBlocked],
+  );
+
   const executeBuyProduct = useCallback(
     async (method: ShopPaymentMethodId) => {
       const pack = checkoutPack;
@@ -303,6 +319,10 @@ function ShopPageContent() {
       const req = requestRef.current;
       if (!req) {
         setBuyError("Not connected");
+        return;
+      }
+      if (!isThirdPartyPaymentEnabled()) {
+        notifyThirdPartyPaymentBlocked();
         return;
       }
       const serverType = resolveServerPaymentTypeForUiMethod(
@@ -363,7 +383,7 @@ function ShopPageContent() {
         setBuyBusy(false);
       }
     },
-    [checkoutPack, requestRef],
+    [checkoutPack, requestRef, notifyThirdPartyPaymentBlocked],
   );
 
   const handleBindingSubmit = useCallback(
@@ -583,6 +603,7 @@ function ShopPageContent() {
           onBindingSubmit={handleBindingSubmit}
           onSelectPaymentMethod={handleSelectPayment}
           onCancelPaymentFrame={cancelPaymentFrame}
+          onOpenPaymentPage={openThirdPartyPaymentPage}
         />
       ) : null}
     </div>

@@ -80,7 +80,7 @@ interface ImportMetaEnv {
   /** 邀請好友連結的落地網址基底（不含尾隨 /）；不設則用執行時 `window.location.origin` */
   readonly VITE_REFERRAL_LANDING_URL?: string;
   /**
-   * 設為 `"true"` 啟用購買（/shop）與提現兌換（/redeem）；未設或空值為關閉。
+   * 設為 `"true"` 允許 Shop 開啟第三方金流結帳 URL（BUY_PRODUCT 新分頁）；未設或空值僅 Toast 阻擋，/shop、/redeem 仍可進入。
    */
   readonly VITE_PAYMENT_FEATURES_ENABLED?: string;
   /**
