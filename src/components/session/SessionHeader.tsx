@@ -17,7 +17,6 @@ import { GATEWAY_API_WALLET_USE } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { encodeWalletUseRequestBytes } from "../../realtime/walletLobbyWire";
-import { isPaymentFeaturesEnabled } from "../../lib/env";
 import { getWalletDisplay } from "../../wallet/formatWalletAmount";
 import type { ActiveWallet } from "../../wallet/walletContext";
 import { useWallet } from "../../wallet/walletContext";
@@ -122,18 +121,16 @@ export function SessionHeader() {
               <span className="session-header__pill-label-sr">{label}</span>
             </span>
             <span className="session-header__pill-amount">{amount}</span>
-            {isPaymentFeaturesEnabled() ? (
-              <Link
-                to="/shop"
-                className="session-header__pill-plus"
-                aria-label="Open shop to add coins">
-                <Plus
-                  className="session-header__pill-plus-icon"
-                  strokeWidth={2.4}
-                  aria-hidden
-                />
-              </Link>
-            ) : null}
+            <Link
+              to="/shop"
+              className="session-header__pill-plus"
+              aria-label="Open shop to add coins">
+              <Plus
+                className="session-header__pill-plus-icon"
+                strokeWidth={2.4}
+                aria-hidden
+              />
+            </Link>
           </div>
         </div>
         <div className="session-header__right">

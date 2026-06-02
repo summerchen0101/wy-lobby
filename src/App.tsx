@@ -20,11 +20,8 @@ import {
 } from "./features/auth/AuthRedirects";
 import { LandingPage } from "./features/lobby/LandingPage";
 import { LocaleHtmlSync } from "./i18n/LocaleHtmlSync";
-import { isPaymentFeaturesEnabled } from "./lib/env";
 import { GatewayLobbyProvider } from "./realtime/GatewayLobbyProvider";
 import { WalletProvider } from "./wallet/WalletProvider";
-
-const paymentFeaturesEnabled = isPaymentFeaturesEnabled();
 
 const EventsRedirect = lazy(() =>
   import("./features/lobby/EventsRedirect").then((m) => ({
@@ -100,36 +97,12 @@ export default function App() {
                         <Route element={<RequireAuth />}>
                           <Route path="/events" element={<EventsRedirect />} />
                           <Route element={<SessionLayout />}>
-                            <Route
-                              path="/shop"
-                              element={
-                                paymentFeaturesEnabled ? (
-                                  <ShopPage />
-                                ) : (
-                                  <Navigate to="/" replace />
-                                )
-                              }
-                            />
+                            <Route path="/shop" element={<ShopPage />} />
                             <Route
                               path="/redeem/form/:method"
-                              element={
-                                paymentFeaturesEnabled ? (
-                                  <Navigate to="/redeem" replace />
-                                ) : (
-                                  <Navigate to="/" replace />
-                                )
-                              }
+                              element={<Navigate to="/redeem" replace />}
                             />
-                            <Route
-                              path="/redeem"
-                              element={
-                                paymentFeaturesEnabled ? (
-                                  <RedeemPage />
-                                ) : (
-                                  <Navigate to="/" replace />
-                                )
-                              }
-                            />
+                            <Route path="/redeem" element={<RedeemPage />} />
                             <Route path="/promo" element={<PromoPage />} />
                             <Route path="/profile" element={<ProfilePage />} />
                           </Route>

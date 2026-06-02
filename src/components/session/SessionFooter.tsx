@@ -1,14 +1,13 @@
 import { useMemo } from 'react'
 import { Gift, Home, ShoppingCart, User, Wallet, type LucideIcon } from 'lucide-react'
 import { matchPath, NavLink, useLocation } from 'react-router-dom'
-import { isPaymentFeaturesEnabled } from '../../lib/env'
 import { useGatewayLobby } from '../../realtime/useGatewayLobby'
 import { useWallet } from '../../wallet/walletContext'
 import './SessionChrome.css'
 
 type Item = { to: string; label: string; end?: boolean; icon: 'shop' | 'redeem' | 'lobby' | 'promo' | 'profile' }
 
-const ALL_FOOTER_ITEMS: Item[] = [
+const footerItems: Item[] = [
   { to: '/shop', label: 'SHOP', icon: 'shop' },
   { to: '/redeem', label: 'REDEEM', icon: 'redeem' },
   { to: '/', label: 'LOBBY', end: true, icon: 'lobby' },
@@ -16,9 +15,8 @@ const ALL_FOOTER_ITEMS: Item[] = [
   { to: '/profile', label: 'PROFILE', icon: 'profile' },
 ]
 
-const footerItems: Item[] = isPaymentFeaturesEnabled()
-  ? ALL_FOOTER_ITEMS
-  : ALL_FOOTER_ITEMS.filter((i) => i.icon !== 'shop' && i.icon !== 'redeem')
+const FOOTER_TAB_COUNT = footerItems.length
+const FOOTER_TAB_FRAC = 1 / FOOTER_TAB_COUNT
 
 const iconByName: Record<Item['icon'], LucideIcon> = {
   shop: ShoppingCart,
@@ -28,11 +26,11 @@ const iconByName: Record<Item['icon'], LucideIcon> = {
   profile: User,
 }
 
-function useFooterActiveIndex(items: Item[]): number {
+function useFooterActiveIndex(): number {
   const { pathname } = useLocation()
   return useMemo(() => {
-    for (let i = 0; i < items.length; i += 1) {
-      const { to, end } = items[i]
+    for (let i = 0; i < footerItems.length; i += 1) {
+      const { to, end } = footerItems[i]
       const p = matchPath(
         { path: to, end: end ?? false, caseSensitive: true },
         pathname
@@ -40,23 +38,21 @@ function useFooterActiveIndex(items: Item[]): number {
       if (p) return i
     }
     return -1
-  }, [pathname, items])
+  }, [pathname])
 }
 
 export function SessionFooter() {
   const { activeWallet } = useWallet()
   const { refreshLobbyGet } = useGatewayLobby()
-  const activeIndex = useFooterActiveIndex(footerItems)
-  const tabCount = footerItems.length
-  const tabFrac = 1 / tabCount
+  const activeIndex = useFooterActiveIndex()
   return (
     <nav
       className="session-footer"
       data-active-wallet={activeWallet}
       data-footer-active-index={activeIndex}
       style={{
-        ['--session-footer-tab-count' as string]: String(tabCount),
-        ['--session-footer-tab-frac' as string]: String(tabFrac),
+        ['--session-footer-tab-count' as string]: String(FOOTER_TAB_COUNT),
+        ['--session-footer-tab-frac' as string]: String(FOOTER_TAB_FRAC),
         ...(activeIndex >= 0
           ? { ['--session-footer-active-index' as string]: String(activeIndex) }
           : {}),

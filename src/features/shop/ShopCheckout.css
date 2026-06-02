@@ -512,6 +512,12 @@
 }
 
 .shop-checkout__payment-wait-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
   color: #7ec8ff;
   text-decoration: underline;
   text-underline-offset: 2px;

@@ -137,9 +137,14 @@ export function supportChatUrl(): string | undefined {
   return v || undefined;
 }
 
-/** 購買（/shop）與提現兌換（/redeem）；預設關，串接新金流商後設 `VITE_PAYMENT_FEATURES_ENABLED=true`。 */
-export function isPaymentFeaturesEnabled(): boolean {
+/** 允許開啟 Shop 第三方金流結帳 URL；預設關，串接新金流商後設 `VITE_PAYMENT_FEATURES_ENABLED=true`。 */
+export function isThirdPartyPaymentEnabled(): boolean {
   return import.meta.env.VITE_PAYMENT_FEATURES_ENABLED === "true";
+}
+
+/** @deprecated 請改用 `isThirdPartyPaymentEnabled()` */
+export function isPaymentFeaturesEnabled(): boolean {
+  return isThirdPartyPaymentEnabled();
 }
 
 /** 大廳第三方遊戲（PROVIDERS／GetThirdPartyGameInfo）；預設關，串接新商後設 `VITE_THIRD_PARTY_GAMES_ENABLED=true`。 */

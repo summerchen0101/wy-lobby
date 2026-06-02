@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { isPaymentFeaturesEnabled } from "../lib/env";
 import {
   isLobbySoundEnabled,
   playLobbySfx,
@@ -9,7 +8,8 @@ import {
 
 const LOBBY_SFX_PATHS = new Set([
   "/",
-  ...(isPaymentFeaturesEnabled() ? ["/shop", "/redeem"] : []),
+  "/shop",
+  "/redeem",
   "/promo",
   "/profile",
 ]);

@@ -42,7 +42,7 @@ steps:
       VITE_UNITY_WEBENTRY_URL: https://unityweb-alpha.ffglobaltech.com/0001/WebGL_Build_Alpha/index.html
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
-      # 金流（/shop、/redeem）與大廳第三方遊戲；串接新商後改為 "true"
+      # Shop 第三方金流結帳頁；串接新金流商後改為 "true"
       VITE_PAYMENT_FEATURES_ENABLED: "false"
       VITE_THIRD_PARTY_GAMES_ENABLED: "false"
       VITE_THIRD_PARTY_GAME_THUMB_BASE: https://nas01.ffglobaltech.com
@@ -99,7 +99,7 @@ steps:
       VITE_UNITY_WEBENTRY_URL: https://unityweb-alpha.ffglobaltech.com/0001/WebGL_Build_Alpha/index.html
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
-      # 金流（/shop、/redeem）與大廳第三方遊戲；串接新商後改為 "true"
+      # Shop 第三方金流結帳頁；串接新金流商後改為 "true"
       VITE_PAYMENT_FEATURES_ENABLED: "false"
       VITE_THIRD_PARTY_GAMES_ENABLED: "false"
       VITE_THIRD_PARTY_GAME_THUMB_BASE: https://nas01.ffglobaltech.com
@@ -162,7 +162,7 @@ steps:
         from_secret: vite_unity_webentry_us
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_USE_WS_LOBBY_GAMES: "true"
-      # 金流（/shop、/redeem）與大廳第三方遊戲；串接新商後改為 "true"
+      # Shop 第三方金流結帳頁；串接新金流商後改為 "true"
       VITE_PAYMENT_FEATURES_ENABLED: "false"
       VITE_THIRD_PARTY_GAMES_ENABLED: "false"
       VITE_CLIENT_VER: "web-us-${DRONE_TAG}"
@@ -222,7 +222,7 @@ steps:
         from_secret: vite_unity_webentry_tw
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
       VITE_USE_WS_LOBBY_GAMES: "true"
-      # 金流（/shop、/redeem）與大廳第三方遊戲；串接新商後改為 "true"
+      # Shop 第三方金流結帳頁；串接新金流商後改為 "true"
       VITE_PAYMENT_FEATURES_ENABLED: "false"
       VITE_THIRD_PARTY_GAMES_ENABLED: "false"
       VITE_CLIENT_VER: "web-tw-${DRONE_TAG}"
