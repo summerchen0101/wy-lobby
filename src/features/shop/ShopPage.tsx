@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
-import { isMockMode } from "../../lib/env";
+import { isMockMode, isPaymentFeaturesEnabled } from "../../lib/env";
 import {
   GATEWAY_API_BUY_PRODUCT,
   GATEWAY_API_LIST_PRODUCTS,
@@ -134,6 +135,13 @@ function coinPileSrc(n: 1 | 2 | 3 | 4 | 5) {
 }
 
 export function ShopPage() {
+  if (!isPaymentFeaturesEnabled()) {
+    return <Navigate to="/" replace />;
+  }
+  return <ShopPageContent />;
+}
+
+function ShopPageContent() {
   const { token, user, mergeUser } = useAuth();
   const { requestRef, subscribePaymentFinish } = useGatewayLobby();
   const [packs, setPacks] = useState<ShopPack[]>([]);
