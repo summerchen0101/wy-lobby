@@ -3,7 +3,10 @@ import { useAuth } from "../auth/useAuth";
 import type { User } from "../lib/api/types";
 import {
   assignLobbyBgm,
+  LOBBY_BGM_SUPPRESS_EVENT,
   LOBBY_SOUND_PREF_EVENT,
+  isLobbyBgmSuppressed,
+  isLobbySoundEnabled,
   playLobbyWelcomeVoice,
   resumeLobbyBgm,
 } from "../lib/lobbySound";
@@ -13,7 +16,7 @@ import { useGameShell } from "./useGameShell";
  * 全域大廳 BGM（不綁定特定路由）：
  * 1. 初次載入 SPA 開始循環 BGM，並隨機播一次欢迎语音（F1/F3）
  * 2. 訪客登入成功（null → user）再播欢迎语音；還原既有 session 不做「登入成功」
- * BGM 循環直到靜音／遊戲殼開啟／分頁隱藏（暫停）；與 Profile 靜音、遊戲殼層、分頁可見度同步。
+ * BGM 循環直到靜音／遊戲殼開啟／新手教學／分頁隱藏（暫停）；與 Profile 靜音、遊戲殼層、教學 overlay、分頁可見度同步。
  */
 export function LobbyBgmOrchestrator() {
   const { user, ready } = useAuth();
@@ -35,7 +38,7 @@ export function LobbyBgmOrchestrator() {
   const syncPlayback = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (gameShellOpen) {
+    if (!isLobbySoundEnabled() || gameShellOpen || isLobbyBgmSuppressed()) {
       audio.pause();
       return;
     }
@@ -52,9 +55,11 @@ export function LobbyBgmOrchestrator() {
   useEffect(() => {
     syncPlayback();
     window.addEventListener(LOBBY_SOUND_PREF_EVENT, syncPlayback);
+    window.addEventListener(LOBBY_BGM_SUPPRESS_EVENT, syncPlayback);
     document.addEventListener("visibilitychange", syncPlayback);
     return () => {
       window.removeEventListener(LOBBY_SOUND_PREF_EVENT, syncPlayback);
+      window.removeEventListener(LOBBY_BGM_SUPPRESS_EVENT, syncPlayback);
       document.removeEventListener("visibilitychange", syncPlayback);
     };
   }, [syncPlayback]);

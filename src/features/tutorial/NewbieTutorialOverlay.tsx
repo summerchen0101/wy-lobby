@@ -1,8 +1,8 @@
 import "./NewbieTutorialOverlay.css";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { renderBbcodeTutorial } from "./bbcodeTutorial";
-import { NEWBIE_TUTORIAL_STEPS } from "./newbieTutorialSteps";
+import { getNewbieTutorialSteps } from "./newbieTutorialSteps";
 import { markNewbieTutorialDone } from "./tutorialStorage";
 import {
   TutorialSpineCanvas,
@@ -15,6 +15,8 @@ type Props = {
 };
 
 export function NewbieTutorialOverlay({ open, onClose }: Props) {
+  const steps = useMemo(() => getNewbieTutorialSteps(), []);
+  const stepCount = steps.length;
   const [stepIndex, setStepIndex] = useState(0);
   const [spineError, setSpineError] = useState<string | null>(null);
   const [phase, setPhase] = useState<TutorialSpinePhase>("enter");
@@ -26,8 +28,8 @@ export function NewbieTutorialOverlay({ open, onClose }: Props) {
     setPhase("enter");
   }, [open]);
 
-  const step = NEWBIE_TUTORIAL_STEPS[stepIndex];
-  const lastStep = stepIndex >= NEWBIE_TUTORIAL_STEPS.length - 1;
+  const step = steps[stepIndex];
+  const lastStep = stepIndex >= stepCount - 1;
 
   const afterExitClose = useCallback(() => {
     markNewbieTutorialDone();
@@ -63,8 +65,8 @@ export function NewbieTutorialOverlay({ open, onClose }: Props) {
       requestDismissWithExit();
       return;
     }
-    setStepIndex((i) => Math.min(i + 1, NEWBIE_TUTORIAL_STEPS.length - 1));
-  }, [lastStep, requestDismissWithExit]);
+    setStepIndex((i) => Math.min(i + 1, stepCount - 1));
+  }, [lastStep, requestDismissWithExit, stepCount]);
 
   const onBack = useCallback(() => {
     setStepIndex((i) => Math.max(0, i - 1));
@@ -115,7 +117,7 @@ export function NewbieTutorialOverlay({ open, onClose }: Props) {
       </div>
       <div className="newbie-tutorial-overlay__chrome">
         <p className="newbie-tutorial-overlay__progress" aria-live="polite">
-          Step {stepIndex + 1} of {NEWBIE_TUTORIAL_STEPS.length}
+          Step {stepIndex + 1} of {stepCount}
         </p>
         <div className="newbie-tutorial-overlay__footer-nav">
           <button

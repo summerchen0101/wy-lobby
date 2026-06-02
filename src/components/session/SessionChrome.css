@@ -392,7 +392,7 @@ a.session-header__avatar {
 
 .session-footer__list {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--session-footer-tab-count, 5), 1fr);
   list-style: none;
   margin: 0;
   padding: var(--space-2) var(--page-pad) 0;
@@ -411,15 +411,18 @@ a.session-header__avatar {
   box-sizing: border-box;
 }
 
-/* ~70% of one tab column: centered in each 20% band via margin-left */
+/* ~70% of one tab column: centered in each tab band via margin-left */
 .session-footer__slide {
   position: relative;
   flex-shrink: 0;
-  width: 14%;
+  width: calc(var(--session-footer-tab-frac, 0.2) * 70%);
   height: 0.2rem;
   border-radius: 999px;
   background: var(--session-footer-accent);
-  margin-left: calc(3% + 20% * var(--session-footer-active-index, 0));
+  margin-left: calc(
+    3% + var(--session-footer-tab-frac, 0.2) * 100% *
+      var(--session-footer-active-index, 0)
+  );
   transition:
     margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.2s ease;
