@@ -136,3 +136,13 @@ export function supportChatUrl(): string | undefined {
   const v = import.meta.env.VITE_SUPPORT_CHAT_URL?.trim();
   return v || undefined;
 }
+
+/** 購買（/shop）與提現兌換（/redeem）；預設關，串接新金流商後設 `VITE_PAYMENT_FEATURES_ENABLED=true`。 */
+export function isPaymentFeaturesEnabled(): boolean {
+  return import.meta.env.VITE_PAYMENT_FEATURES_ENABLED === "true";
+}
+
+/** 大廳第三方遊戲（PROVIDERS／GetThirdPartyGameInfo）；預設關，串接新商後設 `VITE_THIRD_PARTY_GAMES_ENABLED=true`。 */
+export function isThirdPartyGamesEnabled(): boolean {
+  return import.meta.env.VITE_THIRD_PARTY_GAMES_ENABLED === "true";
+}

@@ -1,3 +1,5 @@
+import { isPaymentFeaturesEnabled } from "../../lib/env";
+
 export type NewbieTutorialStep = {
   /** BBCode: [b], [/b], [RRGGBB], [-] */
   textBbcode: string;
@@ -6,7 +8,7 @@ export type NewbieTutorialStep = {
 /**
  * Copy from design spec — DOM overlay inside Spine dialog bubble + dual characters.
  */
-export const NEWBIE_TUTORIAL_STEPS: readonly NewbieTutorialStep[] = [
+const NEWBIE_TUTORIAL_STEPS_WITH_PAYMENT: readonly NewbieTutorialStep[] = [
   {
     textBbcode: "Here we have [b]2 game modes:[/b]",
   },
@@ -45,3 +47,18 @@ export const NEWBIE_TUTORIAL_STEPS: readonly NewbieTutorialStep[] = [
       "[b]You're all set![/b] Good luck spinning!",
   },
 ];
+
+/** 金流關閉時略過引導至 REDEEM／SHOP 的步驟。 */
+const NEWBIE_TUTORIAL_STEPS_PAYMENT_OFF: readonly NewbieTutorialStep[] = [
+  ...NEWBIE_TUTORIAL_STEPS_WITH_PAYMENT.slice(0, 6),
+  NEWBIE_TUTORIAL_STEPS_WITH_PAYMENT[9],
+];
+
+/** @deprecated 請改用 `getNewbieTutorialSteps()` */
+export const NEWBIE_TUTORIAL_STEPS = NEWBIE_TUTORIAL_STEPS_WITH_PAYMENT;
+
+export function getNewbieTutorialSteps(): readonly NewbieTutorialStep[] {
+  return isPaymentFeaturesEnabled()
+    ? NEWBIE_TUTORIAL_STEPS_WITH_PAYMENT
+    : NEWBIE_TUTORIAL_STEPS_PAYMENT_OFF;
+}

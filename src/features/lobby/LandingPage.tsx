@@ -29,6 +29,7 @@ import {
   isSlotWebEntryEnabled,
   isDevConsoleEnabled,
   isMockMode,
+  isThirdPartyGamesEnabled,
   isWsLobbyGamesEnabled,
 } from "../../lib/env";
 import * as apiMock from "../../lib/api/mock";
@@ -67,10 +68,14 @@ import "./LobbyPage.css";
 
 type LobbyFilterTab = "all" | "hot" | "providers" | "slots";
 
+const thirdPartyGamesEnabled = isThirdPartyGamesEnabled();
+
 const LOBBY_FILTER_TABS: { id: LobbyFilterTab; label: string }[] = [
   { id: "all", label: "ALL" },
   { id: "hot", label: "HOT" },
-  { id: "providers", label: "PROVIDERS" },
+  ...(thirdPartyGamesEnabled
+    ? [{ id: "providers" as const, label: "PROVIDERS" }]
+    : []),
   { id: "slots", label: "SLOTS" },
 ];
 
@@ -79,7 +84,7 @@ const LOBBY_FILTER_ORDER: LobbyFilterTab[] = LOBBY_FILTER_TABS.map((t) => t.id);
 /** 已登入「ALL」分頁內小節順序（與分類 tab 名稱對應，不含 ALL） */
 const LOBBY_ALL_SUBSECTIONS: Array<Exclude<LobbyFilterTab, "all">> = [
   "hot",
-  "providers",
+  ...(thirdPartyGamesEnabled ? (["providers"] as const) : []),
   "slots",
 ];
 
@@ -356,6 +361,12 @@ export function LandingPage() {
   const [mockLoading, setMockLoading] = useState(false);
   const [mockError, setMockError] = useState<string | null>(null);
   const [lobbyFilter, setLobbyFilter] = useState<LobbyFilterTab>("all");
+
+  useEffect(() => {
+    if (!thirdPartyGamesEnabled) {
+      setLobbyFilter((f) => (f === "providers" ? "all" : f));
+    }
+  }, []);
   const [lobbySearch, setLobbySearch] = useState("");
   const [lobbySearchExpanded, setLobbySearchExpanded] = useState(false);
   const lobbySearchInputRef = useRef<HTMLInputElement | null>(null);
@@ -440,6 +451,7 @@ export function LandingPage() {
 
   /** 第三方遊戲：`thirdPartyGameInfoList` 僅 `status === "ACTIVE"`，順序不變，僅依搜尋過濾（不重排）。 */
   const providerGamesFiltered = useMemo(() => {
+    if (!thirdPartyGamesEnabled) return [];
     const list = lobbyThirdPartyListToApiGames(
       lobbyGet?.thirdPartyGameInfoList,
     );
@@ -456,7 +468,12 @@ export function LandingPage() {
   const gamesByFilter = useMemo(() => {
     const out = {} as Record<LobbyFilterTab, Game[]>;
     const sessionProviders =
-      user && wsLobbyEnabled && !mockLobby ? providerGamesFiltered : [];
+      thirdPartyGamesEnabled &&
+      user &&
+      wsLobbyEnabled &&
+      !mockLobby
+        ? providerGamesFiltered
+        : [];
     for (const f of LOBBY_FILTER_ORDER) {
       if (f === "providers") {
         out[f] = sessionProviders;
@@ -668,6 +685,7 @@ export function LandingPage() {
         gameToken = fresh;
       }
       if (card.thirdPartyLaunch) {
+        if (!thirdPartyGamesEnabled) return;
         await launchThirdPartyGame(card);
         return;
       }

@@ -80,6 +80,14 @@ interface ImportMetaEnv {
   /** 邀請好友連結的落地網址基底（不含尾隨 /）；不設則用執行時 `window.location.origin` */
   readonly VITE_REFERRAL_LANDING_URL?: string;
   /**
+   * 設為 `"true"` 啟用購買（/shop）與提現兌換（/redeem）；未設或空值為關閉。
+   */
+  readonly VITE_PAYMENT_FEATURES_ENABLED?: string;
+  /**
+   * 設為 `"true"` 啟用大廳第三方遊戲（PROVIDERS 分頁）；未設或空值為關閉。
+   */
+  readonly VITE_THIRD_PARTY_GAMES_ENABLED?: string;
+  /**
    * 第三方遊戲大廳卡片縮圖基底（HTTPS，不帶尾隨 /）。
    * Alpha 範例：https://nas01.ffglobaltech.com；Prod：https://unityweb-cdn.boss-fun.com
    */
