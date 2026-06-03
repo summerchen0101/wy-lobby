@@ -1,37 +1,86 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppleLogin from "react-apple-login";
 import { IoChevronBack } from "react-icons/io5";
 import { FaApple } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
 import { useAuth } from "../../auth/useAuth";
 import { fetchAppleOAuthState } from "../../lib/api/oauth";
-import { ApiError } from "../../lib/api/client";
+import { ApiError, ClientVersionError } from "../../lib/api/client";
 import { appleOAuthClientId, getApiBase, isMockMode } from "../../lib/env";
 import { buildOAuthBackUrl } from "../../lib/oauth/backUrl";
+import { AuthClearableInputWrap } from "./AuthClearableInputWrap";
 import "./AuthModals.css";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  /** @deprecated 僅 Apple／Google 登入；保留 props 以免呼叫端改動 */
   onSwitchRegister: () => void;
-  /** @deprecated */
   onForgotPassword: () => void;
 };
+
+/** Icon when password is hidden — click to reveal. */
+function IconEyeOpen() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+    </svg>
+  );
+}
+
+/** Icon when password is visible — click to hide. */
+function IconEyeClosed() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.27-1.13 2.2-2.5 2.7-3.9-1.73-4.39-6-7.5-11-7.5-1.4 0-2.75.25-3.99.7l2.2 2.2C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.05-.2 4.45-.55l.42.42L19.73 22 22 19.73 4.27 2 2 4.27zM7.53 9.8l1.55 1.55c-.05.3-.08.6-.08.9 0 1.66 1.34 3 3 3 .3 0 .6-.04.9-.1l1.55 1.55c-.84.3-1.75.5-2.7.5-2.76 0-5-2.24-5-5 0-.95.2-1.86.5-2.7z" />
+    </svg>
+  );
+}
 
 export function LoginModal({
   open,
   onClose,
+  onSwitchRegister,
+  onForgotPassword,
 }: Props) {
-  const { ingestAuthResponse } = useAuth();
+  const { login, ingestAuthResponse } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const titleId = useId();
+  const formId = useId();
+  const emailId = `${formId}-email`;
+  const passwordId = `${formId}-password`;
+
+  const [account, setAccount] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [oauthError, setOauthError] = useState<string | null>(null);
+  const [stubMsg, setStubMsg] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [appleState, setAppleState] = useState("");
   const [appleLoading, setAppleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const appleTriggerRef = useRef<HTMLDivElement>(null);
 
   const apiBase = getApiBase();
@@ -50,7 +99,9 @@ export function LoginModal({
 
   useEffect(() => {
     if (!open) return;
-    setError(null);
+    setFormError(null);
+    setOauthError(null);
+    setStubMsg(null);
     setAppleState("");
   }, [open]);
 
@@ -59,11 +110,14 @@ export function LoginModal({
     const redirect = searchParams.get("redirect");
     if (redirect?.startsWith("/") && !redirect.startsWith("//")) {
       navigate(redirect, { replace: true });
+    } else {
+      navigate("/", { replace: true });
     }
   }, [onClose, navigate, searchParams]);
 
   const handleAppleLogin = useCallback(async () => {
-    setError(null);
+    setOauthError(null);
+    setStubMsg(null);
     setAppleLoading(true);
     try {
       if (isMockMode()) {
@@ -82,10 +136,9 @@ export function LoginModal({
       const state = await fetchAppleOAuthState(backUrl);
       setAppleState(state);
       requestAnimationFrame(() => {
-        const el =
-          appleTriggerRef.current?.querySelector(
-            "#appleid-signin",
-          ) as HTMLElement | null;
+        const el = appleTriggerRef.current?.querySelector(
+          "#appleid-signin",
+        ) as HTMLElement | null;
         el?.click();
       });
     } catch (err) {
@@ -95,11 +148,44 @@ export function LoginModal({
           : err instanceof Error
             ? err.message
             : "Apple sign-in failed";
-      setError(msg);
+      setOauthError(msg);
     } finally {
       setAppleLoading(false);
     }
   }, [searchParams, ingestAuthResponse, finishLogin]);
+
+  function handleSocialStub(label: string) {
+    setStubMsg(`${label} sign-in is not available yet`);
+    setOauthError(null);
+  }
+
+  async function onSignIn(e: FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    setStubMsg(null);
+    setSubmitting(true);
+    try {
+      await login(account.trim(), password);
+      finishLogin();
+    } catch (err) {
+      if (err instanceof ClientVersionError) {
+        window.open(err.updateUrl, "_blank", "noopener,noreferrer");
+        setFormError(
+          "A new version is required. A download page was opened in a new tab.",
+        );
+        return;
+      }
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Sign-in failed";
+      setFormError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (!open) return null;
 
@@ -135,15 +221,23 @@ export function LoginModal({
         </header>
         <hr className="app-modal__rule" />
         <div className="app-modal__body">
-          <div className="auth-modal__social-stack">
+          <div className="auth-modal__social-row">
             <button
               type="button"
               className="auth-modal__social-btn auth-modal__social-btn--apple"
+              aria-label="Log in with Apple"
               disabled={appleLoading}
               onClick={() => void handleAppleLogin()}
             >
-              <FaApple aria-hidden size={20} />
-              {appleLoading ? "…" : "Continue with Apple"}
+              <FaApple aria-hidden size={22} />
+            </button>
+            <button
+              type="button"
+              className="auth-modal__social-btn auth-modal__social-btn--google"
+              aria-label="Log in with Google"
+              onClick={() => handleSocialStub("Google")}
+            >
+              <FcGoogle aria-hidden size={22} />
             </button>
           </div>
           <div ref={appleTriggerRef} hidden aria-hidden>
@@ -158,9 +252,114 @@ export function LoginModal({
               />
             ) : null}
           </div>
-          {error ? <p className="auth-modal__error">{error}</p> : null}
-          <p className="auth-modal__text auth-modal__text--muted">
-            Google sign-in will be available soon.
+          {oauthError ? (
+            <p className="auth-modal__error">{oauthError}</p>
+          ) : null}
+          {stubMsg ? (
+            <p className="auth-modal__stub-toast">{stubMsg}</p>
+          ) : null}
+
+          <div className="auth-modal__divider" aria-hidden>
+            or
+          </div>
+
+          <form onSubmit={onSignIn} noValidate>
+            <fieldset
+              disabled={submitting}
+              className="auth-form-fieldset-reset"
+            >
+              <label
+                className="auth-modal__field-label auth-modal__field-label--register"
+                htmlFor={emailId}
+              >
+                Email:
+              </label>
+              <AuthClearableInputWrap
+                variant="modal"
+                value={account}
+                onClear={() => setAccount("")}
+                clearAriaLabel="Clear email"
+              >
+                <input
+                  id={emailId}
+                  className="auth-modal__input auth-modal__input--register"
+                  name="account"
+                  type="email"
+                  autoComplete="username"
+                  placeholder="Please enter email"
+                  value={account}
+                  onChange={(e) => setAccount(e.target.value)}
+                  required
+                />
+              </AuthClearableInputWrap>
+              <label
+                className="auth-modal__field-label auth-modal__field-label--register"
+                htmlFor={passwordId}
+              >
+                Password:
+              </label>
+              <AuthClearableInputWrap
+                variant="modal"
+                modalWrap="password"
+                value={password}
+                onClear={() => setPassword("")}
+                clearAriaLabel="Clear password"
+                suffix={
+                  <button
+                    type="button"
+                    className="auth-modal__password-toggle"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? <IconEyeClosed /> : <IconEyeOpen />}
+                  </button>
+                }
+              >
+                <input
+                  id={passwordId}
+                  className="auth-modal__input auth-modal__input--register auth-modal__input--password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  placeholder="Please enter password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </AuthClearableInputWrap>
+              <p className="auth-modal__forgot-password">
+                <button
+                  type="button"
+                  className="auth-modal__footer-link"
+                  onClick={onForgotPassword}
+                >
+                  Forgot password?
+                </button>
+              </p>
+              {formError ? (
+                <p className="auth-modal__error">{formError}</p>
+              ) : null}
+              <button
+                type="submit"
+                className="auth-modal__submit"
+                disabled={submitting}
+              >
+                {submitting ? "…" : "SIGN IN"}
+              </button>
+            </fieldset>
+          </form>
+          <p className="auth-modal__footer">
+            Need an account?{" "}
+            <button
+              type="button"
+              className="auth-modal__footer-link"
+              onClick={onSwitchRegister}
+            >
+              CREATE ACCOUNT
+            </button>
           </p>
         </div>
       </div>
