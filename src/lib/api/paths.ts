@@ -9,12 +9,9 @@ export function getApiPaths() {
     /** v1 以 refresh 換新 access */
     token: import.meta.env.VITE_API_PATH_AUTH_TOKEN ?? '/api/v1/token',
     /** Apple Sign In：取得 state（query `backUrl`） */
-    appleState:
-      import.meta.env.VITE_API_PATH_APPLE_STATE ?? '/api/v1/apple/state',
+    appleState: '/api/v1/apple/state',
     /** OAuth 導向連結（query `autoRedirect`、`backUrl`） */
-    oauthLink: (channel: OAuthLinkChannel) =>
-      import.meta.env.VITE_API_PATH_OAUTH_LINK?.replace('{channel}', channel) ??
-      `/api/v1/${channel}/link`,
+    oauthLink: (channel: OAuthLinkChannel) => `/api/v1/${channel}/link`,
     passwordReset:
       import.meta.env.VITE_API_PATH_PASSWORD_RESET ?? '/api/v1/password/reset',
     passwordResetInfo:

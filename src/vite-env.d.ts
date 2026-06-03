@@ -12,8 +12,6 @@ interface ImportMetaEnv {
   readonly VITE_API_PATH_AUTH_LOGIN?: string;
   readonly VITE_API_PATH_AUTH_TOKEN?: string;
   readonly VITE_APPLE_OAUTH_CLIENT_ID?: string;
-  readonly VITE_API_PATH_APPLE_STATE?: string;
-  readonly VITE_API_PATH_OAUTH_LINK?: string;
   /** access 到期前主動 refresh 的提前秒數（預設 0；需後端回 expiresIn） */
   readonly VITE_TOKEN_REFRESH_LEAD_SEC?: string;
   /** 僅 dev：Vite 將 /api 代理到此目標 */
