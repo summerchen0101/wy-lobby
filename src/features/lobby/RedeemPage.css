@@ -408,12 +408,17 @@
     filter 0.15s ease;
 }
 
-.redeem-page__new-redeem:hover {
+.redeem-page__new-redeem:hover:not(:disabled) {
   filter: brightness(1.08);
 }
 
-.redeem-page__new-redeem:active {
+.redeem-page__new-redeem:active:not(:disabled) {
   transform: translateY(1px);
+}
+
+.redeem-page__new-redeem:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .redeem-page__insufficient-inline {

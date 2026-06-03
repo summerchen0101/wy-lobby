@@ -75,6 +75,27 @@ export async function mockLogin(body: LoginBody): Promise<AuthResponse> {
   return delay(mockAuth(body.account));
 }
 
+export async function mockAppleOAuthState(_backUrl: string): Promise<string> {
+  void _backUrl;
+  return delay("mock-apple-oauth-state");
+}
+
+export async function mockOAuthLink(
+  channel: string,
+  _backUrl: string,
+): Promise<string> {
+  void _backUrl;
+  if (typeof window !== "undefined") {
+    const q = new URLSearchParams({
+      accessToken: tokenFor(`oauth-${channel}`),
+      refreshToken: `mock.refresh.oauth.${channel}`,
+      expiresIn: "3600",
+    });
+    return delay(`${window.location.origin}/?${q.toString()}`);
+  }
+  return delay(`https://example.com/oauth/${channel}`);
+}
+
 export async function mockRequestPasswordReset(): Promise<void> {
   return delay(undefined);
 }

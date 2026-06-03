@@ -23,6 +23,12 @@
   margin-bottom: 0;
 }
 
+.auth-modal__text--muted {
+  margin-top: var(--space-4);
+  font-size: 0.8rem;
+  color: rgb(255 255 255 / 65%);
+}
+
 .auth-modal__link {
   color: var(--crown-gold);
   font-weight: 700;

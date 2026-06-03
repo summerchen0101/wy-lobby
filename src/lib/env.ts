@@ -22,6 +22,12 @@ export function getApiBase(): string {
   return raw.replace(/\/$/, "");
 }
 
+/** Apple Sign In Service ID（對齊 official `com.Rich.MegaRich.Service`，Alpha 請用後端提供值） */
+export function appleOAuthClientId(): string {
+  const v = import.meta.env.VITE_APPLE_OAUTH_CLIENT_ID?.trim();
+  return v || "com.Rich.Luklok.Service";
+}
+
 export function trustpilotBusinessUnitId(): string | undefined {
   const v = import.meta.env.VITE_TRUSTPILOT_BUSINESS_UNIT_ID?.trim();
   return v || undefined;
@@ -137,9 +143,14 @@ export function supportChatUrl(): string | undefined {
   return v || undefined;
 }
 
-/** 購買（/shop）與提現兌換（/redeem）；預設關，串接新金流商後設 `VITE_PAYMENT_FEATURES_ENABLED=true`。 */
-export function isPaymentFeaturesEnabled(): boolean {
+/** 允許開啟 Shop 第三方金流結帳 URL；預設關，串接新金流商後設 `VITE_PAYMENT_FEATURES_ENABLED=true`。 */
+export function isThirdPartyPaymentEnabled(): boolean {
   return import.meta.env.VITE_PAYMENT_FEATURES_ENABLED === "true";
+}
+
+/** @deprecated 請改用 `isThirdPartyPaymentEnabled()` */
+export function isPaymentFeaturesEnabled(): boolean {
+  return isThirdPartyPaymentEnabled();
 }
 
 /** 大廳第三方遊戲（PROVIDERS／GetThirdPartyGameInfo）；預設關，串接新商後設 `VITE_THIRD_PARTY_GAMES_ENABLED=true`。 */

@@ -11,6 +11,7 @@ interface ImportMetaEnv {
   readonly VITE_API_PATH_AUTH_REGISTER?: string;
   readonly VITE_API_PATH_AUTH_LOGIN?: string;
   readonly VITE_API_PATH_AUTH_TOKEN?: string;
+  readonly VITE_APPLE_OAUTH_CLIENT_ID?: string;
   /** access 到期前主動 refresh 的提前秒數（預設 0；需後端回 expiresIn） */
   readonly VITE_TOKEN_REFRESH_LEAD_SEC?: string;
   /** 僅 dev：Vite 將 /api 代理到此目標 */
@@ -80,7 +81,7 @@ interface ImportMetaEnv {
   /** 邀請好友連結的落地網址基底（不含尾隨 /）；不設則用執行時 `window.location.origin` */
   readonly VITE_REFERRAL_LANDING_URL?: string;
   /**
-   * 設為 `"true"` 啟用購買（/shop）與提現兌換（/redeem）；未設或空值為關閉。
+   * 設為 `"true"` 允許 Shop 開啟第三方金流結帳 URL（BUY_PRODUCT 新分頁）；未設或空值僅 Toast 阻擋，/shop、/redeem 仍可進入。
    */
   readonly VITE_PAYMENT_FEATURES_ENABLED?: string;
   /**

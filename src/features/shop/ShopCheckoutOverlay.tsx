@@ -34,6 +34,8 @@ type Props = {
   onBindingSubmit: (payload: ShopBindingFormPayload) => Promise<void>;
   onSelectPaymentMethod: (method: ShopPaymentMethodId) => void;
   onCancelPaymentFrame: () => void;
+  /** 開啟第三方金流結帳 URL；回傳 false 表示已阻擋（Toast 由父層處理） */
+  onOpenPaymentPage: (url: string) => boolean;
 };
 
 function BackIcon() {
@@ -176,9 +178,11 @@ function OrderSummaryView({
 function PaymentFrameView({
   paymentUrl,
   onBack,
+  onOpenPaymentPage,
 }: {
   paymentUrl: string;
   onBack: () => void;
+  onOpenPaymentPage: (url: string) => boolean;
 }) {
   return (
     <>
@@ -204,13 +208,12 @@ function PaymentFrameView({
           will update when your purchase is confirmed.
         </p>
         <p className="shop-checkout__payment-wait-text">
-          <a
+          <button
+            type="button"
             className="shop-checkout__payment-wait-link"
-            href={paymentUrl}
-            target="_blank"
-            rel="noopener noreferrer">
+            onClick={() => onOpenPaymentPage(paymentUrl)}>
             Open payment page
-          </a>{" "}
+          </button>{" "}
           if it did not open automatically.
         </p>
       </div>
@@ -270,6 +273,7 @@ export function ShopCheckoutOverlay({
   onBindingSubmit,
   onSelectPaymentMethod,
   onCancelPaymentFrame,
+  onOpenPaymentPage,
 }: Props) {
   const closeOverlay = useCallback(() => {
     onCancelPaymentFrame();
@@ -333,6 +337,7 @@ export function ShopCheckoutOverlay({
           <PaymentFrameView
             paymentUrl={paymentUrl}
             onBack={onCancelPaymentFrame}
+            onOpenPaymentPage={onOpenPaymentPage}
           />
         ) : (
           <SuccessView onClose={closeOverlay} />
