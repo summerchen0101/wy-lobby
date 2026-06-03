@@ -74,6 +74,19 @@
   gap: var(--space-3);
 }
 
+.auth-modal__social-row {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: stretch;
+}
+
+.auth-modal__social-row .auth-modal__social-btn {
+  flex: 1;
+  min-height: 3rem;
+  padding: 0;
+  border-radius: 999px;
+}
+
 .auth-modal__social-btn {
   display: flex;
   align-items: center;
