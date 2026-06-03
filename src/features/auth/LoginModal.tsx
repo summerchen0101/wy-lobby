@@ -190,7 +190,7 @@ export function LoginModal({
   if (!open) return null;
 
   return createPortal(
-    <div className="app-modal-overlay" role="presentation" onClick={onClose}>
+    <div className="app-modal-overlay" role="presentation">
       <div
         className="app-modal app-modal--scroll-y auth-modal auth-modal--login"
         role="dialog"
