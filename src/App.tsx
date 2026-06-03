@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Route, BrowserRouter, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthProvider";
+import { OAuthReturnHandler } from "./auth/OAuthReturnHandler";
 import { RequireAuth } from "./auth/RequireAuth";
 import { AlertProvider } from "./components/alert/AlertProvider";
 import { LoadingOverlayProvider } from "./components/loading/LoadingOverlayProvider";
@@ -68,6 +69,7 @@ export default function App() {
         <LoadingOverlayProvider>
           <WalletProvider>
             <AlertProvider>
+              <OAuthReturnHandler />
               <GatewayLobbyProvider>
                 <AuthModalsProvider>
                   <GameShellProvider>

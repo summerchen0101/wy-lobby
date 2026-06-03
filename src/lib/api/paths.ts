@@ -1,3 +1,5 @@
+export type OAuthLinkChannel = 'google' | 'line' | 'fb'
+
 export function getApiPaths() {
   return {
     /** v1 註冊（`login_flow`：POST `/api/v1/signup`） */
@@ -6,6 +8,10 @@ export function getApiPaths() {
     login: import.meta.env.VITE_API_PATH_AUTH_LOGIN ?? '/api/v1/login',
     /** v1 以 refresh 換新 access */
     token: import.meta.env.VITE_API_PATH_AUTH_TOKEN ?? '/api/v1/token',
+    /** Apple Sign In：取得 state（query `backUrl`） */
+    appleState: '/api/v1/apple/state',
+    /** OAuth 導向連結（query `autoRedirect`、`backUrl`） */
+    oauthLink: (channel: OAuthLinkChannel) => `/api/v1/${channel}/link`,
     passwordReset:
       import.meta.env.VITE_API_PATH_PASSWORD_RESET ?? '/api/v1/password/reset',
     passwordResetInfo:
