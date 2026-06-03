@@ -22,6 +22,12 @@ export function getApiBase(): string {
   return raw.replace(/\/$/, "");
 }
 
+/** Apple Sign In Service ID（對齊 official `com.Rich.MegaRich.Service`，Alpha 請用後端提供值） */
+export function appleOAuthClientId(): string {
+  const v = import.meta.env.VITE_APPLE_OAUTH_CLIENT_ID?.trim();
+  return v || "com.Rich.Luklok.Service";
+}
+
 export function trustpilotBusinessUnitId(): string | undefined {
   const v = import.meta.env.VITE_TRUSTPILOT_BUSINESS_UNIT_ID?.trim();
   return v || undefined;
