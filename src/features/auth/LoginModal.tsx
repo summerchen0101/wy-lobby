@@ -13,7 +13,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { FaApple } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { useAuth } from "../../auth/useAuth";
-import { fetchAppleOAuthState } from "../../lib/api/oauth";
+import { fetchAppleOAuthState, fetchOAuthLink } from "../../lib/api/oauth";
 import { ApiError, ClientVersionError } from "../../lib/api/client";
 import { appleOAuthClientId, getApiBase, isMockMode } from "../../lib/env";
 import { buildOAuthBackUrl } from "../../lib/oauth/backUrl";
@@ -76,11 +76,11 @@ export function LoginModal({
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [oauthError, setOauthError] = useState<string | null>(null);
-  const [stubMsg, setStubMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [appleState, setAppleState] = useState("");
   const [appleLoading, setAppleLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const appleTriggerRef = useRef<HTMLDivElement>(null);
 
   const apiBase = getApiBase();
@@ -101,7 +101,6 @@ export function LoginModal({
     if (!open) return;
     setFormError(null);
     setOauthError(null);
-    setStubMsg(null);
     setAppleState("");
   }, [open]);
 
@@ -115,9 +114,27 @@ export function LoginModal({
     }
   }, [onClose, navigate, searchParams]);
 
+  const handleGoogleLogin = useCallback(async () => {
+    setOauthError(null);
+    setGoogleLoading(true);
+    try {
+      const backUrl = buildOAuthBackUrl(searchParams);
+      const url = await fetchOAuthLink("google", backUrl);
+      window.location.assign(url);
+    } catch (err) {
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Google sign-in failed";
+      setOauthError(msg);
+      setGoogleLoading(false);
+    }
+  }, [searchParams]);
+
   const handleAppleLogin = useCallback(async () => {
     setOauthError(null);
-    setStubMsg(null);
     setAppleLoading(true);
     try {
       if (isMockMode()) {
@@ -154,15 +171,9 @@ export function LoginModal({
     }
   }, [searchParams, ingestAuthResponse, finishLogin]);
 
-  function handleSocialStub(label: string) {
-    setStubMsg(`${label} sign-in is not available yet`);
-    setOauthError(null);
-  }
-
   async function onSignIn(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setStubMsg(null);
     setSubmitting(true);
     try {
       await login(account.trim(), password);
@@ -190,7 +201,7 @@ export function LoginModal({
   if (!open) return null;
 
   return createPortal(
-    <div className="app-modal-overlay" role="presentation" onClick={onClose}>
+    <div className="app-modal-overlay" role="presentation">
       <div
         className="app-modal app-modal--scroll-y auth-modal auth-modal--login"
         role="dialog"
@@ -235,7 +246,8 @@ export function LoginModal({
               type="button"
               className="auth-modal__social-btn auth-modal__social-btn--google"
               aria-label="Log in with Google"
-              onClick={() => handleSocialStub("Google")}
+              disabled={googleLoading}
+              onClick={() => void handleGoogleLogin()}
             >
               <FcGoogle aria-hidden size={22} />
             </button>
@@ -254,9 +266,6 @@ export function LoginModal({
           </div>
           {oauthError ? (
             <p className="auth-modal__error">{oauthError}</p>
-          ) : null}
-          {stubMsg ? (
-            <p className="auth-modal__stub-toast">{stubMsg}</p>
           ) : null}
 
           <div className="auth-modal__divider" aria-hidden>
