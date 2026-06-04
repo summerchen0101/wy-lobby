@@ -64,7 +64,14 @@ export function stripOAuthReturnQuery(
   return next;
 }
 
+export function oauthReturnUsesBlockingAlert(errCode: string): boolean {
+  return errCode === "400008";
+}
+
 export function oauthReturnMessageForCode(errCode: string): string {
+  if (errCode === "400008") {
+    return "Apple sign-in requires your email address. Please try again and choose to share your email when Apple asks.";
+  }
   if (errCode === "403012") {
     return "Registration limit reached. Please contact support.";
   }
