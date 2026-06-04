@@ -6,6 +6,7 @@ import { useAuth } from "./useAuth";
 import {
   isNewOAuthAccount,
   oauthReturnMessageForCode,
+  oauthReturnUsesBlockingAlert,
   readOAuthReturnAuth,
   readOAuthReturnError,
   stripOAuthReturnQuery,
@@ -19,7 +20,7 @@ export function OAuthReturnHandler() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { ingestAuthResponse } = useAuth();
-  const { show } = useAlert();
+  const { show, showBlockingAlert } = useAlert();
   const handledRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -32,8 +33,13 @@ export function OAuthReturnHandler() {
 
     const oauthErr = readOAuthReturnError(searchParams);
     if (oauthErr) {
-      const preset = oauthReturnMessageForCode(oauthErr.errCode);
-      show(preset || oauthErr.errMsg, { variant: "error" });
+      const message =
+        oauthReturnMessageForCode(oauthErr.errCode) || oauthErr.errMsg;
+      if (oauthReturnUsesBlockingAlert(oauthErr.errCode)) {
+        showBlockingAlert(message);
+      } else {
+        show(message, { variant: "error" });
+      }
       setSearchParams(stripOAuthReturnQuery(searchParams), { replace: true });
       return;
     }
@@ -56,6 +62,7 @@ export function OAuthReturnHandler() {
     navigate,
     ingestAuthResponse,
     show,
+    showBlockingAlert,
   ]);
 
   return null;
