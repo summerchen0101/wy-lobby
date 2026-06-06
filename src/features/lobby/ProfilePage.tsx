@@ -371,7 +371,7 @@ export function ProfilePage() {
           </button>
         </div>
 
-        <a className="profile-page__privacy" href="#privacy">
+        <a className="profile-page__privacy" href="/privacy">
           Privacy Policy
         </a>
       </div>

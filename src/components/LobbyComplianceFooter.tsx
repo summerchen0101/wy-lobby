@@ -5,14 +5,14 @@ const LOGO_SRC = publicImageUrl('/images/compliance/img_logo.png')
 const AGE_SRC = publicImageUrl('/images/compliance/icon_21UP.png')
 
 const LINK_COL_A: { href: string; label: string }[] = [
-  { href: '#terms', label: 'Terms of Service' },
+  { href: '/terms', label: 'Terms of Service' },
   { href: '#sweeps', label: 'Sweeps Policy' },
   { href: '#invite', label: 'Invite Friends Terms of Use' },
   { href: '#help', label: 'Help Center' },
 ]
 
 const LINK_COL_B: { href: string; label: string }[] = [
-  { href: '#privacy', label: 'Privacy Policy' },
+  { href: '/privacy', label: 'Privacy Policy' },
   { href: '#responsible', label: 'Responsible Social Play' },
   { href: '#contact', label: 'Contact US' },
 ]
