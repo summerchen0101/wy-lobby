@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { LobbyComplianceFooter } from '../../components/LobbyComplianceFooter'
 import { LegalBlockRenderer } from './LegalText'
+import { LegalScrollToTop } from './LegalScrollToTop'
 import {
   PRIVACY_POLICY_INTRO,
   PRIVACY_POLICY_LAST_REVISED,
@@ -48,6 +49,7 @@ export function PrivacyPolicyPage() {
       </article>
 
       <LobbyComplianceFooter variant="guest" />
+      <LegalScrollToTop />
     </div>
   )
 }

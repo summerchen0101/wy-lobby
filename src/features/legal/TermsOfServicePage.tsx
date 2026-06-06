@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { LobbyComplianceFooter } from '../../components/LobbyComplianceFooter'
 import { LegalBlockRenderer } from './LegalText'
+import { LegalScrollToTop } from './LegalScrollToTop'
 import {
   TERMS_OF_SERVICE_EFFECTIVE,
   TERMS_OF_SERVICE_INTRO,
@@ -51,6 +52,7 @@ export function TermsOfServicePage() {
       </article>
 
       <LobbyComplianceFooter variant="guest" />
+      <LegalScrollToTop />
     </div>
   )
 }

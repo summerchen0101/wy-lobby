@@ -126,3 +126,43 @@
 .legal-page__table td:last-child {
   white-space: nowrap;
 }
+
+.legal-page__scroll-top {
+  position: fixed;
+  right: max(var(--page-pad-inline), var(--safe-right));
+  bottom: calc(var(--space-4) + var(--safe-bottom));
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--color-text);
+  background: var(--crown-button-primary-gradient);
+  box-shadow:
+    0 2px 0 rgb(0 0 0 / 70%),
+    0 6px 16px rgb(0 0 0 / 62%),
+    0 12px 32px rgb(0 0 0 / 68%);
+  transition:
+    transform 0.08s ease,
+    filter 0.15s ease,
+    opacity 0.15s ease;
+  touch-action: manipulation;
+}
+
+.legal-page__scroll-top:hover {
+  filter: brightness(1.12);
+}
+
+.legal-page__scroll-top:active {
+  transform: scale(0.96);
+}
+
+.legal-page__scroll-top-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
