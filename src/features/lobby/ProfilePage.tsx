@@ -4,7 +4,7 @@ import { HiPencil } from "react-icons/hi2";
 import { useAlert } from "../../components/alert/alertContext";
 import { InfoPopover } from "../../components/InfoPopover";
 import { useAuth } from "../../auth/useAuth";
-import { isMockMode, isWsLobbyGamesEnabled } from "../../lib/env";
+import { isWsLobbyGamesEnabled } from "../../lib/env";
 import {
   GATEWAY_API_LIST_PLAYER_AVATARS,
   GATEWAY_API_UPDATE_PLAYER_AVATAR,
@@ -123,7 +123,7 @@ export function ProfilePage() {
   useEffect(() => {
     if (!headIconOpen) return;
     setHeadIconChoices(null);
-    if (isMockMode() || !isWsLobbyGamesEnabled()) return;
+    if (!isWsLobbyGamesEnabled()) return;
     const req = requestRef.current;
     if (!req) return;
     let cancelled = false;
@@ -158,7 +158,7 @@ export function ProfilePage() {
       setAvatarId(selectedId);
       const n = Number.parseInt(selectedId, 10);
       if (!user || !Number.isFinite(n) || n < 1) return;
-      const wsOk = !isMockMode() && isWsLobbyGamesEnabled();
+      const wsOk = isWsLobbyGamesEnabled();
       if (wsOk && requestRef.current) {
         try {
           const body = encodeUpdatePlayerCurrentAvatarRequest({

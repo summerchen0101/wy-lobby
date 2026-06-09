@@ -1,11 +1,9 @@
-import { isMockMode } from '../env'
 import { buildAppMetaPayload, getOrCreateWebDeviceId, LOGIN_V1_TYPE } from '../appMeta'
 import { apiRequest, ApiError } from './client'
 
 export { ClientVersionError } from './client'
 import { normalizeAuthResponse, parseSignupResponse } from './authParse'
 import { getApiPaths } from './paths'
-import * as mock from './mock'
 import type {
   AuthResponse,
   LoginBody,
@@ -43,12 +41,6 @@ function buildV1RefreshBody(refreshToken: string) {
 }
 
 export async function signUp(body: SignUpRequest): Promise<SignupResult> {
-  if (isMockMode()) {
-    if (body.answer) {
-      return { needSMSAnswer: false, auth: await mock.mockRegisterFromSignUp(body) }
-    }
-    return { needSMSAnswer: true }
-  }
   const data = await apiRequest<unknown>(getApiPaths().register, {
     method: 'POST',
     body,
@@ -75,9 +67,6 @@ export async function refreshAccessToken(
   /** 若後端要求，可帶目前 access 作為 Bearer（文件未強制；IAM 實務常需要）。 */
   accessToken?: string | null,
 ): Promise<AuthResponse> {
-  if (isMockMode()) {
-    return mock.mockRefreshToken(refreshToken)
-  }
   const bearer = accessToken?.trim() || null
   const data = await apiRequest<unknown>(getApiPaths().token, {
     method: 'POST',
@@ -90,7 +79,6 @@ export async function refreshAccessToken(
 }
 
 export async function login(body: LoginBody): Promise<AuthResponse> {
-  if (isMockMode()) return mock.mockLogin(body)
   const data = await apiRequest<unknown>(getApiPaths().login, {
     method: 'POST',
     body: buildV1LoginBody(body),
@@ -100,10 +88,6 @@ export async function login(body: LoginBody): Promise<AuthResponse> {
 }
 
 export async function requestPasswordReset(body: PasswordResetRequest): Promise<void> {
-  if (isMockMode()) {
-    await mock.mockRequestPasswordReset()
-    return
-  }
   await apiRequest<unknown>(getApiPaths().passwordReset, {
     method: 'POST',
     body: { email: body.email.trim() },
@@ -111,10 +95,6 @@ export async function requestPasswordReset(body: PasswordResetRequest): Promise<
 }
 
 export async function completePasswordReset(body: PasswordResetInfoRequest): Promise<void> {
-  if (isMockMode()) {
-    await mock.mockCompletePasswordReset()
-    return
-  }
   await apiRequest<unknown>(getApiPaths().passwordResetInfo, {
     method: 'POST',
     body: {

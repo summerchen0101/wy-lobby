@@ -14,9 +14,7 @@ import {
   login as apiLogin,
   signUp as apiSignUp,
 } from "../lib/api/auth";
-import * as apiMock from "../lib/api/mock";
 import { nicknameFromEmail } from "../lib/appMeta";
-import { isMockMode } from "../lib/env";
 import {
   setOn401RefreshTokenHandler,
   setUnauthorizedHandler,
@@ -48,9 +46,6 @@ function getInitialRefresh(): string | null {
 function initialReadyState(): boolean {
   const t = getInitialToken();
   const r = getInitialRefresh();
-  if (isMockMode()) {
-    return !t;
-  }
   if (r) return false;
   return !t;
 }
@@ -58,7 +53,6 @@ function initialReadyState(): boolean {
 /** 僅在 storage 有 access 時還原 user；僅 refresh 時由 bootstrap 驗證，不顯示幽靈已登入。 */
 function getInitialUser(): User | null {
   if (typeof localStorage === "undefined") return null;
-  if (isMockMode()) return null;
   if (!getInitialToken()?.trim()) return null;
   return readPersistedUser() ?? minimalSessionUser();
 }
@@ -175,7 +169,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // 啟動驗證：無 access、access 已過期、或缺 expiresAt 時以 refresh 換發；失敗清 session 並導向大廳登入
   useEffect(() => {
-    if (isMockMode()) return;
     const initialRt = getStoredRefreshToken()?.trim();
     if (!initialRt) return;
     if (!shouldRefreshStoredSessionOnStartup()) return;
@@ -202,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [applyAuthResponse, handleRefreshFailed]);
 
-  // 依 `token` 還原使用者：mock 用內建假資料；其餘用登入／refresh 已寫入之持久化，大廳則由 LOBBY_GET 之 playerInfo 經 mergeUser 併入
+  // 依 `token` 還原使用者：登入／refresh 已寫入之持久化；大廳則由 LOBBY_GET 之 playerInfo 經 mergeUser 併入
   useEffect(() => {
     if (token == null) {
       setUser(null);
@@ -213,33 +206,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return;
     }
-    let cancelled = false;
-
-    if (isMockMode()) {
-      setReady(false);
-      void apiMock
-        .mockGetMe()
-        .then((u) => {
-          if (!cancelled) {
-            setUser(u);
-            writePersistedUser(u);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            clearStoredSession();
-            setToken(null);
-            setUser(null);
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setReady(true);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
     let u = readPersistedUser();
     if (!u) {
       u = minimalSessionUser();
@@ -252,25 +218,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       getStoredRefreshToken()?.trim() &&
       shouldRefreshStoredSessionOnStartup()
     ) {
-      return () => {
-        cancelled = true;
-      };
+      return;
     }
 
     setReady(true);
-    return () => {
-      cancelled = true;
-    };
   }, [token]);
 
   const refreshUser = useCallback(async () => {
     if (!token) {
-      return;
-    }
-    if (isMockMode()) {
-      const u = await apiMock.mockGetMe();
-      setUser(u);
-      writePersistedUser(u);
       return;
     }
     const u = readPersistedUser();
@@ -317,7 +272,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const tryRefreshSession = useCallback(async (): Promise<boolean> => {
-    if (isMockMode()) return false;
     const rt = getStoredRefreshToken()?.trim();
     if (!rt) {
       invalidateSessionToLogin();
@@ -332,9 +286,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applyAuthResponse, invalidateSessionToLogin]);
 
   const ensureFreshAccessForGame = useCallback(async (): Promise<string | null> => {
-    if (isMockMode()) {
-      return token?.trim() || getStoredAccessToken()?.trim() || null;
-    }
     const rt = getStoredRefreshToken()?.trim();
     if (!rt) {
       handleRefreshFailed();

@@ -28,11 +28,9 @@ import {
   unityWebEntryDefaultGameId,
   isSlotWebEntryEnabled,
   isDevConsoleEnabled,
-  isMockMode,
   isThirdPartyGamesEnabled,
   isWsLobbyGamesEnabled,
 } from "../../lib/env";
-import * as apiMock from "../../lib/api/mock";
 import { GATEWAY_API_GET_THIRD_PARTY_GAME_INFO } from "../../realtime/gatewayApi";
 import {
   decodeGetThirdPartyGameInfoResponseBytes,
@@ -53,14 +51,11 @@ import type { Game } from "../../lib/api/types";
 import { useWallet } from "../../wallet/walletContext";
 import {
   FLOATING_CTA_IMAGE,
-  GUEST_DEMO_GAMES,
   GUEST_DEMO_SLOT_IDS,
-  GUEST_TOP_GAMES,
   getGuestHeroImage,
   lobbyGameCardThumbnail,
   thirdPartyGameEntryThumbnailUrl,
   getSessionLobbyBannerImage,
-  LOBBY_DEMO_JACKPOT_AMOUNTS,
   UNITY_DEMO_LOBBY_GAME,
   unityDemoGameUrl,
 } from "./landingContent";
@@ -355,11 +350,7 @@ export function LandingPage() {
   } = useGatewayLobby();
 
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
-  const mockLobby = isMockMode();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [mockGames, setMockGames] = useState<Game[]>([]);
-  const [mockLoading, setMockLoading] = useState(false);
-  const [mockError, setMockError] = useState<string | null>(null);
   const [lobbyFilter, setLobbyFilter] = useState<LobbyFilterTab>("all");
 
   useEffect(() => {
@@ -373,14 +364,8 @@ export function LandingPage() {
   const lobbyGameFilterRef = useRef<HTMLDivElement | null>(null);
   const lobbyGamesSectionRef = useRef<HTMLElement | null>(null);
 
-  const loading =
-    user && mockLobby
-      ? mockLoading
-      : user && wsLobbyEnabled
-        ? lobbyLoading
-        : false;
-  const error =
-    user && mockLobby ? mockError : user && wsLobbyEnabled ? lobbyError : null;
+  const loading = user && wsLobbyEnabled ? lobbyLoading : false;
+  const error = user && wsLobbyEnabled ? lobbyError : null;
   const {
     termsOpen,
     loginOpen,
@@ -408,36 +393,32 @@ export function LandingPage() {
   const guestHeroSrc = getGuestHeroImage();
 
   const guestLobbyRows = useMemo(() => {
-    if (lobbyGames !== null) {
-      const hotFiltered = filterHotGames(lobbyGames);
-      const top = sortLobbyGamesByMenu(
-        hotFiltered.length > 0 ? hotFiltered : lobbyGames,
-        "hot",
-      );
-      return {
-        top,
-        demo: pickGuestDemoRowGames(lobbyGames, GUEST_DEMO_SLOT_IDS),
-      };
+    if (lobbyGames === null) {
+      return { top: [] as Game[], demo: [] as Game[] };
     }
+    const hotFiltered = filterHotGames(lobbyGames);
+    const top = sortLobbyGamesByMenu(
+      hotFiltered.length > 0 ? hotFiltered : lobbyGames,
+      "hot",
+    );
     return {
-      top: GUEST_TOP_GAMES,
-      demo: pickGuestDemoRowGames([], GUEST_DEMO_SLOT_IDS),
+      top,
+      demo: pickGuestDemoRowGames(lobbyGames, GUEST_DEMO_SLOT_IDS),
     };
   }, [lobbyGames]);
 
   const displayGames = useMemo(() => {
-    if (user && mockLobby) {
-      return [UNITY_DEMO_LOBBY_GAME, ...mockGames];
-    }
     if (user && wsLobbyEnabled && lobbyGames !== null) {
       const sorted = sortLobbyGamesByMenu(lobbyGames, "all");
       return [UNITY_DEMO_LOBBY_GAME, ...sorted];
     }
-    if (!user) {
-      return GUEST_DEMO_GAMES;
+    if (!user && lobbyGames !== null) {
+      return guestLobbyRows.top.length > 0 || guestLobbyRows.demo.length > 0
+        ? [...guestLobbyRows.top, ...guestLobbyRows.demo]
+        : [];
     }
-    return [UNITY_DEMO_LOBBY_GAME];
-  }, [user, mockLobby, mockGames, wsLobbyEnabled, lobbyGames]);
+    return user ? [UNITY_DEMO_LOBBY_GAME] : [];
+  }, [user, wsLobbyEnabled, lobbyGames, guestLobbyRows]);
 
   const searchFilteredGames = useMemo(() => {
     const q = lobbySearch.trim().toLowerCase();
@@ -468,10 +449,7 @@ export function LandingPage() {
   const gamesByFilter = useMemo(() => {
     const out = {} as Record<LobbyFilterTab, Game[]>;
     const sessionProviders =
-      thirdPartyGamesEnabled &&
-      user &&
-      wsLobbyEnabled &&
-      !mockLobby
+      thirdPartyGamesEnabled && user && wsLobbyEnabled
         ? providerGamesFiltered
         : [];
     for (const f of LOBBY_FILTER_ORDER) {
@@ -483,13 +461,7 @@ export function LandingPage() {
       out[f] = sortLobbyGamesByMenu(filtered, lobbySortMenuForTab(f));
     }
     return out;
-  }, [
-    searchFilteredGames,
-    providerGamesFiltered,
-    user,
-    wsLobbyEnabled,
-    mockLobby,
-  ]);
+  }, [searchFilteredGames, providerGamesFiltered, user, wsLobbyEnabled]);
 
   const launchThirdPartyGame = useCallback(
     async (card: Game) => {
@@ -617,41 +589,9 @@ export function LandingPage() {
   }, [searchParams, setSearchParams, openForgotPasswordDirect, openTermsThen]);
 
   useEffect(() => {
-    if (!token) {
-      setMockGames([]);
-      setMockLoading(false);
-      setMockError(null);
-      return;
-    }
-    if (!mockLobby) {
-      setMockGames([]);
-      setMockLoading(false);
-      setMockError(null);
-      void refreshUser();
-      return;
-    }
-    let cancelled = false;
-    setMockError(null);
-    setMockLoading(true);
-    void (async () => {
-      try {
-        const res = await apiMock.mockGetGames();
-        if (cancelled) return;
-        setMockGames(res.items ?? []);
-        await refreshUser();
-      } catch (e) {
-        if (cancelled) return;
-        const msg = e instanceof Error ? e.message : "Could not load games";
-        setMockError(msg);
-        setMockGames([]);
-      } finally {
-        if (!cancelled) setMockLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, refreshUser, mockLobby]);
+    if (!token) return;
+    void refreshUser();
+  }, [token, refreshUser]);
 
   useEffect(() => {
     const { documentElement, body } = document;
@@ -822,16 +762,7 @@ export function LandingPage() {
           className="guest-landing__games-block page-container"
           aria-labelledby="guest-top-games-heading">
           <h2 id="guest-top-games-heading" className="guest-landing__row-title">
-            {lobbyGames !== null ? (
-              <>
-                <span className="guest-landing__accent">HOT</span> GAMES
-              </>
-            ) : (
-              <>
-                TOP <span className="guest-landing__accent">FREE-TO-PLAY</span>{" "}
-                CASINO STYLE GAMES
-              </>
-            )}
+            <span className="guest-landing__accent">HOT</span> GAMES
           </h2>
           {renderGameTrack(guestLobbyRows.top, 0, false, () =>
             openTermsThen("register"),
@@ -902,11 +833,13 @@ export function LandingPage() {
               height={420}
               decoding="async"
             />
-            <LobbyJackpotStrip
-              wallet={activeWallet}
-              amounts={liveJackpotAmounts ?? LOBBY_DEMO_JACKPOT_AMOUNTS}
-              variant={liveJackpotAmounts ? "live" : "demo"}
-            />
+            {liveJackpotAmounts ? (
+              <LobbyJackpotStrip
+                wallet={activeWallet}
+                amounts={liveJackpotAmounts}
+                variant="live"
+              />
+            ) : null}
           </div>
         </section>
 

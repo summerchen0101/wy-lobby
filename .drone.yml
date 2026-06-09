@@ -34,7 +34,6 @@ steps:
     image: node:20-alpine
     depends_on: [lint]
     environment:
-      VITE_API_USE_MOCK: "false"
       VITE_API_BASE: https://apis-us-alpha.ffglobaltech.com
       VITE_WS_URL: wss://app-us-alpha.ffglobaltech.com/ws
       VITE_USE_SLOT_WEBENTRY: "true"
@@ -92,7 +91,6 @@ steps:
     image: node:20-alpine
     depends_on: [lint]
     environment:
-      VITE_API_USE_MOCK: "false"
       VITE_API_BASE: https://apis-us-alpha.ffglobaltech.com
       VITE_WS_URL: wss://app-us-alpha.ffglobaltech.com/ws
       VITE_USE_SLOT_WEBENTRY: "true"
@@ -151,7 +149,6 @@ steps:
     image: node:20-alpine
     depends_on: [lint]
     environment:
-      VITE_API_USE_MOCK: "false"
       VITE_API_BASE:
         from_secret: vite_api_base_us
       VITE_WS_URL:
@@ -210,7 +207,6 @@ steps:
     image: node:20-alpine
     depends_on: [lint]
     environment:
-      VITE_API_USE_MOCK: "false"
       VITE_API_BASE: https://app-apis.wncocasino.com
       # VITE_API_BASE:
       #   from_secret: vite_api_base_tw

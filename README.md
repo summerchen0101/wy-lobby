@@ -34,8 +34,7 @@ Vite + React + TypeScript。開發在 `web/`，產線請將 **`dist/` 內容部�
 
 | 變數 | 說明 |
 | --- | --- |
-| `VITE_API_BASE` | 後端 API 根路徑（不帶尾隨斜線）。未設且非 mock 時，請以反向代理讓同源的 `/api` 可轉到後端。 |
-| `VITE_API_USE_MOCK` | 設 `true` 則不發真實 HTTP，用內建假資料。本機有預設 [`.env.development`](.env.development)。 |
+| `VITE_API_BASE` | 後端 API 根路徑（不帶尾隨斜線）。未設時，請以反向代理讓同源的 `/api` 可轉到後端。 |
 | `VITE_OPEN_GAMES_IN_NEW_WINDOW` | 遊戲未指定 `openInNewWindow` 時是否預設新分頁，對應舊殼的 `OPEN_GAMES_IN_NEW_WINDOW_DEFAULT`。 |
 | `VITE_API_PATH_AUTH_*` | 可覆寫註冊／登入／refresh token 相對路徑（見 `.env.example`）。 |
 

@@ -9,7 +9,6 @@ import {
 import { createPortal } from "react-dom";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
-import { isMockMode } from "../../lib/env";
 import { GATEWAY_API_CREATE_WITHDRAW_ORDER } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
@@ -35,8 +34,6 @@ const METHOD_LABEL: Record<RedeemMethodSlug, string> = {
 };
 
 type Step = "pick" | "form" | "success";
-
-const MOCK_WITHDRAW_ORDER_UID = "demo-mock-withdraw-order";
 
 type Props = {
   open: boolean;
@@ -365,7 +362,6 @@ export function RedeemMethodModal({
 
   const submitWithdrawOrder = useCallback(
     async (fields: SubmitFields) => {
-      const mock = isMockMode();
       const wireAmt = parseWithdrawDisplayToWire(fields.amountStr);
       if (wireAmt === null || wireAmt <= BigInt(0)) {
         show("Enter a valid whole-number SC amount.", { variant: "error" });
@@ -383,10 +379,6 @@ export function RedeemMethodModal({
           show("Amount exceeds your redeemable balance.", { variant: "error" });
           return;
         }
-      }
-      if (mock) {
-        await finalizeSuccessFlow(MOCK_WITHDRAW_ORDER_UID, fields.amountStr);
-        return;
       }
       const req = requestRef.current;
       if (!req || !gatewayRequestReady) {

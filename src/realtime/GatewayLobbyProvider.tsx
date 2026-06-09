@@ -12,7 +12,6 @@ import { useWallet } from "../wallet/walletContext";
 import {
   getGatewayWsUrlForDevLog,
   isDevConsoleEnabled,
-  isMockMode,
   isWsLobbyGamesEnabled,
 } from "../lib/env";
 import {
@@ -168,7 +167,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const { setActiveWallet, activeWallet } = useWallet();
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const gatewayWsEnabled =
-    !isMockMode() && (devGatewayWsProbeEnabled() || wsLobbyEnabled);
+    devGatewayWsProbeEnabled() || wsLobbyEnabled;
   /** 等 Auth bootstrap（startup refresh）完成再連 WS，避免舊 token → 新 token 連兩次 */
   const gatewayWsConnectEnabled = gatewayWsEnabled && authReady;
   const wsAuthScope = Boolean(token?.trim());

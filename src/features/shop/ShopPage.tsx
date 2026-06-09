@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../auth/useAuth";
 import { useAlert } from "../../components/alert/alertContext";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
-import { isMockMode, isThirdPartyPaymentEnabled } from "../../lib/env";
+import { isThirdPartyPaymentEnabled } from "../../lib/env";
 import {
   GATEWAY_API_BUY_PRODUCT,
   GATEWAY_API_LIST_PRODUCTS,
@@ -40,99 +40,6 @@ const PANEL = publicImageUrl("/images/shop");
 const THIRD_PARTY_PAYMENT_UNAVAILABLE_MSG =
   "Payment is temporarily unavailable. A new payment provider is coming soon.";
 
-const MOCK_PACKS: ShopPack[] = [
-  {
-    id: "1",
-    productID: "1",
-    gcLabel: "600K",
-    bonusSc: 2,
-    price: "$1.99",
-    originalPrice: "",
-    coinPile: 1,
-    paymentTypes: ["11", "12", "14", "15"],
-  },
-  {
-    id: "2",
-    productID: "2",
-    gcLabel: "1500K",
-    bonusSc: 5,
-    price: "$4.99",
-    originalPrice: "",
-    coinPile: 1,
-    paymentTypes: ["11", "12", "14", "15"],
-  },
-  {
-    id: "3",
-    productID: "3",
-    gcLabel: "3M",
-    bonusSc: 10,
-    price: "$9.99",
-    originalPrice: "",
-    coinPile: 2,
-    paymentTypes: ["11", "12", "14", "15"],
-  },
-  {
-    id: "4",
-    productID: "4",
-    gcLabel: "6M",
-    bonusSc: 20,
-    price: "$19.99",
-    originalPrice: "",
-    coinPile: 2,
-    paymentTypes: ["11", "12", "14", "15"],
-  },
-  {
-    id: "5",
-    productID: "5",
-    gcLabel: "12M",
-    bonusSc: 40,
-    price: "$39.99",
-    originalPrice: "",
-    coinPile: 3,
-    paymentTypes: ["11", "12", "14", "15"],
-  },
-  {
-    id: "6",
-    productID: "6",
-    gcLabel: "15M",
-    bonusSc: 50,
-    price: "$49.99",
-    originalPrice: "",
-    coinPile: 3,
-    paymentTypes: ["11", "12", "14", "15"],
-  },
-  {
-    id: "7",
-    productID: "7",
-    gcLabel: "18M",
-    bonusSc: 60,
-    price: "$59.99",
-    originalPrice: "",
-    coinPile: 4,
-    paymentTypes: ["11", "12", "14", "15"],
-  },
-  {
-    id: "8",
-    productID: "8",
-    gcLabel: "24M",
-    bonusSc: 80,
-    price: "$79.99",
-    originalPrice: "",
-    coinPile: 4,
-    paymentTypes: ["11", "12", "14", "15"],
-  },
-  {
-    id: "9",
-    productID: "9",
-    gcLabel: "30M",
-    bonusSc: 100,
-    price: "$99.99",
-    originalPrice: "",
-    coinPile: 5,
-    paymentTypes: ["11", "12", "14", "15"],
-  },
-];
-
 function coinPileSrc(n: 1 | 2 | 3 | 4 | 5) {
   return `${PANEL}/icon_coinPile${n}.png`;
 }
@@ -162,13 +69,6 @@ export function ShopPage() {
   useEffect(() => {
     if (!token) {
       setPacks([]);
-      setListLoading(false);
-      setListError(null);
-      return;
-    }
-
-    if (isMockMode()) {
-      setPacks(MOCK_PACKS);
       setListLoading(false);
       setListError(null);
       return;
@@ -312,10 +212,6 @@ export function ShopPage() {
     async (method: ShopPaymentMethodId) => {
       const pack = checkoutPack;
       if (!pack) return;
-      if (isMockMode()) {
-        setBuyError("Turn off mock API mode to purchase (VITE_API_USE_MOCK).");
-        return;
-      }
       const req = requestRef.current;
       if (!req) {
         setBuyError("Not connected");
@@ -466,10 +362,6 @@ export function ShopPage() {
     async (method: ShopPaymentMethodId) => {
       const pack = checkoutPack;
       if (!pack) return;
-      if (isMockMode()) {
-        setBuyError("Turn off mock API mode to purchase (VITE_API_USE_MOCK).");
-        return;
-      }
       if (!isPhoneBound(user)) {
         setPendingPaymentMethod(method);
         setProtectNeedSms(false);

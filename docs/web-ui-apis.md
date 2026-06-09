@@ -11,7 +11,6 @@
 |------|------|
 | **REST（JSON + `fetch`）** | v1：註冊 `POST /api/v1/signup`、**登入** `POST /api/v1/login`、refresh `POST /api/v1/token`、目前使用者、大廳遊戲列表、忘記密碼等。登入**僅**走此路徑。 |
 | **WebSocket + Gateway 二進位** | 連線存活 `PING_PONG`、可選大廳遊戲 `LOBBY_GET`；**不** 用於帳密登入。 |
-| **Mock 模式** | `VITE_API_USE_MOCK=true` 時不發真實 REST，由 [`web/src/lib/api/mock.ts`](../src/lib/api/mock.ts) 回傳。 |
 
 實作入口：[`apiRequest`](../src/lib/api/client.ts)、[`getApiPaths`](../src/lib/api/paths.ts)、[`useGatewayWs` / `createGatewayWs`](../src/realtime/useGatewayWs.ts)。
 
@@ -19,7 +18,7 @@
 
 ## 2. REST：路徑與用途
 
-基底 URL 為 **`VITE_API_BASE`**（可為空，僅 mock 本機時）；實際 URL 為 `joinUrl(路徑)`。預設路徑可經 `VITE_API_PATH_*` 覆寫，見 [`paths.ts`](../src/lib/api/paths.ts)。
+基底 URL 為 **`VITE_API_BASE`**；實際 URL 為 `joinUrl(路徑)`。預設路徑可經 `VITE_API_PATH_*` 覆寫，見 [`paths.ts`](../src/lib/api/paths.ts)。
 
 ### 2.1 大廳與認證（目前有 UI 或 Auth 呼叫）
 
@@ -44,9 +43,10 @@
 |------|----------|------|------|
 | `GET` | `/api/payment/deposit` + query | `fetchDepositUrl` → [`wallet.ts`](../src/lib/api/wallet.ts) | 已實作；全專案目前 **沒有 import**，預留儲值導轉。Query：`returnUrl`（必填）、`channel`、`amount` 可選。回傳 `DepositResponse`（`url` 等）。 |
 
-### 2.3 純本地／Mock、無後端 API
+### 2.3 尚無 REST 的 UI 區塊
 
-- **兌換頁小字訊息**：[`useRedeemPillMessages`](../src/features/lobby/useRedeemPillMessages.ts) 使用 `mockGetRedeemPillMessages`（僅 mock 延遲回傳字串陣列），**未** 呼叫 REST。
+- **兌換頁跑馬燈**：[`useRedeemPillMessages`](../src/features/lobby/useRedeemPillMessages.ts) 僅顯示 Gateway `WITHDRAW_SUCCESS_PUSH`（1048）即時訊息。
+- **Funds History / Promotions**：目前為空狀態，待後端 API 接上。
 
 ---
 
@@ -109,8 +109,7 @@
 
 | 變數 | 與 API 的關係 |
 |------|----------------|
-| `VITE_API_BASE` | REST 基底；mock 可留空。 |
-| `VITE_API_USE_MOCK` | 為 `true` 時 REST 全走 mock。 |
+| `VITE_API_BASE` | REST 基底。 |
 | `VITE_API_PATH_AUTH_REGISTER` / `LOGIN` / `LOBBY_GAMES` / `USER_ME` / `PAYMENT_DEPOSIT` | 覆寫預設 REST 路徑。 |
 | `VITE_WS_URL`、`VITE_WS_DEVICE_ID` | Gateway WebSocket 連線 URL（[`env.ts` `getGatewayWsUrl`](../src/lib/env.ts)）。 |
 | `VITE_WS_HANDSHAKE_TIMEOUT_MS` | 握手：送出連線後若未 `open` 則放棄（預設 15000）。 |
