@@ -59,6 +59,7 @@ import {
   UNITY_DEMO_LOBBY_GAME,
   unityDemoGameUrl,
 } from "./landingContent";
+import { LobbyGamesScroller } from "./LobbyGamesScroller";
 import "./LobbyPage.css";
 
 type LobbyFilterTab = "all" | "hot" | "providers" | "slots";
@@ -200,7 +201,7 @@ function PaginatedGameTrack({
   const hasMore = visible < total;
 
   return (
-    <div ref={scrollerRef} className="lobby-games-scroller">
+    <LobbyGamesScroller scrollerRef={scrollerRef}>
       <ul className="lobby-games-track" role="list">
         {slice.map((g, index) => (
           <li key={g.id}>
@@ -215,7 +216,7 @@ function PaginatedGameTrack({
           />
         ) : null}
       </ul>
-    </div>
+    </LobbyGamesScroller>
   );
 }
 
@@ -746,7 +747,7 @@ export function LandingPage() {
 
   function renderGuestHotGameTrackSkeleton() {
     return (
-      <div className="lobby-games-scroller">
+      <LobbyGamesScroller>
         <ul
           className="lobby-games-track"
           role="list"
@@ -764,7 +765,7 @@ export function LandingPage() {
             </li>
           ))}
         </ul>
-      </div>
+      </LobbyGamesScroller>
     );
   }
 
@@ -776,7 +777,7 @@ export function LandingPage() {
     eagerThumb = false,
   ) {
     return (
-      <div className="lobby-games-scroller">
+      <LobbyGamesScroller>
         <ul className="lobby-games-track" role="list">
           {games.map((g, index) => (
             <li key={g.id}>
@@ -791,7 +792,7 @@ export function LandingPage() {
             </li>
           ))}
         </ul>
-      </div>
+      </LobbyGamesScroller>
     );
   }
 

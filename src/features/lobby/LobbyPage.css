@@ -690,6 +690,21 @@ html.session-lobby-page {
   touch-action: pan-x pan-y;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .lobby-games-scroller {
+    cursor: grab;
+  }
+
+  .lobby-games-scroller.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+  }
+
+  .lobby-games-scroller.is-dragging .lobby-game-card {
+    pointer-events: none;
+  }
+}
+
 /* 已登入大廳橫向列：隱藏捲軸，仍可用觸控／滾輪捲動 */
 .lobby-landing--session .lobby-games-scroller {
   scrollbar-width: none;
