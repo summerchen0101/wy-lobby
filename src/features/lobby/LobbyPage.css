@@ -1030,6 +1030,42 @@ html.guest-lobby-page body::-webkit-scrollbar {
   container-type: inline-size;
 }
 
+.lobby-game-card__thumb-spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: -0.875rem 0 0 -0.875rem;
+  border: 2px solid rgb(255 255 255 / 14%);
+  border-top-color: var(--crown-gold);
+  border-radius: 50%;
+  animation: lobby-game-card-thumb-spinner 0.7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes lobby-game-card-thumb-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lobby-game-card--skeleton {
+  pointer-events: none;
+  cursor: default;
+}
+
+.lobby-game-card--skeleton .lobby-game-card__thumb {
+  background: linear-gradient(145deg, #2a2f4a 0%, #1c2038 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lobby-game-card__thumb-spinner {
+    animation: none;
+    border-top-color: rgb(255 255 255 / 35%);
+  }
+}
+
 .lobby-landing--guest .guest-landing__games-block .lobby-game-card {
   width: calc((100cqi - 2 * var(--space-3)) / 3);
   box-sizing: border-box;

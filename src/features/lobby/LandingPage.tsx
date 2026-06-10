@@ -88,6 +88,8 @@ const LOBBY_GAMES_PAGE_SIZE = 50;
 const LOBBY_GRID_LOAD_ROOT_MARGIN = "200px 0px 280px 0px";
 /** 橫向列：向右預載（root = scroller） */
 const LOBBY_TRACK_LOAD_ROOT_MARGIN = "0px 240px 0px 0px";
+/** 訪客 HOT 列 LOBBY_GET 完成前之骨架卡數（僅佔位，不顯示假遊戲圖） */
+const GUEST_HOT_SKELETON_COUNT = 4;
 
 type LobbyGameCardRenderer = (
   g: Game,
@@ -227,9 +229,9 @@ function filterHotGames(games: Game[]): Game[] {
   return games.filter((g) => (g.lobbyLabel ?? "").toUpperCase() === "HOT");
 }
 
-function pickGuestDemoRowGames(
+function pickGuestSlotRowGames(
   games: Game[],
-  orderedIds: readonly [number, number, number],
+  orderedIds: readonly number[],
 ): Game[] {
   return orderedIds.map((id) => {
     const sid = String(id);
@@ -273,25 +275,35 @@ function gamesForFilter(displayGames: Game[], f: LobbyFilterTab): Game[] {
 /** 進入視窗（含上下預載）後才載入縮圖，避免大廳一次打滿 HTTP */
 const LOBBY_THUMB_ROOT_MARGIN = "200px 0px 220px 0px";
 
+function LobbyGameCardThumbSpinner() {
+  return <span className="lobby-game-card__thumb-spinner" aria-hidden />;
+}
+
 function LobbyGameCardThumb({
   thumb,
   title,
+  eagerLoad = false,
 }: {
   thumb: string | undefined;
   title: string;
+  /** 訪客首屏橫列等少量本地卡圖：略過 IO，避免首幀空白 */
+  eagerLoad?: boolean;
 }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const [inView, setInView] = useState(() => !thumb);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [inView, setInView] = useState(() => eagerLoad || !thumb);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(!thumb);
 
   useEffect(() => {
+    setImageLoaded(false);
     setImageFailed(!thumb);
     if (!thumb) {
       setInView(true);
       return;
     }
-    setInView(false);
-  }, [thumb]);
+    setInView(eagerLoad ? true : false);
+  }, [thumb, eagerLoad]);
 
   useEffect(() => {
     if (!thumb || inView) return;
@@ -310,21 +322,35 @@ function LobbyGameCardThumb({
   }, [thumb, inView]);
 
   const loadThumb = Boolean(thumb && inView);
+
+  useEffect(() => {
+    if (!loadThumb) return;
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth > 0) {
+      setImageLoaded(true);
+    }
+  }, [loadThumb, thumb]);
+  const thumbLoading =
+    Boolean(thumb) &&
+    (!inView || (loadThumb && !imageLoaded && !imageFailed));
   const showTextFallback = !thumb || (loadThumb && imageFailed);
   const bgStyle =
-    thumb && loadThumb && !imageFailed
+    thumb && loadThumb && imageLoaded && !imageFailed
       ? { backgroundImage: `url("${thumb}")` }
       : undefined;
 
   return (
     <div ref={wrapRef} className="lobby-game-card__thumb" style={bgStyle}>
+      {thumbLoading ? <LobbyGameCardThumbSpinner /> : null}
       {loadThumb ? (
         <img
+          ref={imgRef}
           src={thumb}
           alt=""
           className="lobby-game-card__thumb-probe"
           aria-hidden
           decoding="async"
+          onLoad={() => setImageLoaded(true)}
           onError={() => setImageFailed(true)}
         />
       ) : null}
@@ -394,7 +420,10 @@ export function LandingPage() {
 
   const guestLobbyRows = useMemo(() => {
     if (lobbyGames === null) {
-      return { top: [] as Game[], demo: [] as Game[] };
+      return {
+        top: [] as Game[],
+        demo: pickGuestSlotRowGames([], GUEST_DEMO_SLOT_IDS),
+      };
     }
     const hotFiltered = filterHotGames(lobbyGames);
     const top = sortLobbyGamesByMenu(
@@ -403,7 +432,7 @@ export function LandingPage() {
     );
     return {
       top,
-      demo: pickGuestDemoRowGames(lobbyGames, GUEST_DEMO_SLOT_IDS),
+      demo: pickGuestSlotRowGames(lobbyGames, GUEST_DEMO_SLOT_IDS),
     };
   }, [lobbyGames]);
 
@@ -681,6 +710,7 @@ export function LandingPage() {
     thumbBase: number,
     showTextLabels = true,
     onCardAction?: (g: Game) => void,
+    eagerThumb = false,
   ) {
     const thumb = g.thirdPartyLaunch
       ? thirdPartyGameEntryThumbnailUrl(
@@ -697,7 +727,11 @@ export function LandingPage() {
         }
         onClick={() => (onCardAction ? onCardAction(g) : onPlayGame(g))}
         aria-label={showTextLabels ? undefined : g.title}>
-        <LobbyGameCardThumb thumb={thumb} title={g.title} />
+        <LobbyGameCardThumb
+          thumb={thumb}
+          title={g.title}
+          eagerLoad={eagerThumb}
+        />
         {showTextLabels ? (
           <>
             <span className="lobby-game-card__title">{g.title}</span>
@@ -710,18 +744,50 @@ export function LandingPage() {
     );
   }
 
+  function renderGuestHotGameTrackSkeleton() {
+    return (
+      <div className="lobby-games-scroller">
+        <ul
+          className="lobby-games-track"
+          role="list"
+          aria-busy="true"
+          aria-label="Loading hot games">
+          {Array.from({ length: GUEST_HOT_SKELETON_COUNT }, (_, index) => (
+            <li key={`guest-hot-skeleton-${index}`}>
+              <div
+                className="lobby-game-card lobby-game-card--thumb-only lobby-game-card--skeleton"
+                aria-hidden>
+                <div className="lobby-game-card__thumb">
+                  <LobbyGameCardThumbSpinner />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
   function renderGameTrack(
     games: Game[],
     thumbOffset = 0,
     showTextLabels = true,
     onCardAction?: (g: Game) => void,
+    eagerThumb = false,
   ) {
     return (
       <div className="lobby-games-scroller">
         <ul className="lobby-games-track" role="list">
           {games.map((g, index) => (
             <li key={g.id}>
-              {gameCard(g, index, thumbOffset, showTextLabels, onCardAction)}
+              {gameCard(
+                g,
+                index,
+                thumbOffset,
+                showTextLabels,
+                onCardAction,
+                eagerThumb,
+              )}
             </li>
           ))}
         </ul>
@@ -764,9 +830,15 @@ export function LandingPage() {
           <h2 id="guest-top-games-heading" className="guest-landing__row-title">
             <span className="guest-landing__accent">HOT</span> GAMES
           </h2>
-          {renderGameTrack(guestLobbyRows.top, 0, false, () =>
-            openTermsThen("register"),
-          )}
+          {lobbyGames === null
+            ? renderGuestHotGameTrackSkeleton()
+            : renderGameTrack(
+                guestLobbyRows.top,
+                0,
+                false,
+                () => openTermsThen("register"),
+                true,
+              )}
         </section>
 
         <section
@@ -781,6 +853,8 @@ export function LandingPage() {
             guestLobbyRows.demo,
             guestLobbyRows.top.length,
             false,
+            undefined,
+            true,
           )}
         </section>
 

@@ -276,12 +276,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   }, [gateActive]);
 
   useEffect(() => {
-    if (!token?.trim()) {
-      setLobbyWsBootstrapDone(true);
-    }
-  }, [token]);
-
-  useEffect(() => {
     if (!gateActive) return;
     if (!wsAuthScope) return;
     setLobbyWsBootstrapDone(false);
@@ -794,23 +788,26 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     onOpen: async ({ request }) => {
       gatewayWsSessionStartAtMsRef.current = Date.now();
       requestRef.current = request;
-      setGatewayRequestReady(true);
-
-      const continueBootstrap = await runServerLoginOnOpen(request);
-      if (!continueBootstrap) return;
-
-      if (shouldRunLobbyGetOnOpen) {
-        await runLobbyGetRequest(request, { bootstrap: true });
-      }
 
       try {
-        await request({
-          type: GATEWAY_API_GET_JACKPOT_INFO,
-          data: new Uint8Array(0),
-          debugLabel: "GET_JACKPOT_INFO",
-        });
-      } catch (e) {
-        console.warn("[gateway-ws] GET_JACKPOT_INFO failed", e);
+        const continueBootstrap = await runServerLoginOnOpen(request);
+        if (!continueBootstrap) return;
+
+        if (shouldRunLobbyGetOnOpen) {
+          await runLobbyGetRequest(request, { bootstrap: true });
+        }
+
+        try {
+          await request({
+            type: GATEWAY_API_GET_JACKPOT_INFO,
+            data: new Uint8Array(0),
+            debugLabel: "GET_JACKPOT_INFO",
+          });
+        } catch (e) {
+          console.warn("[gateway-ws] GET_JACKPOT_INFO failed", e);
+        }
+      } finally {
+        setGatewayRequestReady(true);
       }
     },
     onSocketError: (ev) => {
