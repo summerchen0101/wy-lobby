@@ -157,6 +157,8 @@ message PlayerInfo {
   uint64 exp = 8;
   uint64 avatarID = 10;
   string cellPhone = 26;
+  uint64 vipCurrentLevelExp = 14;
+  uint64 vipCurrentLevelExpRequired = 15;
   uint64 vipCurrentLevelBetExp = 41;
   uint64 vipCurrentLevelBetExpRequired = 42;
   WalletType walletType = 85;

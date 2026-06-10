@@ -319,6 +319,14 @@ export default {
               "type": "string",
               "id": 26
             },
+            "vipCurrentLevelExp": {
+              "type": "uint64",
+              "id": 14
+            },
+            "vipCurrentLevelExpRequired": {
+              "type": "uint64",
+              "id": 15
+            },
             "vipCurrentLevelBetExp": {
               "type": "uint64",
               "id": 41

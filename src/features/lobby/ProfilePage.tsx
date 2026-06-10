@@ -31,11 +31,9 @@ import {
   LOBBY_SOUND_PREF_STORAGE_KEY,
   notifyLobbySoundPreferenceChanged,
 } from "../../lib/lobbySound";
+import { profileVipProgress } from "./profileVipProgress";
 import "./ProfilePage.css";
 import "./SessionPageDecor.css";
-const RANK_MAX = 500;
-/** Placeholder until rank API exists */
-const RANK_PCT = 0;
 
 export function ProfilePage() {
   const { show } = useAlert();
@@ -52,16 +50,12 @@ export function ProfilePage() {
   const [soundOn, setSoundOn] = useState(true);
   const soundLabelId = useId();
 
-  const betReq = user?.vipCurrentLevelBetExpRequired;
-  const betExp = user?.vipCurrentLevelBetExp;
-  const useServerVipBar = betReq !== undefined && betReq > 0;
-  const rankMax = useServerVipBar ? betReq! : RANK_MAX;
-  const rankCurrent = useServerVipBar
-    ? Math.min(betReq!, Math.max(0, betExp ?? 0))
-    : Math.round((RANK_PCT / 100) * RANK_MAX);
-  const rankPct = useServerVipBar
-    ? Math.min(100, Math.round(((betExp ?? 0) / betReq!) * 100))
-    : RANK_PCT;
+  const {
+    useServerVipBar,
+    current: vipProgressCurrent,
+    required: vipProgressRequired,
+    fillPct: vipProgressFillPct,
+  } = profileVipProgress(user);
 
   const onRefresh = useCallback(async () => {
     try {
@@ -276,7 +270,7 @@ export function ProfilePage() {
               content={
                 <p className="profile-page__info-popover-text">
                   {useServerVipBar
-                    ? "VIP bet progress toward the next loyalty tier."
+                    ? "VIP point progress toward the next loyalty tier."
                     : "Level details will be available when your account is connected to the loyalty system."}
                 </p>
               }>
@@ -302,15 +296,15 @@ export function ProfilePage() {
               className="profile-page__bar"
               role="progressbar"
               aria-valuemin={0}
-              aria-valuemax={RANK_MAX}
-              aria-valuenow={rankCurrent}
+              aria-valuemax={vipProgressRequired}
+              aria-valuenow={vipProgressCurrent}
               aria-label="Level progress">
               <div
                 className="profile-page__bar-fill"
-                style={{ width: `${rankPct}%` }}
+                style={{ width: `${vipProgressFillPct}%` }}
               />
               <span className="profile-page__bar-label">
-                {rankCurrent}/{rankMax}
+                {vipProgressCurrent}/{vipProgressRequired}
               </span>
               <div className="profile-page__bar-cap" aria-hidden>
                 <Crown
