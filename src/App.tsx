@@ -70,6 +70,11 @@ const TermsOfServicePage = lazy(() =>
     default: m.TermsOfServicePage,
   })),
 );
+const SweepsPolicyPage = lazy(() =>
+  import("./features/legal/SweepsPolicyPage").then((m) => ({
+    default: m.SweepsPolicyPage,
+  })),
+);
 
 export default function App() {
   return (
@@ -108,6 +113,7 @@ export default function App() {
                         />
                         <Route path="/privacy" element={<PrivacyPolicyPage />} />
                         <Route path="/terms" element={<TermsOfServicePage />} />
+                        <Route path="/sweeps" element={<SweepsPolicyPage />} />
                         <Route element={<RequireAuth />}>
                           <Route path="/events" element={<EventsRedirect />} />
                           <Route element={<SessionLayout />}>

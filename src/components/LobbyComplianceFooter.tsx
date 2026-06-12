@@ -6,7 +6,7 @@ const AGE_SRC = publicImageUrl('/images/compliance/icon_21UP.png')
 
 const LINK_COL_A: { href: string; label: string }[] = [
   { href: '/terms', label: 'Terms of Service' },
-  { href: '#sweeps', label: 'Sweeps Policy' },
+  { href: '/sweeps', label: 'Sweeps Policy' },
   { href: '#invite', label: 'Invite Friends Terms of Use' },
   { href: '#help', label: 'Help Center' },
 ]

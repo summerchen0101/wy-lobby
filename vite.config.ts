@@ -73,6 +73,7 @@ export default defineConfig(({ mode }) => {
       setupFiles: ["./src/test/vitest-setup.ts"],
     },
     server: {
+      port: 5176,
       host: true,
       allowedHosts: ["devserver-main--hilarious-semifreddo-86de97.netlify.app"],
       // 不設 VITE_API_BASE 時，可將同源的 /api 代理到後端
