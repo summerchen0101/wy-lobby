@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { HEADER_BRAND_LOGO_GC } from '../lib/brandLogos'
+import { LANDING_HEADER_LOGO } from '../lib/brandLogos'
 import './LandingHeader.css'
 
 function formatHeaderBalance(n: number | undefined, currency?: string) {
@@ -28,12 +28,11 @@ export function LandingHeader({ onJoinUs, onLogin, overHero = false }: Props) {
       <div className="landing-header__inner page-container">
         <Link to="/" className="landing-header__brand">
           <img
-            src={HEADER_BRAND_LOGO_GC}
-            alt=""
+            src={LANDING_HEADER_LOGO}
+            alt="WYNOCO"
             className="landing-header__mark"
             decoding="async"
           />
-          <span className="landing-header__title">Wynoco</span>
         </Link>
         <div className="landing-header__end">
           {user ? (
