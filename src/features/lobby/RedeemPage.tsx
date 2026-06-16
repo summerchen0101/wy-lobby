@@ -115,7 +115,8 @@ export function RedeemPage() {
   const fetchOrders = useCallback(
     async (page: number) => {
       const req = requestRef.current;
-      if (!req) {
+      const userId = user?.id?.trim();
+      if (!req || !userId || userId === "0") {
         setOrdersLoading(false);
         setInitialOrdersFetched(true);
         return;
@@ -125,7 +126,11 @@ export function RedeemPage() {
       try {
         const r = await req({
           type: GATEWAY_API_LIST_WITHDRAW_ORDERS,
-          data: encodeListWithdrawOrdersRequestBytes(page, ORDERS_PER_PAGE),
+          data: encodeListWithdrawOrdersRequestBytes(
+            userId,
+            page,
+            ORDERS_PER_PAGE,
+          ),
           debugLabel: "LIST_WITHDRAW_ORDERS",
         });
         const code = String(r.code ?? "");
@@ -154,7 +159,7 @@ export function RedeemPage() {
         setInitialOrdersFetched(true);
       }
     },
-    [requestRef],
+    [requestRef, user?.id],
   );
 
   useEffect(() => {
