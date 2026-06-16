@@ -87,11 +87,12 @@ export function withdrawOrderPaymentStatusToLabel(raw: unknown): string {
 }
 
 export function encodeListWithdrawOrdersRequestBytes(
+  userId: bigint | number | string,
   page: number,
   perPage: number,
 ): Uint8Array {
   const msg = {
-    userIDIn: [] as number[],
+    userIDIn: [wireUInt64Field(userId)],
     withdrawOrderPaymentStatusIn: [...ALL_WITHDRAW_ORDER_PAYMENT_STATUSES],
     startedAtTimestampMillisecond: 0,
     endedAtTimestampMillisecond: 0,

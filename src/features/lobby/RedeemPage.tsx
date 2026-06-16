@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { InfoPopover } from "../../components/InfoPopover";
 import { useAuth } from "../../auth/useAuth";
 import { CURRENCY_ICON_SC } from "../../lib/currencyIcons";
-import { isMockMode } from "../../lib/env";
 import {
   formatScFromRaw,
   formatScFromRawWireInteger,
@@ -23,7 +22,6 @@ import { redeemScBalancesFromLobby } from "./redeemBalances";
 import { RedeemNotifyPill } from "./RedeemNotifyPill";
 import { useRedeemPillMessages } from "./useRedeemPillMessages";
 import { RedeemMethodModal } from "./RedeemMethodModal";
-import { getMockWithdrawOrdersPage } from "./mockWithdrawOrderHistory";
 import "./RedeemPage.css";
 import "./SessionPageDecor.css";
 
@@ -78,8 +76,6 @@ export function RedeemPage() {
     subscribeWithdrawSuccessPush,
   } = useGatewayLobby();
 
-  const mock = isMockMode();
-
   const [pillExtras, setPillExtras] = useState<string[]>([]);
   useEffect(() => {
     return subscribeWithdrawSuccessPush((p) => {
@@ -96,9 +92,9 @@ export function RedeemPage() {
   const [ordersPage, setOrdersPage] = useState(0);
   const [ordersRows, setOrdersRows] = useState<WithdrawOrderWireRow[]>([]);
   const [ordersTotal, setOrdersTotal] = useState(0);
-  const [ordersLoading, setOrdersLoading] = useState(!mock);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState<string | null>(null);
-  const [initialOrdersFetched, setInitialOrdersFetched] = useState(mock);
+  const [initialOrdersFetched, setInitialOrdersFetched] = useState(false);
 
   const { amount: scAmount, redeemableAmount, unplayed } =
     redeemScBalancesFromLobby({
@@ -118,17 +114,9 @@ export function RedeemPage() {
 
   const fetchOrders = useCallback(
     async (page: number) => {
-      if (mock) {
-        const { orders, total } = getMockWithdrawOrdersPage(page, ORDERS_PER_PAGE);
-        setOrdersRows(orders);
-        setOrdersTotal(total);
-        setOrdersError(null);
-        setInitialOrdersFetched(true);
-        setOrdersLoading(false);
-        return;
-      }
       const req = requestRef.current;
-      if (!req) {
+      const userId = user?.id?.trim();
+      if (!req || !userId || userId === "0") {
         setOrdersLoading(false);
         setInitialOrdersFetched(true);
         return;
@@ -138,7 +126,11 @@ export function RedeemPage() {
       try {
         const r = await req({
           type: GATEWAY_API_LIST_WITHDRAW_ORDERS,
-          data: encodeListWithdrawOrdersRequestBytes(page, ORDERS_PER_PAGE),
+          data: encodeListWithdrawOrdersRequestBytes(
+            userId,
+            page,
+            ORDERS_PER_PAGE,
+          ),
           debugLabel: "LIST_WITHDRAW_ORDERS",
         });
         const code = String(r.code ?? "");
@@ -167,28 +159,20 @@ export function RedeemPage() {
         setInitialOrdersFetched(true);
       }
     },
-    [mock, requestRef],
+    [requestRef, user?.id],
   );
 
   useEffect(() => {
-    if (mock) {
-      void fetchOrders(ordersPage);
-      return;
-    }
     if (!gatewayRequestReady) return;
     void fetchOrders(ordersPage);
-  }, [mock, gatewayRequestReady, ordersPage, fetchOrders]);
+  }, [gatewayRequestReady, ordersPage, fetchOrders]);
 
   const refetchOrdersAfterWithdraw = useCallback(async () => {
     setOrdersPage(0);
-    if (mock) {
-      await fetchOrders(0);
-      return;
-    }
     if (!gatewayRequestReady) return;
     await refreshLobbyGet();
     await fetchOrders(0);
-  }, [mock, gatewayRequestReady, fetchOrders, refreshLobbyGet]);
+  }, [gatewayRequestReady, fetchOrders, refreshLobbyGet]);
 
   const pagerPrev = useCallback(() => {
     setOrdersPage((p) => Math.max(0, p - 1));
@@ -216,7 +200,7 @@ export function RedeemPage() {
     !hasOrderHistory;
 
   const showRedeemHistoryUi =
-    (mock || gatewayRequestReady) && !showInsufficientFullPage;
+    gatewayRequestReady && !showInsufficientFullPage;
 
   return (
     <section className="redeem-page page-container session-page session-page--pattern">
@@ -296,7 +280,7 @@ export function RedeemPage() {
         ) : null}
       </div>
 
-      {!mock && !gatewayRequestReady ? (
+      {!gatewayRequestReady ? (
         <div className="redeem-page__card redeem-page__history-card">
           <p className="redeem-page__history-title">Connecting…</p>
         </div>
@@ -385,7 +369,7 @@ export function RedeemPage() {
             className="redeem-page__new-redeem"
             disabled={
               ordersLoading ||
-              (!mock && !gatewayRequestReady) ||
+              !gatewayRequestReady ||
               cannotRedeem
             }
             onClick={() => setMethodModalOpen(true)}>

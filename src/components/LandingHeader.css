@@ -44,18 +44,11 @@
 .landing-header__mark {
   flex-shrink: 0;
   display: block;
-  height: 3.5rem;
+  height: 3.125rem;
   width: auto;
-  max-width: 7rem;
+  max-width: 8.75rem;
   object-fit: contain;
   transform: translateY(-0.125rem);
-}
-
-.landing-header__title {
-  font-weight: 800;
-  font-size: 1.2rem;
-  letter-spacing: 0.03em;
-  color: var(--color-text);
 }
 
 .landing-header__end {

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Copy } from 'lucide-react'
 import { InfoPopover } from '../../components/InfoPopover'
 import { useAlert } from '../../components/alert/alertContext'
-import { buildReferralInviteUrl, isMockMode, isWsLobbyGamesEnabled } from '../../lib/env'
+import { buildReferralInviteUrl, isWsLobbyGamesEnabled } from '../../lib/env'
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from '../../lib/currencyIcons'
 import {
   GATEWAY_API_CLAIM_REFERRAL_REWARD,
@@ -25,8 +25,6 @@ type Props = {
   open: boolean
   onClose: () => void
 }
-
-const DEMO_REFERRAL_URL = 'https://www.wncogames.com?referrercode=demo'
 
 const CLAIM_REFERRAL_NO_REWARDS_INFO =
   'No rewards to claim yet. Your friend must complete registration successfully before you can receive referral rewards.'
@@ -68,7 +66,7 @@ export function InviteFriendsModal({ open, onClose }: Props) {
   const [retryNonce, setRetryNonce] = useState(0)
   const [claiming, setClaiming] = useState(false)
 
-  const wsOk = !isMockMode() && isWsLobbyGamesEnabled()
+  const wsOk = isWsLobbyGamesEnabled()
 
   const fetchReferralInfo = useCallback(
     async (options?: { quiet?: boolean }) => {
@@ -161,20 +159,17 @@ export function InviteFriendsModal({ open, onClose }: Props) {
   const friendsQualified = wsOk ? parseCnt(referralInfo?.qualifiedReferredCnt) : 0
 
   const referralCode = referralInfo?.myReferrerCode?.value?.trim() ?? ''
-  const referralUrl = wsOk
-    ? referralCode
-      ? buildReferralInviteUrl(referralCode)
-      : ''
-    : DEMO_REFERRAL_URL
+  const referralUrl =
+    wsOk && referralCode ? buildReferralInviteUrl(referralCode) : ''
 
   const gcLabel =
     wsOk && loadPhase === 'ready'
       ? gcDisplay !== null
         ? `${formatCompactInt(gcDisplay)} +`
         : '—'
-      : '400K +'
+      : '—'
   const scLabel =
-    wsOk && loadPhase === 'ready' ? (scDisplay !== null ? String(scDisplay) : '—') : '20'
+    wsOk && loadPhase === 'ready' ? (scDisplay !== null ? String(scDisplay) : '—') : '—'
 
   const linkPillText =
     loadPhase === 'ws_wait' || (loadPhase === 'idle' && wsOk)

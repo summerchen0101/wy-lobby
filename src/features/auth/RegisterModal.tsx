@@ -291,11 +291,21 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
               />
               <label className="auth-modal__legal-text" htmlFor={termsId}>
                 By creating an account, you agree to our{' '}
-                <a className="auth-modal__link" href="#terms" onClick={(e) => e.preventDefault()}>
+                <a
+                  className="auth-modal__link"
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Terms of Service
                 </a>{' '}
                 and{' '}
-                <a className="auth-modal__link" href="#privacy" onClick={(e) => e.preventDefault()}>
+                <a
+                  className="auth-modal__link"
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Privacy Policy
                 </a>
                 . You confirm that you are 21+ and a resident of a non-excluded territory.

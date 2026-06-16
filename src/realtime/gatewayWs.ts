@@ -444,7 +444,14 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
         completeEntry(byType[0], byType[1]);
       } else if (pairUnmatchedSuccessToSinglePending && pending.size === 1) {
         const [onlyId, entry] = pending.entries().next().value!;
-        completeEntry(onlyId, entry);
+        const responseType = Number(obj.type);
+        if (
+          Number.isFinite(responseType) &&
+          responseType >= 0 &&
+          entry.apiType === responseType
+        ) {
+          completeEntry(onlyId, entry);
+        }
       } else if (isGatewayWsTraceEnabled() && pending.size > 0) {
         const pendingSample =
           pending.size <= 3
@@ -669,15 +676,16 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
         timestamp: Date.now(),
       });
       // #endregion
-      if (!skipInitialPing) {
-        sendPing();
-      }
-      startHeartbeat();
       void (async () => {
         try {
           await options.onOpen?.({ request });
         } catch (e) {
           console.warn("[gateway-ws] onOpen handler failed", e);
+        } finally {
+          if (!skipInitialPing) {
+            sendPing();
+          }
+          startHeartbeat();
         }
       })();
     };

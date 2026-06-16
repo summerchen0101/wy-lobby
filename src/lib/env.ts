@@ -5,10 +5,6 @@ export function openGamesInNewWindowDefault(): boolean {
   return import.meta.env.VITE_OPEN_GAMES_IN_NEW_WINDOW === "true";
 }
 
-export function isMockMode(): boolean {
-  return import.meta.env.VITE_API_USE_MOCK === "true";
-}
-
 /** 應用程式主動輸出的開發診斷 console（非瀏覽器／第三方套件 log）。 */
 export function isDevConsoleEnabled(): boolean {
   const v = import.meta.env.VITE_DEV_CONSOLE?.trim();
@@ -123,11 +119,9 @@ export function isSlotWebEntryEnabled(): boolean {
 
 /**
  * 已登入大廳遊戲列表改由 Gateway WS `LOBBY_GET` 提供。
- * - mock 模式：一律 false（使用內建假資料，不連真實 WS）。
- * - 非 mock：預設 true；僅當 `VITE_USE_WS_LOBBY_GAMES=false` 時關閉。
+ * 預設 true；僅當 `VITE_USE_WS_LOBBY_GAMES=false` 時關閉。
  */
 export function isWsLobbyGamesEnabled(): boolean {
-  if (isMockMode()) return false;
   return import.meta.env.VITE_USE_WS_LOBBY_GAMES !== "false";
 }
 

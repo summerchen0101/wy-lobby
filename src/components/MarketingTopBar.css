@@ -27,9 +27,9 @@
 
 .marketing-top-bar__mark {
   display: block;
-  height: 3.25rem;
+  height: 2.875rem;
   width: auto;
-  max-width: 6.5rem;
+  max-width: 5.75rem;
   object-fit: contain;
   flex-shrink: 0;
   transform: translateY(-0.125rem);

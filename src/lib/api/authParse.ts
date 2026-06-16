@@ -125,6 +125,17 @@ export function normalizeUserPayload(raw: unknown): User {
   const lwt = lobbyWalletTypeFromPayload(o);
   if (lwt !== undefined) u.lobbyWalletType = lwt;
 
+  const vipExp = numField(o, "vipCurrentLevelExp", "vip_current_level_exp");
+  if (vipExp !== undefined) u.vipCurrentLevelExp = Math.floor(vipExp);
+
+  const vipExpReq = numField(
+    o,
+    "vipCurrentLevelExpRequired",
+    "vip_current_level_exp_required",
+  );
+  if (vipExpReq !== undefined)
+    u.vipCurrentLevelExpRequired = Math.floor(vipExpReq);
+
   const vipBet = numField(o, "vipCurrentLevelBetExp", "vip_current_level_bet_exp");
   if (vipBet !== undefined) u.vipCurrentLevelBetExp = Math.floor(vipBet);
 

@@ -1,12 +1,30 @@
 import { describe, expect, it } from "vitest";
 import * as protobuf from "protobufjs/light.js";
 import schema from "../gen/lobby_wire.schema.js";
-import { decodeWithdrawSuccessPushBytes } from "./withdrawLobbyWire";
+import {
+  decodeListWithdrawOrdersRequestForDevLog,
+  decodeWithdrawSuccessPushBytes,
+  encodeListWithdrawOrdersRequestBytes,
+} from "./withdrawLobbyWire";
 
 const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
 const WithdrawSuccessPushPb = root.lookupType(
   "megaman.WithdrawSuccessPush",
 ) as protobuf.Type;
+
+describe("encodeListWithdrawOrdersRequestBytes", () => {
+  it("帶入 userIDIn 與分頁欄位", () => {
+    const raw = encodeListWithdrawOrdersRequestBytes(
+      "2046952017814859776",
+      1,
+      4,
+    );
+    const o = decodeListWithdrawOrdersRequestForDevLog(raw);
+    expect(o.userIDIn).toEqual(["2046952017814859776"]);
+    expect(o.page).toBe("1");
+    expect(o.perPage).toBe("4");
+  });
+});
 
 describe("decodeWithdrawSuccessPushBytes", () => {
   function encodePush(fields: {

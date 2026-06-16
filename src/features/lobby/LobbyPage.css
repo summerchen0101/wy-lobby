@@ -690,6 +690,21 @@ html.session-lobby-page {
   touch-action: pan-x pan-y;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .lobby-games-scroller {
+    cursor: grab;
+  }
+
+  .lobby-games-scroller.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+  }
+
+  .lobby-games-scroller.is-dragging .lobby-game-card {
+    pointer-events: none;
+  }
+}
+
 /* 已登入大廳橫向列：隱藏捲軸，仍可用觸控／滾輪捲動 */
 .lobby-landing--session .lobby-games-scroller {
   scrollbar-width: none;
@@ -1028,6 +1043,42 @@ html.guest-lobby-page body::-webkit-scrollbar {
   padding-top: var(--space-6);
   /* 與已登入大廳遊戲卡同寬（見 .lobby-landing--session .lobby-games-group .lobby-game-card） */
   container-type: inline-size;
+}
+
+.lobby-game-card__thumb-spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: -0.875rem 0 0 -0.875rem;
+  border: 2px solid rgb(255 255 255 / 14%);
+  border-top-color: var(--crown-gold);
+  border-radius: 50%;
+  animation: lobby-game-card-thumb-spinner 0.7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes lobby-game-card-thumb-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lobby-game-card--skeleton {
+  pointer-events: none;
+  cursor: default;
+}
+
+.lobby-game-card--skeleton .lobby-game-card__thumb {
+  background: linear-gradient(145deg, #2a2f4a 0%, #1c2038 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lobby-game-card__thumb-spinner {
+    animation: none;
+    border-top-color: rgb(255 255 255 / 35%);
+  }
 }
 
 .lobby-landing--guest .guest-landing__games-block .lobby-game-card {

@@ -12,7 +12,6 @@ import { useWallet } from "../wallet/walletContext";
 import {
   getGatewayWsUrlForDevLog,
   isDevConsoleEnabled,
-  isMockMode,
   isWsLobbyGamesEnabled,
 } from "../lib/env";
 import {
@@ -168,7 +167,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const { setActiveWallet, activeWallet } = useWallet();
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const gatewayWsEnabled =
-    !isMockMode() && (devGatewayWsProbeEnabled() || wsLobbyEnabled);
+    devGatewayWsProbeEnabled() || wsLobbyEnabled;
   /** 等 Auth bootstrap（startup refresh）完成再連 WS，避免舊 token → 新 token 連兩次 */
   const gatewayWsConnectEnabled = gatewayWsEnabled && authReady;
   const wsAuthScope = Boolean(token?.trim());
@@ -275,12 +274,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!gateActive) setLobbyWsBootstrapDone(true);
   }, [gateActive]);
-
-  useEffect(() => {
-    if (!token?.trim()) {
-      setLobbyWsBootstrapDone(true);
-    }
-  }, [token]);
 
   useEffect(() => {
     if (!gateActive) return;
@@ -795,23 +788,26 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     onOpen: async ({ request }) => {
       gatewayWsSessionStartAtMsRef.current = Date.now();
       requestRef.current = request;
-      setGatewayRequestReady(true);
-
-      const continueBootstrap = await runServerLoginOnOpen(request);
-      if (!continueBootstrap) return;
-
-      if (shouldRunLobbyGetOnOpen) {
-        await runLobbyGetRequest(request, { bootstrap: true });
-      }
 
       try {
-        await request({
-          type: GATEWAY_API_GET_JACKPOT_INFO,
-          data: new Uint8Array(0),
-          debugLabel: "GET_JACKPOT_INFO",
-        });
-      } catch (e) {
-        console.warn("[gateway-ws] GET_JACKPOT_INFO failed", e);
+        const continueBootstrap = await runServerLoginOnOpen(request);
+        if (!continueBootstrap) return;
+
+        if (shouldRunLobbyGetOnOpen) {
+          await runLobbyGetRequest(request, { bootstrap: true });
+        }
+
+        try {
+          await request({
+            type: GATEWAY_API_GET_JACKPOT_INFO,
+            data: new Uint8Array(0),
+            debugLabel: "GET_JACKPOT_INFO",
+          });
+        } catch (e) {
+          console.warn("[gateway-ws] GET_JACKPOT_INFO failed", e);
+        }
+      } finally {
+        setGatewayRequestReady(true);
       }
     },
     onSocketError: (ev) => {

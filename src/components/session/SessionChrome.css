@@ -143,9 +143,9 @@
 
 .session-header__logo {
   display: block;
-  height: 3.5rem;
+  height: 3.125rem;
   width: auto;
-  max-width: 7rem;
+  max-width: 6.25rem;
   object-fit: contain;
   flex-shrink: 0;
   transform: translateY(-0.125rem);

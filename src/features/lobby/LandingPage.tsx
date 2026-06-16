@@ -28,11 +28,9 @@ import {
   unityWebEntryDefaultGameId,
   isSlotWebEntryEnabled,
   isDevConsoleEnabled,
-  isMockMode,
   isThirdPartyGamesEnabled,
   isWsLobbyGamesEnabled,
 } from "../../lib/env";
-import * as apiMock from "../../lib/api/mock";
 import { GATEWAY_API_GET_THIRD_PARTY_GAME_INFO } from "../../realtime/gatewayApi";
 import {
   decodeGetThirdPartyGameInfoResponseBytes,
@@ -53,17 +51,15 @@ import type { Game } from "../../lib/api/types";
 import { useWallet } from "../../wallet/walletContext";
 import {
   FLOATING_CTA_IMAGE,
-  GUEST_DEMO_GAMES,
   GUEST_DEMO_SLOT_IDS,
-  GUEST_TOP_GAMES,
   getGuestHeroImage,
   lobbyGameCardThumbnail,
   thirdPartyGameEntryThumbnailUrl,
   getSessionLobbyBannerImage,
-  LOBBY_DEMO_JACKPOT_AMOUNTS,
   UNITY_DEMO_LOBBY_GAME,
   unityDemoGameUrl,
 } from "./landingContent";
+import { LobbyGamesScroller } from "./LobbyGamesScroller";
 import "./LobbyPage.css";
 
 type LobbyFilterTab = "all" | "hot" | "providers" | "slots";
@@ -93,6 +89,8 @@ const LOBBY_GAMES_PAGE_SIZE = 50;
 const LOBBY_GRID_LOAD_ROOT_MARGIN = "200px 0px 280px 0px";
 /** 橫向列：向右預載（root = scroller） */
 const LOBBY_TRACK_LOAD_ROOT_MARGIN = "0px 240px 0px 0px";
+/** 訪客 HOT 列 LOBBY_GET 完成前之骨架卡數（僅佔位，不顯示假遊戲圖） */
+const GUEST_HOT_SKELETON_COUNT = 4;
 
 type LobbyGameCardRenderer = (
   g: Game,
@@ -203,7 +201,7 @@ function PaginatedGameTrack({
   const hasMore = visible < total;
 
   return (
-    <div ref={scrollerRef} className="lobby-games-scroller">
+    <LobbyGamesScroller scrollerRef={scrollerRef}>
       <ul className="lobby-games-track" role="list">
         {slice.map((g, index) => (
           <li key={g.id}>
@@ -218,7 +216,7 @@ function PaginatedGameTrack({
           />
         ) : null}
       </ul>
-    </div>
+    </LobbyGamesScroller>
   );
 }
 
@@ -232,9 +230,9 @@ function filterHotGames(games: Game[]): Game[] {
   return games.filter((g) => (g.lobbyLabel ?? "").toUpperCase() === "HOT");
 }
 
-function pickGuestDemoRowGames(
+function pickGuestSlotRowGames(
   games: Game[],
-  orderedIds: readonly [number, number, number],
+  orderedIds: readonly number[],
 ): Game[] {
   return orderedIds.map((id) => {
     const sid = String(id);
@@ -278,25 +276,35 @@ function gamesForFilter(displayGames: Game[], f: LobbyFilterTab): Game[] {
 /** 進入視窗（含上下預載）後才載入縮圖，避免大廳一次打滿 HTTP */
 const LOBBY_THUMB_ROOT_MARGIN = "200px 0px 220px 0px";
 
+function LobbyGameCardThumbSpinner() {
+  return <span className="lobby-game-card__thumb-spinner" aria-hidden />;
+}
+
 function LobbyGameCardThumb({
   thumb,
   title,
+  eagerLoad = false,
 }: {
   thumb: string | undefined;
   title: string;
+  /** 訪客首屏橫列等少量本地卡圖：略過 IO，避免首幀空白 */
+  eagerLoad?: boolean;
 }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const [inView, setInView] = useState(() => !thumb);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [inView, setInView] = useState(() => eagerLoad || !thumb);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(!thumb);
 
   useEffect(() => {
+    setImageLoaded(false);
     setImageFailed(!thumb);
     if (!thumb) {
       setInView(true);
       return;
     }
-    setInView(false);
-  }, [thumb]);
+    setInView(eagerLoad ? true : false);
+  }, [thumb, eagerLoad]);
 
   useEffect(() => {
     if (!thumb || inView) return;
@@ -315,21 +323,35 @@ function LobbyGameCardThumb({
   }, [thumb, inView]);
 
   const loadThumb = Boolean(thumb && inView);
+
+  useEffect(() => {
+    if (!loadThumb) return;
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth > 0) {
+      setImageLoaded(true);
+    }
+  }, [loadThumb, thumb]);
+  const thumbLoading =
+    Boolean(thumb) &&
+    (!inView || (loadThumb && !imageLoaded && !imageFailed));
   const showTextFallback = !thumb || (loadThumb && imageFailed);
   const bgStyle =
-    thumb && loadThumb && !imageFailed
+    thumb && loadThumb && imageLoaded && !imageFailed
       ? { backgroundImage: `url("${thumb}")` }
       : undefined;
 
   return (
     <div ref={wrapRef} className="lobby-game-card__thumb" style={bgStyle}>
+      {thumbLoading ? <LobbyGameCardThumbSpinner /> : null}
       {loadThumb ? (
         <img
+          ref={imgRef}
           src={thumb}
           alt=""
           className="lobby-game-card__thumb-probe"
           aria-hidden
           decoding="async"
+          onLoad={() => setImageLoaded(true)}
           onError={() => setImageFailed(true)}
         />
       ) : null}
@@ -355,11 +377,7 @@ export function LandingPage() {
   } = useGatewayLobby();
 
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
-  const mockLobby = isMockMode();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [mockGames, setMockGames] = useState<Game[]>([]);
-  const [mockLoading, setMockLoading] = useState(false);
-  const [mockError, setMockError] = useState<string | null>(null);
   const [lobbyFilter, setLobbyFilter] = useState<LobbyFilterTab>("all");
 
   useEffect(() => {
@@ -373,14 +391,8 @@ export function LandingPage() {
   const lobbyGameFilterRef = useRef<HTMLDivElement | null>(null);
   const lobbyGamesSectionRef = useRef<HTMLElement | null>(null);
 
-  const loading =
-    user && mockLobby
-      ? mockLoading
-      : user && wsLobbyEnabled
-        ? lobbyLoading
-        : false;
-  const error =
-    user && mockLobby ? mockError : user && wsLobbyEnabled ? lobbyError : null;
+  const loading = user && wsLobbyEnabled ? lobbyLoading : false;
+  const error = user && wsLobbyEnabled ? lobbyError : null;
   const {
     termsOpen,
     loginOpen,
@@ -408,36 +420,35 @@ export function LandingPage() {
   const guestHeroSrc = getGuestHeroImage();
 
   const guestLobbyRows = useMemo(() => {
-    if (lobbyGames !== null) {
-      const hotFiltered = filterHotGames(lobbyGames);
-      const top = sortLobbyGamesByMenu(
-        hotFiltered.length > 0 ? hotFiltered : lobbyGames,
-        "hot",
-      );
+    if (lobbyGames === null) {
       return {
-        top,
-        demo: pickGuestDemoRowGames(lobbyGames, GUEST_DEMO_SLOT_IDS),
+        top: [] as Game[],
+        demo: pickGuestSlotRowGames([], GUEST_DEMO_SLOT_IDS),
       };
     }
+    const hotFiltered = filterHotGames(lobbyGames);
+    const top = sortLobbyGamesByMenu(
+      hotFiltered.length > 0 ? hotFiltered : lobbyGames,
+      "hot",
+    );
     return {
-      top: GUEST_TOP_GAMES,
-      demo: pickGuestDemoRowGames([], GUEST_DEMO_SLOT_IDS),
+      top,
+      demo: pickGuestSlotRowGames(lobbyGames, GUEST_DEMO_SLOT_IDS),
     };
   }, [lobbyGames]);
 
   const displayGames = useMemo(() => {
-    if (user && mockLobby) {
-      return [UNITY_DEMO_LOBBY_GAME, ...mockGames];
-    }
     if (user && wsLobbyEnabled && lobbyGames !== null) {
       const sorted = sortLobbyGamesByMenu(lobbyGames, "all");
       return [UNITY_DEMO_LOBBY_GAME, ...sorted];
     }
-    if (!user) {
-      return GUEST_DEMO_GAMES;
+    if (!user && lobbyGames !== null) {
+      return guestLobbyRows.top.length > 0 || guestLobbyRows.demo.length > 0
+        ? [...guestLobbyRows.top, ...guestLobbyRows.demo]
+        : [];
     }
-    return [UNITY_DEMO_LOBBY_GAME];
-  }, [user, mockLobby, mockGames, wsLobbyEnabled, lobbyGames]);
+    return user ? [UNITY_DEMO_LOBBY_GAME] : [];
+  }, [user, wsLobbyEnabled, lobbyGames, guestLobbyRows]);
 
   const searchFilteredGames = useMemo(() => {
     const q = lobbySearch.trim().toLowerCase();
@@ -468,10 +479,7 @@ export function LandingPage() {
   const gamesByFilter = useMemo(() => {
     const out = {} as Record<LobbyFilterTab, Game[]>;
     const sessionProviders =
-      thirdPartyGamesEnabled &&
-      user &&
-      wsLobbyEnabled &&
-      !mockLobby
+      thirdPartyGamesEnabled && user && wsLobbyEnabled
         ? providerGamesFiltered
         : [];
     for (const f of LOBBY_FILTER_ORDER) {
@@ -483,13 +491,7 @@ export function LandingPage() {
       out[f] = sortLobbyGamesByMenu(filtered, lobbySortMenuForTab(f));
     }
     return out;
-  }, [
-    searchFilteredGames,
-    providerGamesFiltered,
-    user,
-    wsLobbyEnabled,
-    mockLobby,
-  ]);
+  }, [searchFilteredGames, providerGamesFiltered, user, wsLobbyEnabled]);
 
   const launchThirdPartyGame = useCallback(
     async (card: Game) => {
@@ -617,41 +619,9 @@ export function LandingPage() {
   }, [searchParams, setSearchParams, openForgotPasswordDirect, openTermsThen]);
 
   useEffect(() => {
-    if (!token) {
-      setMockGames([]);
-      setMockLoading(false);
-      setMockError(null);
-      return;
-    }
-    if (!mockLobby) {
-      setMockGames([]);
-      setMockLoading(false);
-      setMockError(null);
-      void refreshUser();
-      return;
-    }
-    let cancelled = false;
-    setMockError(null);
-    setMockLoading(true);
-    void (async () => {
-      try {
-        const res = await apiMock.mockGetGames();
-        if (cancelled) return;
-        setMockGames(res.items ?? []);
-        await refreshUser();
-      } catch (e) {
-        if (cancelled) return;
-        const msg = e instanceof Error ? e.message : "Could not load games";
-        setMockError(msg);
-        setMockGames([]);
-      } finally {
-        if (!cancelled) setMockLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, refreshUser, mockLobby]);
+    if (!token) return;
+    void refreshUser();
+  }, [token, refreshUser]);
 
   useEffect(() => {
     const { documentElement, body } = document;
@@ -741,6 +711,7 @@ export function LandingPage() {
     thumbBase: number,
     showTextLabels = true,
     onCardAction?: (g: Game) => void,
+    eagerThumb = false,
   ) {
     const thumb = g.thirdPartyLaunch
       ? thirdPartyGameEntryThumbnailUrl(
@@ -757,7 +728,11 @@ export function LandingPage() {
         }
         onClick={() => (onCardAction ? onCardAction(g) : onPlayGame(g))}
         aria-label={showTextLabels ? undefined : g.title}>
-        <LobbyGameCardThumb thumb={thumb} title={g.title} />
+        <LobbyGameCardThumb
+          thumb={thumb}
+          title={g.title}
+          eagerLoad={eagerThumb}
+        />
         {showTextLabels ? (
           <>
             <span className="lobby-game-card__title">{g.title}</span>
@@ -770,22 +745,54 @@ export function LandingPage() {
     );
   }
 
+  function renderGuestHotGameTrackSkeleton() {
+    return (
+      <LobbyGamesScroller>
+        <ul
+          className="lobby-games-track"
+          role="list"
+          aria-busy="true"
+          aria-label="Loading hot games">
+          {Array.from({ length: GUEST_HOT_SKELETON_COUNT }, (_, index) => (
+            <li key={`guest-hot-skeleton-${index}`}>
+              <div
+                className="lobby-game-card lobby-game-card--thumb-only lobby-game-card--skeleton"
+                aria-hidden>
+                <div className="lobby-game-card__thumb">
+                  <LobbyGameCardThumbSpinner />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </LobbyGamesScroller>
+    );
+  }
+
   function renderGameTrack(
     games: Game[],
     thumbOffset = 0,
     showTextLabels = true,
     onCardAction?: (g: Game) => void,
+    eagerThumb = false,
   ) {
     return (
-      <div className="lobby-games-scroller">
+      <LobbyGamesScroller>
         <ul className="lobby-games-track" role="list">
           {games.map((g, index) => (
             <li key={g.id}>
-              {gameCard(g, index, thumbOffset, showTextLabels, onCardAction)}
+              {gameCard(
+                g,
+                index,
+                thumbOffset,
+                showTextLabels,
+                onCardAction,
+                eagerThumb,
+              )}
             </li>
           ))}
         </ul>
-      </div>
+      </LobbyGamesScroller>
     );
   }
 
@@ -822,20 +829,17 @@ export function LandingPage() {
           className="guest-landing__games-block page-container"
           aria-labelledby="guest-top-games-heading">
           <h2 id="guest-top-games-heading" className="guest-landing__row-title">
-            {lobbyGames !== null ? (
-              <>
-                <span className="guest-landing__accent">HOT</span> GAMES
-              </>
-            ) : (
-              <>
-                TOP <span className="guest-landing__accent">FREE-TO-PLAY</span>{" "}
-                CASINO STYLE GAMES
-              </>
-            )}
+            <span className="guest-landing__accent">HOT</span> GAMES
           </h2>
-          {renderGameTrack(guestLobbyRows.top, 0, false, () =>
-            openTermsThen("register"),
-          )}
+          {lobbyGames === null
+            ? renderGuestHotGameTrackSkeleton()
+            : renderGameTrack(
+                guestLobbyRows.top,
+                0,
+                false,
+                () => openTermsThen("register"),
+                true,
+              )}
         </section>
 
         <section
@@ -850,6 +854,8 @@ export function LandingPage() {
             guestLobbyRows.demo,
             guestLobbyRows.top.length,
             false,
+            undefined,
+            true,
           )}
         </section>
 
@@ -902,11 +908,13 @@ export function LandingPage() {
               height={420}
               decoding="async"
             />
-            <LobbyJackpotStrip
-              wallet={activeWallet}
-              amounts={liveJackpotAmounts ?? LOBBY_DEMO_JACKPOT_AMOUNTS}
-              variant={liveJackpotAmounts ? "live" : "demo"}
-            />
+            {liveJackpotAmounts ? (
+              <LobbyJackpotStrip
+                wallet={activeWallet}
+                amounts={liveJackpotAmounts}
+                variant="live"
+              />
+            ) : null}
           </div>
         </section>
 

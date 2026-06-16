@@ -1,5 +1,6 @@
-import type { ProviderLogo } from './landingContent'
 import './ProviderMarquee.css'
+
+type ProviderLogo = { alt: string; src: string }
 
 type Props = {
   title: string

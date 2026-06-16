@@ -1,7 +1,5 @@
-import { isMockMode } from "../env";
 import { apiRequest } from "./client";
 import { getApiPaths } from "./paths";
-import * as mock from "./mock";
 
 /** 對齊 official `YesNo.No`：由前端自行導向 OAuth URL */
 export const OAUTH_AUTO_REDIRECT_NO = 2;
@@ -36,7 +34,6 @@ export async function fetchOAuthLink(
   channel: OAuthChannel,
   backUrl: string,
 ): Promise<string> {
-  if (isMockMode()) return mock.mockOAuthLink(channel, backUrl);
   const path = getApiPaths().oauthLink(channel);
   const url = new URL(path, "http://local");
   url.searchParams.set("autoRedirect", String(OAUTH_AUTO_REDIRECT_NO));
@@ -50,7 +47,6 @@ export async function fetchOAuthLink(
 
 /** `GET /api/v1/apple/state?backUrl=…` */
 export async function fetchAppleOAuthState(backUrl: string): Promise<string> {
-  if (isMockMode()) return mock.mockAppleOAuthState(backUrl);
   const path = getApiPaths().appleState;
   const url = new URL(path, "http://local");
   url.searchParams.set("backUrl", backUrl);

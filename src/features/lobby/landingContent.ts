@@ -100,84 +100,6 @@ export const UNITY_DEMO_LOBBY_GAME: Game = {
   thumbnailUrl: `${G}/crownslots/olympics-alternate-all-KXkAo.webp`,
 };
 
-/** 未登入首頁 — 第一列（TOP FREE-TO-PLAY） */
-export const GUEST_TOP_GAMES: Game[] = [
-  { ...UNITY_DEMO_LOBBY_GAME },
-  {
-    id: "guest-top-2",
-    title: "Ember Rush",
-    launchUrl: "",
-    thumbnailUrl: `${G}/booming/68b705d3800528273b1057c8-cutThumbnailShortHr-rBBMl.webp`,
-  },
-  {
-    id: "guest-top-3",
-    title: "Treasure Blast",
-    launchUrl: "",
-    thumbnailUrl: `${G}/playson-infin/pls_coin_strike_xxl-cutThumbnailHr-bUafU.webp`,
-  },
-  {
-    id: "guest-top-4",
-    title: "Lucky Spin",
-    launchUrl: "",
-    thumbnailUrl: `${G}/koala/kg_5009-cutThumbnailShortHr-FAQcd.webp`,
-  },
-  {
-    id: "guest-top-5",
-    title: "Crown Jewels",
-    launchUrl: "",
-    thumbnailUrl: `${G}/playson-infin/pls_coin_strike_xxl-cutThumbnailHr-bUafU.webp`,
-  },
-  {
-    id: "guest-top-6",
-    title: "Neon Reels",
-    launchUrl: "",
-    thumbnailUrl: `${G}/koala/kg_5009-cutThumbnailShortHr-FAQcd.webp`,
-  },
-  {
-    id: "guest-top-7",
-    title: "Jungle Gold",
-    launchUrl: "",
-    thumbnailUrl: `${G}/booming/68b705d3800528273b1057c8-cutThumbnailShortHr-rBBMl.webp`,
-  },
-  {
-    id: "guest-top-8",
-    title: "Midas Riches",
-    launchUrl: "",
-    thumbnailUrl: `${G}/crownslots/olympics-alternate-all-KXkAo.webp`,
-  },
-  {
-    id: "guest-top-9",
-    title: "Star Fortune",
-    launchUrl: "",
-    thumbnailUrl: `${G}/playson-infin/pls_coin_strike_xxl-cutThumbnailHr-bUafU.webp`,
-  },
-];
-
-/** 未登入首頁 — 第二列（DEMO here），與 GUEST_DEMO_SLOT_IDS 對齊；無 LOBBY 時佔位。 */
-export const GUEST_DEMO_ROW_GAMES: Game[] = GUEST_DEMO_SLOT_IDS.map(
-  (id) => ({
-    id: String(id),
-    title: `Game ${id}`,
-    launchUrl: "",
-  }),
-);
-
-/** 向後相容：未登入合併列表（僅供需單一清單之邏輯使用） */
-export const GUEST_DEMO_GAMES: Game[] = [
-  ...GUEST_TOP_GAMES,
-  ...GUEST_DEMO_ROW_GAMES,
-];
-
-/** Static marketing assets (URLs from Crown sample; replace for production). */
-export const DEFAULT_HERO_IMAGE =
-  "https://crowncoinscasino.com/assets/direct_reg_carousel_1-DSLgz1KV.webp";
-
-/** 舊版單一 hero；未設 env 時仍用外部預設（非直向 Panel 資產）。 */
-export function getLobbyHeroImage(): string {
-  const u = import.meta.env.VITE_LOBBY_HERO_IMAGE?.trim();
-  return u || DEFAULT_HERO_IMAGE;
-}
-
 /**
  * 已登入大廳 banner：依目前選中錢包 GC/SC 切圖；`VITE_LOBBY_HERO_IMAGE` 若設定則覆寫兩者。
  */
@@ -187,11 +109,6 @@ export function getSessionLobbyBannerImage(activeWallet: ActiveWallet): string {
   return activeWallet === "SC" ? PANEL_BG_SC : PANEL_BG_GC;
 }
 
-/** 大廳 banner 上 Jackpot 1–3 示範額度（可改接 API） */
-export const LOBBY_DEMO_JACKPOT_AMOUNTS: Readonly<[number, number, number]> = [
-  6_314_803, 507_900, 62_753,
-];
-
 /** 訪客 hero：預設未登入 Panel 圖；`VITE_GUEST_HERO_IMAGE` 可覆寫。 */
 export function getGuestHeroImage(): string {
   const u = import.meta.env.VITE_GUEST_HERO_IMAGE?.trim();
@@ -199,81 +116,3 @@ export function getGuestHeroImage(): string {
 }
 
 export const FLOATING_CTA_IMAGE = publicImageUrl("/images/lobby/gift_box.png");
-
-export type BenefitItem = {
-  alt: string;
-  label: string;
-  image: string;
-  htmlLabel?: boolean;
-};
-
-export const BENEFITS: BenefitItem[] = [
-  {
-    alt: "Safe and Secure",
-    label: "Safe and Secure",
-    image: "https://crowncoinscasino.com/assets/benefit-lock-fFmUkmZG.png",
-  },
-  {
-    alt: "Easy and Fast Redemption",
-    label: "Easy and Fast Redemption",
-    image: "https://crowncoinscasino.com/assets/benefit-cash-DGxeLdYk.png",
-  },
-  {
-    alt: "Lowest Play Required",
-    label: "<b>Lowest</b> Play Required",
-    image: "https://crowncoinscasino.com/assets/benefit-x1-PUzEn1IQ.png",
-    htmlLabel: true,
-  },
-  {
-    alt: "Top VIP Experience",
-    label: "Top VIP Experience",
-    image: "https://crowncoinscasino.com/assets/benefit-medals-Dn7jJhzB.png",
-  },
-  {
-    alt: "24/7 Customer Support",
-    label: "24/7 Customer Support",
-    image:
-      "https://crowncoinscasino.com/assets/benefit-headphones-BwSGQSnP.png",
-  },
-  {
-    alt: "No Purchase Necessary",
-    label: "No Purchase Necessary",
-    image: "https://crowncoinscasino.com/assets/benefit-slot-iD2nh_zz.png",
-  },
-];
-
-const P = "https://static.crowncoinscasino.com/production/assets/provider";
-
-export type ProviderLogo = { alt: string; src: string };
-
-/** First marquee row (LTR scroll). */
-export const PROVIDERS_ROW_A: ProviderLogo[] = [
-  { alt: "Spinomenal", src: `${P}/768-btkJK.webp` },
-  { alt: "Sneaky Slots", src: `${P}/943-qCmIN.webp` },
-  { alt: "Hacksaw RGS", src: `${P}/697-pWqaw.webp` },
-  { alt: "Novomatic", src: `${P}/1010-teHgU.webp` },
-  { alt: "Playtech", src: `${P}/595-BRpfK.webp` },
-  { alt: "Red Tiger", src: `${P}/804-BAZkX.webp` },
-  { alt: "Booming", src: `${P}/874-uqyHO.webp` },
-  { alt: "Relax Gaming", src: `${P}/562-mwHye.webp` },
-  { alt: "Galaxys", src: `${P}/876-wMnxg.webp` },
-  { alt: "Evolution", src: `${P}/802-peIYA.webp` },
-  { alt: "Yggdrasil Gaming", src: `${P}/1077-khXUr.webp` },
-  { alt: "Micro Gaming", src: `${P}/661-swFlL.webp` },
-];
-
-/** Second marquee row (RTL scroll). */
-export const PROVIDERS_ROW_B: ProviderLogo[] = [
-  { alt: "NetEnt", src: `${P}/805-QTerx.webp` },
-  { alt: "Koala", src: `${P}/807-oCIwL.webp` },
-  { alt: "Reel Riot", src: `${P}/702-cACoa.webp` },
-  { alt: "Big Time Gaming", src: `${P}/806-gwMAi.webp` },
-  { alt: "Crownslots", src: `${P}/801-nkksY.webp` },
-  { alt: "Hacksaw", src: `${P}/696-gUGyp.webp` },
-  { alt: "RubyPlay", src: `${P}/74-KrsyP.webp` },
-  { alt: "Penguin King", src: `${P}/1011-Sqpik.webp` },
-  { alt: "Spinomenal", src: `${P}/768-btkJK.webp` },
-  { alt: "Playtech", src: `${P}/595-BRpfK.webp` },
-  { alt: "Novomatic", src: `${P}/1010-teHgU.webp` },
-  { alt: "Relax Gaming", src: `${P}/562-mwHye.webp` },
-];

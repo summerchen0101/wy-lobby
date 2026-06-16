@@ -41,11 +41,21 @@ export function TermsGateModal({ open, onClose, onAccept }: Props) {
         <div className="app-modal__body">
           <p className="auth-modal__text">
             To start playing, you need to accept our{' '}
-            <a className="auth-modal__link" href="#terms" onClick={(e) => e.preventDefault()}>
+            <a
+              className="auth-modal__link"
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Terms of Service
             </a>{' '}
             &amp;{' '}
-            <a className="auth-modal__link" href="#privacy" onClick={(e) => e.preventDefault()}>
+            <a
+              className="auth-modal__link"
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Privacy Policy
             </a>{' '}
             (which include a provision requiring arbitration of disputes).

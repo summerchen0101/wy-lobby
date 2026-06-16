@@ -4,8 +4,6 @@ interface ImportMetaEnv {
   /** 檔期主題 id，寫入 <html data-theme>；對應 theme-seasonal.css */
   readonly VITE_APP_THEME?: string;
   readonly VITE_API_BASE: string;
-  /** 設為 "true" 時使用內建假 API，不發網路請求 */
-  readonly VITE_API_USE_MOCK: string;
   /** 內嵌遊戲/金流：預設與新分頁。設為 "true" 則遊戲預設新分頁（可覆寫每款遊戲） */
   readonly VITE_OPEN_GAMES_IN_NEW_WINDOW: string;
   readonly VITE_API_PATH_AUTH_REGISTER?: string;

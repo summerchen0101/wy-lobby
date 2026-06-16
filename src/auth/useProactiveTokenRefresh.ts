@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { isMockMode } from "../lib/env";
 import type { AuthResponse } from "../lib/api/types";
 import { refreshSession } from "./refreshSession";
 import {
@@ -38,8 +37,6 @@ export function useProactiveTokenRefresh({
   }, [onRefreshed, onRefreshFailed]);
 
   useEffect(() => {
-    if (isMockMode()) return;
-
     const clearTimer = () => {
       if (timerRef.current != null) {
         clearTimeout(timerRef.current);

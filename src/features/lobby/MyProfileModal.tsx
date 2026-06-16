@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { Info } from "lucide-react";
+import { Crown, Info } from "lucide-react";
 import { InfoPopover } from "../../components/InfoPopover";
+import { useAuth } from "../../auth/useAuth";
 import { getProfileAvatarById } from "./profileAvatars";
+import { profileVipProgress } from "./profileVipProgress";
 import "./MyProfileModal.css";
 
 type Props = {
@@ -27,6 +29,7 @@ export function MyProfileModal({
   phone,
   profileSyncPending = false,
 }: Props) {
+  const { user } = useAuth();
   const titleId = useId();
   const [avatarImgFailed, setAvatarImgFailed] = useState(false);
 
@@ -64,6 +67,12 @@ export function MyProfileModal({
     displayName?.trim() || userId?.trim() || "—";
   const emailText = email?.trim() ?? "";
   const phoneText = phone?.trim() ?? "";
+  const {
+    useServerVipBar,
+    current: vipProgressCurrent,
+    required: vipProgressRequired,
+    fillPct: vipProgressFillPct,
+  } = profileVipProgress(user);
 
   return createPortal(
     <div
@@ -125,8 +134,9 @@ export function MyProfileModal({
               align="end"
               content={
                 <p className="my-profile-modal__info-popover-text">
-                  Level details will be available when your account is connected
-                  to the loyalty system.
+                  {useServerVipBar
+                    ? "VIP point progress toward the next loyalty tier."
+                    : "Level details will be available when your account is connected to the loyalty system."}
                 </p>
               }
             >
@@ -145,6 +155,30 @@ export function MyProfileModal({
                 </button>
               )}
             </InfoPopover>
+          </div>
+          <div className="my-profile-modal__progress">
+            <div
+              className="my-profile-modal__bar"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={vipProgressRequired}
+              aria-valuenow={vipProgressCurrent}
+              aria-label="Level progress"
+            >
+              <div
+                className="my-profile-modal__bar-fill"
+                style={{ width: `${vipProgressFillPct}%` }}
+              />
+              <span className="my-profile-modal__bar-label">
+                {vipProgressCurrent}/{vipProgressRequired}
+              </span>
+              <div className="my-profile-modal__bar-cap" aria-hidden>
+                <Crown
+                  className="my-profile-modal__bar-crown-icon"
+                  strokeWidth={2.5}
+                />
+              </div>
+            </div>
           </div>
           <div className="my-profile-modal__fields">
             <div className="my-profile-modal__field">

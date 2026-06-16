@@ -344,6 +344,17 @@ export function lobbyDecodedPlayerToUserPatch(
       ? (p as { walletType?: unknown }).walletType
       : undefined;
   const lobbyWalletType = lobbyWalletTypeFromWire(walletRaw);
+  const vipExp = numFromWire(
+    p && typeof p === "object"
+      ? (p as { vipCurrentLevelExp?: unknown }).vipCurrentLevelExp
+      : undefined,
+  );
+  const vipExpReq = numFromWire(
+    p && typeof p === "object"
+      ? (p as { vipCurrentLevelExpRequired?: unknown })
+          .vipCurrentLevelExpRequired
+      : undefined,
+  );
   const vipBet = numFromWire(
     p && typeof p === "object"
       ? (p as { vipCurrentLevelBetExp?: unknown }).vipCurrentLevelBetExp
@@ -377,6 +388,8 @@ export function lobbyDecodedPlayerToUserPatch(
     !email &&
     avatarId === undefined &&
     lobbyWalletType === undefined &&
+    vipExp === undefined &&
+    vipExpReq === undefined &&
     vipBet === undefined &&
     vipBetReq === undefined
   )
@@ -387,6 +400,9 @@ export function lobbyDecodedPlayerToUserPatch(
   if (vipLevel !== undefined) out.vipLevel = Math.floor(vipLevel);
   if (avatarId !== undefined) out.avatarId = avatarId;
   if (lobbyWalletType !== undefined) out.lobbyWalletType = lobbyWalletType;
+  if (vipExp !== undefined) out.vipCurrentLevelExp = Math.floor(vipExp);
+  if (vipExpReq !== undefined)
+    out.vipCurrentLevelExpRequired = Math.floor(vipExpReq);
   if (vipBet !== undefined) out.vipCurrentLevelBetExp = Math.floor(vipBet);
   if (vipBetReq !== undefined)
     out.vipCurrentLevelBetExpRequired = Math.floor(vipBetReq);

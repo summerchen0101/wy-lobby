@@ -13,7 +13,7 @@ export type WithdrawSuccessPushListener = (
 
 export type GatewayLobbyContextValue = {
   requestRef: MutableRefObject<GatewayWsRequestFn | null>;
-  /** Gateway WS `onOpen` 已設定且可使用 `request()`（mock 模式或非 WS 環境為 false） */
+  /** Gateway WS `onOpen` 已設定且可使用 `request()`（非 WS 環境為 false） */
   gatewayRequestReady: boolean;
   lobbyGames: Game[] | null;
   lobbyLoading: boolean;

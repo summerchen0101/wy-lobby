@@ -14,7 +14,10 @@ export type User = {
   avatarId?: number;
   /** LOBBY_GET `playerInfo.walletType` */
   lobbyWalletType?: LobbyWalletType;
-  /** LOBBY_GET `playerInfo.vipCurrentLevelBetExp` / `vipCurrentLevelBetExpRequired`（VIP 押注經驗條） */
+  /** LOBBY_GET `playerInfo.vipCurrentLevelExp` / `vipCurrentLevelExpRequired`（VIP 點數進度條） */
+  vipCurrentLevelExp?: number;
+  vipCurrentLevelExpRequired?: number;
+  /** LOBBY_GET `playerInfo.vipCurrentLevelBetExp` / `vipCurrentLevelBetExpRequired`（VIP 押注；Profile 不用） */
   vipCurrentLevelBetExp?: number;
   vipCurrentLevelBetExpRequired?: number;
   /** LOBBY_GET 根層 `phone` 或 `playerInfo.cellPhone` */

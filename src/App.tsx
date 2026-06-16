@@ -60,6 +60,21 @@ const SessionLayout = lazy(() =>
     default: m.SessionLayout,
   })),
 );
+const PrivacyPolicyPage = lazy(() =>
+  import("./features/legal/PrivacyPolicyPage").then((m) => ({
+    default: m.PrivacyPolicyPage,
+  })),
+);
+const TermsOfServicePage = lazy(() =>
+  import("./features/legal/TermsOfServicePage").then((m) => ({
+    default: m.TermsOfServicePage,
+  })),
+);
+const SweepsPolicyPage = lazy(() =>
+  import("./features/legal/SweepsPolicyPage").then((m) => ({
+    default: m.SweepsPolicyPage,
+  })),
+);
 
 export default function App() {
   return (
@@ -96,6 +111,9 @@ export default function App() {
                           path="/forgot-password"
                           element={<ForgotPasswordRedirect />}
                         />
+                        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                        <Route path="/terms" element={<TermsOfServicePage />} />
+                        <Route path="/sweeps" element={<SweepsPolicyPage />} />
                         <Route element={<RequireAuth />}>
                           <Route path="/events" element={<EventsRedirect />} />
                           <Route element={<SessionLayout />}>

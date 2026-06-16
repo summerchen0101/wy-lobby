@@ -15,7 +15,7 @@ import { FcGoogle } from "react-icons/fc";
 import { useAuth } from "../../auth/useAuth";
 import { fetchAppleOAuthState, fetchOAuthLink } from "../../lib/api/oauth";
 import { ApiError, ClientVersionError } from "../../lib/api/client";
-import { appleOAuthClientId, getApiBase, isMockMode } from "../../lib/env";
+import { appleOAuthClientId, getApiBase } from "../../lib/env";
 import { buildOAuthBackUrl } from "../../lib/oauth/backUrl";
 import { AuthClearableInputWrap } from "./AuthClearableInputWrap";
 import "./AuthModals.css";
@@ -137,18 +137,6 @@ export function LoginModal({
     setOauthError(null);
     setAppleLoading(true);
     try {
-      if (isMockMode()) {
-        const res = await fetchAppleOAuthState(buildOAuthBackUrl(searchParams));
-        void res;
-        ingestAuthResponse({
-          accessToken: "mock.apple.oauth",
-          refreshToken: "mock.refresh.apple",
-          expiresIn: 3600,
-          user: { id: "0", displayName: "Apple Player" },
-        });
-        finishLogin();
-        return;
-      }
       const backUrl = buildOAuthBackUrl(searchParams);
       const state = await fetchAppleOAuthState(backUrl);
       setAppleState(state);

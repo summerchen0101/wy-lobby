@@ -209,6 +209,7 @@ export function decodeGatewayResponseDataForDevLog(
         return {
           kind: "LIST_PLAYER_AVATARS",
           avatarCount: avatarsInfo?.length ?? 0,
+          avatarsInfo,
         };
       } catch (e) {
         return fallbackHex(raw, e);
