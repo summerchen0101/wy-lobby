@@ -11,6 +11,7 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { LandingHeader } from "../../components/LandingHeader";
 import { LobbyJackpotStrip } from "../../components/LobbyJackpotStrip";
+import { LobbyHeroBanner } from "../../components/LobbyHeroBanner";
 import { SessionChromeShell } from "../../components/session/SessionChromeShell";
 import { SupportFab } from "../../components/session/SupportFab";
 import { LobbyComplianceFooter } from "../../components/LobbyComplianceFooter";
@@ -899,15 +900,7 @@ export function LandingPage() {
     <>
       <main className="lobby-landing__main">
         <section className="lobby-hero-banner" aria-label="Promotional banner">
-          <div className="lobby-hero-banner__art-wrap">
-            <img
-              className="lobby-hero-banner__img"
-              src={sessionHeroSrc}
-              alt=""
-              width={1200}
-              height={420}
-              decoding="async"
-            />
+          <LobbyHeroBanner baseSrc={sessionHeroSrc}>
             {liveJackpotAmounts ? (
               <LobbyJackpotStrip
                 wallet={activeWallet}
@@ -915,7 +908,7 @@ export function LandingPage() {
                 variant="live"
               />
             ) : null}
-          </div>
+          </LobbyHeroBanner>
         </section>
 
         <section

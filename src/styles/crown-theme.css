@@ -57,7 +57,7 @@ a.btn-crown-secondary {
     var(--crown-purple) 42%,
     var(--crown-purple-deep) 100%
   );
-  color: #1a1a0a;
+  color: #ffffff;
   box-shadow:
     0 var(--crown-btn-shadow-h) 0 0 var(--crown-purple-shadow),
     inset 0 -1px 0 rgb(255 255 255 / 22%);

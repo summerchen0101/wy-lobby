@@ -8,10 +8,7 @@ import {
   getProfileAvatarById,
 } from "../../features/lobby/profileAvatars";
 import { useProfileAvatarId } from "../../features/lobby/profileAvatarStorage";
-import {
-  getCurrencyIconUrl,
-  getCurrencyTextIconUrl,
-} from "../../lib/currencyIcons";
+import { getCurrencyIconUrl } from "../../lib/currencyIcons";
 import { getHeaderBrandLogoUrl } from "../../lib/brandLogos";
 import { GATEWAY_API_WALLET_USE } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
@@ -111,14 +108,7 @@ export function SessionHeader() {
         <div className="session-header__center">
           <div className="session-header__pill" title="Wallet balance">
             <span className="session-header__pill-label">
-              <img
-                src={getCurrencyTextIconUrl(activeWallet)}
-                alt=""
-                className="session-header__pill-label-img"
-                width={30}
-                height={30}
-              />
-              <span className="session-header__pill-label-sr">{label}</span>
+              <span className="session-header__pill-label-text">{label}</span>
             </span>
             <span className="session-header__pill-amount">{amount}</span>
             <Link
@@ -151,8 +141,8 @@ export function SessionHeader() {
                 src={getCurrencyIconUrl(activeWallet)}
                 alt=""
                 className="session-header__wallet-thumb-img"
-                width={20}
-                height={20}
+                width={24}
+                height={24}
               />
             </span>
           </button>

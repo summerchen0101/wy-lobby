@@ -10,21 +10,6 @@
   margin-inline: auto;
 }
 
-.shop-page__banner {
-  margin: 0 0 var(--space-3);
-  border-radius: var(--crown-surface-card-radius);
-  overflow: hidden;
-  line-height: 0;
-}
-
-.shop-page__banner-img {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  vertical-align: top;
-}
-
 .shop-page__title {
   margin: 0 0 var(--space-2);
   font-size: clamp(1.75rem, 1.2rem + 2vw, 2.25rem);
@@ -39,7 +24,7 @@
   font-size: 0.95rem;
   font-weight: 400;
   letter-spacing: 0.12em;
-  color: var(--crown-locale-green);
+  color: var(--crown-gold);
   text-align: center;
 }
 

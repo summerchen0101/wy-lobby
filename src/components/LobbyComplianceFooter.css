@@ -1,9 +1,15 @@
 .lobby-comp {
   /* Scoped accent for this footer only; global --crown-gold unchanged */
   --lobby-comp-accent: var(--crown-locale-green);
-  --lobby-comp-btn-shadow: color-mix(in srgb, #000000 42%, #6b4cff);
+  --lobby-comp-btn-shadow: color-mix(in srgb, #000000 42%, #3435e0);
   padding-block: var(--space-8) var(--space-10);
   margin-top: var(--space-4);
+}
+
+.lobby-comp--guest {
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
 }
 
 .lobby-comp__inner {
@@ -20,7 +26,7 @@
   font-weight: 900;
   line-height: 1.15;
   letter-spacing: 0.02em;
-  color: var(--color-text);
+  color: var(--crown-gold);
   text-shadow: 0 2px 12px rgb(0 0 0 / 45%);
 }
 
@@ -78,7 +84,7 @@
 
 .lobby-comp__logo {
   display: block;
-  width: min(6rem, 60vw);
+  width: min(11rem, 72vw);
   height: auto;
   object-fit: contain;
 }

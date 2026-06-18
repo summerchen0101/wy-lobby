@@ -45,28 +45,7 @@ html.session-lobby-page {
   padding: 0;
 }
 
-.lobby-hero-banner__art-wrap {
-  position: relative;
-  z-index: 0;
-  margin: 0;
-  max-width: none;
-  border-radius: 0;
-  overflow: hidden;
-  line-height: 0;
-  box-shadow: none;
-  /* 讓底端 Jackpot 整排略往下，減少壓在圖上的面積 */
-  padding-bottom: 1.5rem;
-  box-sizing: border-box;
-}
-
-.lobby-hero-banner__img {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-  max-height: min(52vh, 420px);
-  scale: 1.2;
-}
+/* Hero banner layers: see LobbyHeroBanner.css */
 
 .lobby-section-title {
   margin: 0 0 var(--space-5);
@@ -315,9 +294,9 @@ html.session-lobby-page {
 }
 
 .lobby-game-filter__tab.is-active {
-  border-color: var(--session-wallet-accent, var(--crown-gold));
-  color: var(--session-wallet-accent, var(--crown-gold));
-  box-shadow: none;
+  border-color: #5878ff;
+  color: var(--color-text);
+  box-shadow: 0 0 10px rgb(88 120 255 / 22%);
 }
 
 .lobby-game-filter__tab:active:not(:disabled) {
@@ -761,9 +740,9 @@ html.session-lobby-page {
 
 .lobby-game-card__thumb {
   position: relative;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 404 / 532;
   border-radius: 0.75rem;
-  background: linear-gradient(145deg, #2d3358 0%, #1a1f35 100%);
+  background: linear-gradient(145deg, #2a2d5a 0%, #151735 100%);
   background-size: cover;
   background-position: center;
   border: 0;
@@ -946,7 +925,7 @@ html.guest-lobby-page body::-webkit-scrollbar {
       rgb(253 226 1 / 14%),
       transparent 55%
     ),
-    linear-gradient(180deg, #242946 0%, #1a1f35 100%);
+    linear-gradient(180deg, #1d1f51 0%, #151735 100%);
   border-radius: 0;
   box-shadow: inset 0 -1px 0 rgb(255 255 255 / 6%);
   overflow: hidden;
@@ -973,8 +952,7 @@ html.guest-lobby-page body::-webkit-scrollbar {
   vertical-align: top;
   object-fit: cover;
   object-position: center top;
-  max-height: min(52vh, 420px);
-  scale: 1.35;
+  max-height: min(56vh, 460px);
 }
 
 .guest-landing__claim-banner,
@@ -1146,7 +1124,7 @@ html.guest-lobby-page body::-webkit-scrollbar {
   gap: var(--space-3);
   padding: var(--space-2) var(--space-2);
   padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(180deg, #3c0553 0%, #0c0324 100%);
+  background: linear-gradient(180deg, #4a1a6e 0%, #1d1f51 55%, #0c0324 100%);
   border-top: 2px solid rgb(255 255 255 / 12%);
   box-shadow: 0 -8px 24px rgb(0 0 0 / 35%);
   pointer-events: auto;

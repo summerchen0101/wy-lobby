@@ -1,5 +1,5 @@
 /**
- * 全站配色與品牌色票（#242946 底、主按鈕為藍→紫漸層／#6b4cff 單色基準、#ffffff 文、#fde201 強調、局部 accent 見 --crown-locale-green：switch／頭像／Shop 副標等）。
+ * 全站配色與品牌色票（v2：#1d1f51 底、主按鈕 #3d65e4→#3435e0、次按鈕 #fccb34→#cf7c02、#ffffff 文、#FFED00 強調、連結／副文 #5878FF）。
  *
  * 檔期換色：
  * 1. 在 theme-seasonal.css 新增 [data-theme="檔名"] { … } 覆寫下方變數
@@ -9,12 +9,12 @@
  */
 :root {
   /* —— 頁面表面 —— */
-  --color-bg: #242946;
-  --color-surface: #242946;
-  --color-elevated: #242946;
-  --color-border: color-mix(in srgb, #ffffff 12%, #242946);
-  --session-chrome-surface: #242946;
-  --session-fab-surface: #242946;
+  --color-bg: #1d1f51;
+  --color-surface: #1d1f51;
+  --color-elevated: #1d1f51;
+  --color-border: color-mix(in srgb, #ffffff 12%, #1d1f51);
+  --session-chrome-surface: #1d1f51;
+  --session-fab-surface: #1d1f51;
   --color-text: #ffffff;
   --color-text-muted: rgb(255 255 255 / 68%);
   --color-accent: var(--crown-gold);
@@ -22,24 +22,23 @@
 
   /* 主按鈕（crown-theme、多頁內聯鈕）；檔期可覆寫 gradient 與 bg */
   --crown-button-primary-gradient: linear-gradient(
-    95deg,
-    #5eb8ff 0%,
-    #6b4cff 50%,
-    #8b5cf6 100%
+    180deg,
+    #3d65e4 0%,
+    #3435e0 100%
   );
-  --crown-button-primary-bg: #6b4cff;
+  --crown-button-primary-bg: #3435e0;
   --crown-button-primary-fg: #ffffff;
-  --crown-gold: #fde201;
-  --crown-gold-hover: #ffec4d;
-  --crown-gold-shadow: color-mix(in srgb, #000000 42%, #6b4cff);
-  --crown-primary-gradient-end: #1a1f35;
+  --crown-gold: #ffed00;
+  --crown-gold-hover: #fff44d;
+  --crown-gold-shadow: color-mix(in srgb, #000000 42%, #3435e0);
+  --crown-primary-gradient-end: #151735;
 
   /* Auth：忘記密碼連結（主色 default／hover 輔色，與主按鈕＋金強調一致） */
   --auth-forgot-link: var(--crown-locale-green);
   --auth-forgot-link-hover: var(--crown-gold);
 
-  /* 局部 accent（舊稱局部綠）：Profile switch、頭像、Shop 副標等 */
-  --crown-locale-green: #7b6dfd;
+  /* 局部 accent：Profile switch、頭像、Shop 副標、連結等 */
+  --crown-locale-green: #5878ff;
   --crown-mint: var(--crown-locale-green);
   --crown-mint-shadow: color-mix(
     in srgb,
@@ -47,16 +46,16 @@
     var(--crown-locale-green)
   );
 
-  /* 次按鈕階：亮黃漸層＋深字 */
-  --crown-purple: #fde201;
-  --crown-purple-deep: #b89f00;
-  --crown-purple-shadow: #4a3f00;
-  --crown-secondary-gradient-top: #fff59d;
+  /* 次按鈕階：v2 金橙漸層 */
+  --crown-purple: #fccb34;
+  --crown-purple-deep: #cf7c02;
+  --crown-purple-shadow: #8a5200;
+  --crown-secondary-gradient-top: #ffe066;
 
-  --crown-surface-dark: #1a1f35;
+  --crown-surface-dark: #151735;
 
   /* —— 卡片表面 —— */
-  --crown-surface-card-bg: #242946;
+  --crown-surface-card-bg: #1d1f51;
   --crown-surface-card-border: transparent;
   --crown-surface-card-shadow:
     0 14px 44px rgb(0 0 0 / 0.38), inset 0 1px 0 rgb(0 0 0 / 22%);
@@ -65,10 +64,10 @@
   --crown-benefit-card-border: var(--crown-surface-card-border);
 
   /* —— 全站／大廳背景霧光（site-background、LobbyPage） —— */
-  --theme-radial-green-body: rgb(36 41 70 / 6%);
-  --theme-radial-gold-body: rgb(253 226 1 / 6%);
-  --theme-radial-green-lobby: rgb(36 41 70 / 7%);
-  --theme-radial-gold-lobby: rgb(253 226 1 / 8%);
+  --theme-radial-green-body: rgb(61 101 228 / 8%);
+  --theme-radial-gold-body: rgb(255 237 0 / 6%);
+  --theme-radial-green-lobby: rgb(61 101 228 / 9%);
+  --theme-radial-gold-lobby: rgb(255 237 0 / 8%);
 
   /* —— 彈窗外殼（與 AppModal.css 共用） —— */
   --modal-overlay-scrim: rgb(0 0 0 / 72%);

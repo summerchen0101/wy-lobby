@@ -1,4 +1,5 @@
 import { publicImageUrl } from '../lib/publicImageUrl'
+import { GUEST_FOOT_PAGE_BG } from '../features/lobby/landingContent'
 import './LobbyComplianceFooter.css'
 
 const LOGO_SRC = publicImageUrl('/images/compliance/img_logo.png')
@@ -31,7 +32,18 @@ export function LobbyComplianceFooter({ variant }: LobbyComplianceFooterProps) {
   const showPurchaseHeadline = variant === 'guest'
 
   return (
-    <footer className="lobby-comp">
+    <footer
+      className={
+        'lobby-comp' + (variant === 'guest' ? ' lobby-comp--guest' : '')
+      }
+      style={
+        variant === 'guest'
+          ? {
+              backgroundImage: `url("${GUEST_FOOT_PAGE_BG}")`,
+            }
+          : undefined
+      }
+    >
       <div className="lobby-comp__inner page-container">
         {showPurchaseHeadline ? (
           <h2 className="lobby-comp__purchase-title">
@@ -54,7 +66,7 @@ export function LobbyComplianceFooter({ variant }: LobbyComplianceFooterProps) {
           <div className="lobby-comp__tagline-underline" aria-hidden />
         </div>
 
-        <img className="lobby-comp__logo" src={LOGO_SRC} alt="WYNOCO" width={351} height={77} decoding="async" />
+        <img className="lobby-comp__logo" src={LOGO_SRC} alt="WYNOCO" width={340} height={108} decoding="async" />
 
         <p className="lobby-comp__rsp-text">
           Responsible gaming is a fundamental priority at WYNOCO. For more information, visit our
