@@ -27,7 +27,7 @@ export function SessionHeader() {
   const [avatarImgFailed, setAvatarImgFailed] = useState(false);
   const [walletSwitchBusy, setWalletSwitchBusy] = useState(false);
   const { activeWallet, setActiveWallet } = useWallet();
-  const { label, amount } = getWalletDisplay(user ?? undefined, activeWallet);
+  const { amount } = getWalletDisplay(user ?? undefined, activeWallet);
 
   const initial = (
     user?.displayName?.trim()?.[0] ??
@@ -85,30 +85,33 @@ export function SessionHeader() {
             className="session-header__logo"
             decoding="async"
           />
-          <Link
-            to="/profile"
-            className={
-              "session-header__avatar" +
-              (showAvatarImage ? " session-header__avatar--has-image" : "")
-            }
-            aria-label="Open profile">
-            {showAvatarImage && picked ? (
-              <img
-                className="session-header__avatar-img"
-                src={picked.imageSrc}
-                alt=""
-                onError={() => setAvatarImgFailed(true)}
-                decoding="async"
-              />
-            ) : (
-              initial
-            )}
-          </Link>
         </div>
         <div className="session-header__center">
-          <div className="session-header__pill" title="Wallet balance">
+          <div className="session-header__pill-wrap">
+            <Link
+              to="/profile"
+              className={
+                "session-header__avatar" +
+                (showAvatarImage ? " session-header__avatar--has-image" : "")
+              }
+              aria-label="Open profile">
+              {showAvatarImage && picked ? (
+                <img
+                  className="session-header__avatar-img"
+                  src={picked.imageSrc}
+                  alt=""
+                  onError={() => setAvatarImgFailed(true)}
+                  decoding="async"
+                />
+              ) : (
+                initial
+              )}
+            </Link>
+            <div className="session-header__pill" title="Wallet balance">
             <span className="session-header__pill-label">
-              <span className="session-header__pill-label-text">{label}</span>
+              <span className="session-header__pill-label-text">
+                {activeWallet}
+              </span>
             </span>
             <span className="session-header__pill-amount">{amount}</span>
             <Link
@@ -121,6 +124,7 @@ export function SessionHeader() {
                 aria-hidden
               />
             </Link>
+            </div>
           </div>
         </div>
         <div className="session-header__right">

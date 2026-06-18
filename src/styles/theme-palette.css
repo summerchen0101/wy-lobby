@@ -54,6 +54,25 @@
 
   --crown-surface-dark: #151735;
 
+  /* Session header chrome（TOP_UI pic_RdBG / btn_iap 取色，非連結字 #5878FF） */
+  --session-header-pill-fill: #06003b;
+  --session-header-pill-fill-gradient: linear-gradient(
+    180deg,
+    #070045 0%,
+    #06003b 100%
+  );
+  --session-header-pill-stroke: #003adf;
+  --session-header-pill-glow:
+    0 0 8px rgb(0 58 223 / 48%), 0 0 2px rgb(0 58 223 / 72%);
+  --session-header-plus-bg: radial-gradient(
+    circle at 50% 38%,
+    #1877e8 0%,
+    #1362db 48%,
+    #1234ab 100%
+  );
+  --session-header-plus-glow: 0 0 6px rgb(24 108 221 / 40%);
+  --session-header-avatar-ring: #ffed00;
+
   /* —— 卡片表面 —— */
   --crown-surface-card-bg: #1d1f51;
   --crown-surface-card-border: transparent;
