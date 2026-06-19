@@ -1,11 +1,9 @@
 import { useCallback, useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { FaApple, FaRegCreditCard } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import { IoChevronBack } from "react-icons/io5";
-import { SiCashapp } from "react-icons/si";
 import "./ShopCheckout.css";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
+import { shopPayIconSrc } from "../../lib/shopPayIcons";
 import { ProtectAccountView } from "./ProtectAccountView";
 import type {
   ShopBindingFormPayload,
@@ -51,26 +49,56 @@ const METHOD_ROWS: {
     id: "google",
     label: "Google Pay",
     icon: (
-      <FcGoogle className="shop-checkout__pay-ri shop-checkout__pay-ri--google" />
+      <img
+        className="shop-checkout__pay-img"
+        src={shopPayIconSrc("google")}
+        alt=""
+        width={28}
+        height={28}
+        decoding="async"
+      />
     ),
   },
   {
     id: "apple",
     label: "Apple Pay",
     icon: (
-      <FaApple className="shop-checkout__pay-ri shop-checkout__pay-ri--apple" />
+      <img
+        className="shop-checkout__pay-img"
+        src={shopPayIconSrc("apple")}
+        alt=""
+        width={28}
+        height={28}
+        decoding="async"
+      />
     ),
   },
   {
     id: "credit",
     label: "Credit Card",
-    icon: <FaRegCreditCard className="shop-checkout__pay-ri" />,
+    icon: (
+      <img
+        className="shop-checkout__pay-img"
+        src={shopPayIconSrc("credit")}
+        alt=""
+        width={28}
+        height={28}
+        decoding="async"
+      />
+    ),
   },
   {
     id: "cashapp",
     label: "Cash APP",
     icon: (
-      <SiCashapp className="shop-checkout__pay-ri shop-checkout__pay-ri--cashapp" />
+      <img
+        className="shop-checkout__pay-img"
+        src={shopPayIconSrc("cashapp")}
+        alt=""
+        width={28}
+        height={28}
+        decoding="async"
+      />
     ),
   },
 ];

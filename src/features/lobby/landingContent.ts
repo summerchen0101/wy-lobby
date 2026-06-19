@@ -12,6 +12,16 @@ export const PANEL_BG_GC = `${PANEL_VERTICAL_LOBBY_BG_BASE}/tmp_GCbg.png`;
 export const PANEL_BG_SC = `${PANEL_VERTICAL_LOBBY_BG_BASE}/tmp_SCbg.png`;
 export const PANEL_PATTERN_BG = `${PANEL_VERTICAL_LOBBY_BG_BASE}/Pattern_bg.png`;
 
+/** 已登入大廳 banner 分層（v2） */
+export const LOBBY_BANNER_BASE = publicImageUrl("/images/lobby/banner");
+export const LOBBY_BANNER_TITLE = `${LOBBY_BANNER_BASE}/title.png`;
+export const LOBBY_BANNER_SUBTITLE = `${LOBBY_BANNER_BASE}/subtitle.png`;
+export const LOBBY_BANNER_SUBTITLE_ANIM = `${LOBBY_BANNER_BASE}/subtitle_anim.png`;
+
+/** 訪客落地頁裝飾圖 */
+export const GUEST_DECOR_BASE = publicImageUrl("/images/lobby/guest");
+export const GUEST_FOOT_PAGE_BG = `${GUEST_DECOR_BASE}/img_footPage_2x.png`;
+
 const DEFAULT_UNITY_DEMO_URL =
   "https://unityweb-alpha.ffglobaltech.com/0000/Single1/index.html";
 

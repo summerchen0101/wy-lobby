@@ -1,10 +1,10 @@
 import {
   useCallback,
+  useLayoutEffect,
   useRef,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type Ref,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 
 const DRAG_THRESHOLD_PX = 4;
@@ -30,6 +30,7 @@ export function LobbyGamesScroller({
   children,
   scrollerRef,
 }: LobbyGamesScrollerProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef({
     pointerId: -1,
     startX: 0,
@@ -39,27 +40,35 @@ export function LobbyGamesScroller({
 
   const setRef = useCallback(
     (node: HTMLDivElement | null) => {
+      containerRef.current = node;
       mergeScrollerRef(node, scrollerRef);
     },
     [scrollerRef],
   );
 
-  const onWheel = useCallback((e: ReactWheelEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    const maxScroll = el.scrollWidth - el.clientWidth;
-    if (maxScroll <= 0) return;
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-    const absX = Math.abs(e.deltaX);
-    const absY = Math.abs(e.deltaY);
-    const delta = absX > absY ? e.deltaX : e.deltaY;
-    if (delta === 0) return;
+    const onWheel = (e: WheelEvent) => {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll <= 0) return;
 
-    const prev = el.scrollLeft;
-    const next = Math.max(0, Math.min(maxScroll, prev + delta));
-    if (next === prev) return;
+      const absX = Math.abs(e.deltaX);
+      const absY = Math.abs(e.deltaY);
+      const delta = absX > absY ? e.deltaX : e.deltaY;
+      if (delta === 0) return;
 
-    el.scrollLeft = next;
-    e.preventDefault();
+      const prev = el.scrollLeft;
+      const next = Math.max(0, Math.min(maxScroll, prev + delta));
+      if (next === prev) return;
+
+      el.scrollLeft = next;
+      e.preventDefault();
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   const onPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
@@ -124,7 +133,6 @@ export function LobbyGamesScroller({
     <div
       ref={setRef}
       className="lobby-games-scroller"
-      onWheel={onWheel}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}

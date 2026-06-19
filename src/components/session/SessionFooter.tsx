@@ -1,11 +1,14 @@
-import { useMemo } from 'react'
-import { Gift, Home, ShoppingCart, User, Wallet, type LucideIcon } from 'lucide-react'
-import { matchPath, NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useGatewayLobby } from '../../realtime/useGatewayLobby'
+import {
+  footerIconUrl,
+  footerLobbyBumpUrl,
+  type FooterIconId,
+} from '../../lib/sessionChromeAssets'
 import { useWallet } from '../../wallet/walletContext'
 import './SessionChrome.css'
 
-type Item = { to: string; label: string; end?: boolean; icon: 'shop' | 'redeem' | 'lobby' | 'promo' | 'profile' }
+type Item = { to: string; label: string; end?: boolean; icon: FooterIconId }
 
 const footerItems: Item[] = [
   { to: '/shop', label: 'SHOP', icon: 'shop' },
@@ -15,75 +18,53 @@ const footerItems: Item[] = [
   { to: '/profile', label: 'PROFILE', icon: 'profile' },
 ]
 
-const FOOTER_TAB_COUNT = footerItems.length
-const FOOTER_TAB_FRAC = 1 / FOOTER_TAB_COUNT
-
-const iconByName: Record<Item['icon'], LucideIcon> = {
-  shop: ShoppingCart,
-  redeem: Wallet,
-  lobby: Home,
-  promo: Gift,
-  profile: User,
-}
-
-function useFooterActiveIndex(): number {
-  const { pathname } = useLocation()
-  return useMemo(() => {
-    for (let i = 0; i < footerItems.length; i += 1) {
-      const { to, end } = footerItems[i]
-      const p = matchPath(
-        { path: to, end: end ?? false, caseSensitive: true },
-        pathname
-      )
-      if (p) return i
-    }
-    return -1
-  }, [pathname])
-}
-
 export function SessionFooter() {
   const { activeWallet } = useWallet()
   const { refreshLobbyGet } = useGatewayLobby()
-  const activeIndex = useFooterActiveIndex()
+
   return (
     <nav
       className="session-footer"
       data-active-wallet={activeWallet}
-      data-footer-active-index={activeIndex}
-      style={{
-        ['--session-footer-tab-count' as string]: String(FOOTER_TAB_COUNT),
-        ['--session-footer-tab-frac' as string]: String(FOOTER_TAB_FRAC),
-        ...(activeIndex >= 0
-          ? { ['--session-footer-active-index' as string]: String(activeIndex) }
-          : {}),
-      }}
+      style={
+        {
+          '--session-footer-lobby-bump': `url("${footerLobbyBumpUrl(activeWallet)}")`,
+        } as React.CSSProperties
+      }
       aria-label="Main navigation"
     >
       <ul className="session-footer__list">
-        {footerItems.map(({ to, label, end, icon }) => {
-          const Icon = iconByName[icon]
-          return (
-            <li key={to}>
-              <NavLink
-                to={to}
-                end={end}
-                onClick={() => {
-                  void refreshLobbyGet()
-                }}
-                className={({ isActive }) =>
-                  'session-footer__link' + (isActive ? ' is-active' : '')
-                }
-              >
-                <Icon className="session-footer__icon" strokeWidth={2} aria-hidden />
-                {label}
-              </NavLink>
-            </li>
-          )
-        })}
+        {footerItems.map(({ to, label, end, icon }) => (
+          <li key={to}>
+            <NavLink
+              to={to}
+              end={end}
+              onClick={() => {
+                void refreshLobbyGet()
+              }}
+              className={({ isActive }) =>
+                'session-footer__link' +
+                (icon === 'lobby' ? ' session-footer__link--lobby' : '') +
+                (isActive ? ' is-active' : '')
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <img
+                    className="session-footer__icon"
+                    src={footerIconUrl(icon, isActive)}
+                    alt=""
+                    width={56}
+                    height={56}
+                    decoding="async"
+                  />
+                  <span className="session-footer__label">{label}</span>
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
       </ul>
-      <div className="session-footer__slide-track" aria-hidden>
-        <div className="session-footer__slide" />
-      </div>
     </nav>
   )
 }

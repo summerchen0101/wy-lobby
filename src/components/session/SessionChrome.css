@@ -1,9 +1,12 @@
 .session-layout {
+  --session-chrome-gutter: var(--page-pad-inline);
+  --session-chrome-max: var(--content-max);
+
   /* 與 .session-header 內層 min-height + padding 對齊，供主內容避開 fixed header */
-  --session-header-stripe-h: calc(var(--space-1) + 3.5rem + var(--space-1));
+  --session-header-stripe-h: calc(var(--space-1) + 3.75rem + var(--space-1));
 
   /* 大廳 tab 等：與 header pill／footer 同色（GC default） */
-  --session-wallet-accent: #eab308;
+  --session-wallet-accent: #ffed00;
   --session-wallet-accent-hover: color-mix(
     in srgb,
     var(--session-wallet-accent) 72%,
@@ -52,38 +55,31 @@
 
 /* —— Header —— (GC / SC themes via data-active-wallet) */
 .session-header {
-  /* 線寬以藥丸為準，三處共用 */
   --hdr-stroke: 2px;
-  /* 頂 25% 黑、底全透，整塊覆蓋 */
   --hdr-bg: linear-gradient(180deg, rgb(0 0 0 / 0.25) 0%, transparent 100%);
 
-  /* 左欄頭像邊長；中間藥丸、右欄 wallet switch 同高 */
-  --hdr-avatar-size: 2.25rem;
-  /* 金額藥丸左圓（幣圖）= wallet thumb，與右欄 track 內圓同直徑 */
+  --hdr-pill-outer-h: 2.25rem;
+  --hdr-avatar-size: calc(var(--hdr-pill-outer-h) + 0.5rem);
   --hdr-pill-circle: 1.95rem;
-  /* 右 + 圓鈕略小於左圓，仍垂直置中 */
   --hdr-pill-plus-size: 1.68rem;
-  /* 右欄 wallet track 內圓與左緣；中間藥丸左緣與之對齊 */
   --hdr-pill-inset: 0rem;
-  /* 中間藥丸右側：+ 圓鈕勿貼內框 */
   --hdr-pill-pad-inline-end: 0.13rem;
-  /* 與頭像同高 */
-  --hdr-pill-outer-h: var(--hdr-avatar-size);
-  /* 中間金額藥丸固定寬度（+ 鈕靠右、中間留空如設計圖） */
   --hdr-pill-width: 19rem;
-  /* 頂欄左右內距略小於全站 page-pad，logo / switch 更靠邊，仍保 safe-area */
   --session-header-pad-x: max(var(--safe-left), var(--space-1));
   --session-header-pad-x-end: max(var(--safe-right), var(--space-2));
 
-  /* GC (default) */
-  --hdr-avatar-border: var(--hdr-stroke) solid rgb(34 197 94 / 55%);
-  --hdr-pill-glow: 0 0 12px rgb(234 179 8 / 15%);
-  --hdr-pill-border: var(--hdr-stroke) solid #eab308;
-  --hdr-pill-plus-bg: #eab308;
-  --hdr-pill-plus-fg: #0a0a0a;
-  --hdr-focus: #eab308;
-  /* 右欄 switch 軌道內底：與黃色框線 (#eab308) 同色半透明 */
-  --hdr-wallet-track-bg: rgba(149, 115, 21, 0.4);
+  /* v2 chrome：pic_RdBG 邊 #003adf、底 #06003b；btn_iap 徑向藍 */
+  --hdr-pill-fill: var(--session-header-pill-fill);
+  --hdr-pill-fill-gradient: var(--session-header-pill-fill-gradient);
+  --hdr-pill-border-color: var(--session-header-pill-stroke);
+  --hdr-pill-glow: var(--session-header-pill-glow);
+  --hdr-pill-border: var(--hdr-stroke) solid var(--hdr-pill-border-color);
+  --hdr-pill-plus-bg: var(--session-header-plus-bg);
+  --hdr-pill-plus-glow: var(--session-header-plus-glow);
+  --hdr-pill-plus-fg: #fff;
+  --hdr-focus: var(--session-header-pill-stroke);
+  --hdr-wallet-track-bg: var(--hdr-pill-fill-gradient);
+  --hdr-avatar-border: var(--hdr-stroke) solid var(--session-header-avatar-ring);
 
   position: fixed;
   left: 0;
@@ -99,16 +95,6 @@
 }
 
 .session-header[data-active-wallet="SC"] {
-  /* Sweepstakes：與 GC 同漸層，僅 chrome 色 */
-  --hdr-avatar-border: var(--hdr-stroke) solid rgb(245 158 11 / 65%);
-  --hdr-pill-glow: 0 0 16px rgb(34 197 94 / 28%);
-  --hdr-pill-border: var(--hdr-stroke) solid #4ade80;
-  --hdr-pill-plus-bg: #22c55e;
-  --hdr-pill-plus-fg: #fff;
-  --hdr-focus: #4ade80;
-  /* 右欄 switch 軌道內底：與綠色框線 (#4ade80) 同色半透明 */
-  --hdr-wallet-track-bg: rgba(11, 141, 59, 0.4);
-
   backdrop-filter: blur(10px);
 }
 
@@ -124,11 +110,12 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 3.5rem;
+  min-height: 3.75rem;
   padding: var(--space-1) var(--session-header-pad-x-end) var(--space-1)
     var(--session-header-pad-x);
-  max-width: var(--content-max);
+  max-width: var(--session-chrome-max);
   margin-inline: auto;
+  box-sizing: border-box;
 }
 
 .session-header__left {
@@ -136,9 +123,15 @@
   align-items: center;
   gap: 0;
   flex-shrink: 0;
-  /* 高於中欄藥丸（含內層 z-index），避免頭像點擊被誤擋 */
   position: relative;
   z-index: 2;
+}
+
+.session-header__right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .session-header__logo {
@@ -152,9 +145,13 @@
 }
 
 .session-header__avatar {
-  position: relative;
+  position: absolute;
+  left: 5%;
+  top: 50%;
+  z-index: 3;
   width: var(--hdr-avatar-size);
   height: var(--hdr-avatar-size);
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   background: linear-gradient(145deg, #2d3a45 0%, #12181f 100%);
   border: var(--hdr-avatar-border);
@@ -166,22 +163,15 @@
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
-}
-
-a.session-header__avatar {
   text-decoration: none;
-  color: inherit;
   cursor: pointer;
 }
 
 .session-header__avatar--has-image {
-  color: transparent;
-  background: #12181f;
+  background: transparent;
 }
 
 .session-header__avatar-img {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -193,27 +183,37 @@ a.session-header__avatar {
 .session-header__center {
   flex: 1;
   min-width: 0;
-  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   z-index: 1;
+  overflow: visible;
+}
+
+.session-header__pill-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  padding-left: calc(var(--hdr-avatar-size) * 0.45);
+  overflow: visible;
 }
 
 .session-header__pill {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  flex-shrink: 0;
+  flex-shrink: 1;
   width: var(--hdr-pill-width);
-  max-width: 100%;
-  height: var(--hdr-avatar-size);
+  max-width: min(var(--hdr-pill-width), calc(100vw - 8.5rem));
+  height: var(--hdr-pill-outer-h);
   min-height: var(--hdr-pill-outer-h);
   box-sizing: border-box;
-  padding: 0 var(--hdr-pill-pad-inline-end) 0 var(--space-1);
+  padding: 0 var(--hdr-pill-pad-inline-end) 0
+    calc(var(--hdr-avatar-size) * 0.52);
   border-radius: 999px;
-  background: #0a0a0a;
+  background: var(--hdr-pill-fill-gradient);
   border: var(--hdr-pill-border);
   box-shadow: var(--hdr-pill-glow);
 }
@@ -222,35 +222,24 @@ a.session-header__avatar {
   position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-shrink: 0;
-  width: var(--hdr-pill-circle);
-  height: var(--hdr-pill-circle);
+  min-width: 1.65rem;
   line-height: 0;
 }
 
-.session-header__pill-label-img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-/* GC / SC text for screen readers only */
-.session-header__pill-label-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+.session-header__pill-label-text {
+  font-weight: 900;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 55%);
 }
 
 .session-header__pill-amount {
   min-width: 0;
+  flex: 1;
   font-weight: 800;
   font-size: 0.8rem;
   color: #fff;
@@ -270,6 +259,7 @@ a.session-header__avatar {
   border-radius: 50%;
   background: var(--hdr-pill-plus-bg);
   color: var(--hdr-pill-plus-fg);
+  box-shadow: var(--hdr-pill-plus-glow);
   line-height: 0;
   text-decoration: none;
   flex-shrink: 0;
@@ -290,22 +280,9 @@ a.session-header__avatar {
   height: var(--icon-rwd-sm);
 }
 
-.session-header__right {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-end;
-  min-width: 0;
-}
-
-/* Sliding wallet switch: pill track + circular thumb (GC / SC) — 與中間金額藥丸、頭像同高 */
 .session-header__wallet-track {
-  /* 與中間幣圓鈕同直徑，外圈高度 = --hdr-avatar-size */
   --wallet-thumb: var(--hdr-pill-circle);
-  /* 與中間金額藥丸 --hdr-pill-inset 同值 */
   --wallet-inset: var(--hdr-pill-inset);
-  /* travel = track width − paddings − borders − thumb (matches --hdr-stroke 2px) */
   --wallet-slide: calc(
     4.4rem - 2 * var(--wallet-inset) - 2 * var(--hdr-stroke) -
       var(--wallet-thumb)
@@ -314,7 +291,7 @@ a.session-header__avatar {
   position: relative;
   display: block;
   width: 4.4rem;
-  height: var(--hdr-avatar-size);
+  height: var(--hdr-pill-outer-h);
   min-height: var(--hdr-pill-outer-h);
   margin: 0;
   padding: 0;
@@ -371,9 +348,15 @@ a.session-header__avatar {
   transform: translate(var(--wallet-slide), -50%);
 }
 
-/* —— Footer —— (GC / SC accent via data-active-wallet, same as .session-header) */
+/* —— Footer —— */
 .session-footer {
-  --session-footer-accent: #eab308;
+  --session-footer-accent: #ffed00;
+  --session-footer-gutter: max(var(--safe-left), var(--space-2));
+  --session-footer-gutter-end: max(var(--safe-right), var(--space-2));
+  --session-footer-lobby-bump: none;
+  --session-footer-lobby-bump-w: clamp(3.85rem, 35vw, 7.5rem);
+  --session-footer-lobby-bump-ratio: 384 / 203;
+  --session-footer-lobby-side-gap: clamp(0.65rem, 4vw, 1.15rem);
 
   position: fixed;
   left: 0;
@@ -381,9 +364,19 @@ a.session-header__avatar {
   bottom: 0;
   z-index: 200;
   padding-bottom: var(--safe-bottom);
-  background: #000000;
-  border-top: 2px solid var(--session-footer-accent);
-  box-shadow: 0 -8px 32px rgb(0 0 0 / 55%);
+  /* 取色參考大廳分類列（#110d86 / #070538 / #020010），footer 專用由上而下漸深 */
+  background: linear-gradient(
+    180deg,
+    #4a46d6 0%,
+    #110d86 5%,
+    #070538 48%,
+    #020010 100%
+  );
+  border-top: 1px solid rgb(0 58 223 / 28%);
+  box-shadow:
+    0 -8px 32px rgb(0 0 0 / 55%),
+    inset 0 1px 0 rgb(0 58 223 / 16%);
+  overflow: visible;
 }
 
 .session-footer[data-active-wallet="SC"] {
@@ -391,71 +384,64 @@ a.session-header__avatar {
 }
 
 .session-footer__list {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: repeat(var(--session-footer-tab-count, 5), 1fr);
+  grid-template-columns: repeat(5, 1fr);
   list-style: none;
   margin: 0;
-  padding: var(--space-2) var(--page-pad) 0;
-  max-width: var(--content-max);
+  padding: 0 var(--session-footer-gutter-end) 0.45rem
+    var(--session-footer-gutter);
+  max-width: var(--session-chrome-max);
   margin-inline: auto;
   gap: 0;
-}
-
-/* Sliding accent bar aligned with the five tab columns (index via --session-footer-active-index) */
-.session-footer__slide-track {
-  position: relative;
-  display: flex;
-  max-width: var(--content-max);
-  margin-inline: auto;
-  padding: 0.35rem var(--page-pad) var(--space-1);
   box-sizing: border-box;
+  align-items: end;
 }
 
-/* ~70% of one tab column: centered in each tab band via margin-left */
-.session-footer__slide {
-  position: relative;
-  flex-shrink: 0;
-  width: calc(var(--session-footer-tab-frac, 0.2) * 70%);
-  height: 0.2rem;
-  border-radius: 999px;
-  background: var(--session-footer-accent);
-  margin-left: calc(
-    3% + var(--session-footer-tab-frac, 0.2) * 100% *
-      var(--session-footer-active-index, 0)
-  );
-  transition:
-    margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.2s ease;
-  will-change: margin-left;
-  opacity: 1;
+.session-footer__list > li {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  overflow: visible;
 }
 
-.session-footer[data-footer-active-index="-1"] .session-footer__slide {
-  opacity: 0;
-  margin-left: 0;
-  transition: opacity 0.12s ease;
+.session-footer__list > li:has(.session-footer__link--lobby) {
+  z-index: 2;
+}
+
+.session-footer__list > li:nth-child(2) {
+  padding-inline-end: var(--session-footer-lobby-side-gap);
+}
+
+.session-footer__list > li:nth-child(4) {
+  padding-inline-start: var(--session-footer-lobby-side-gap);
 }
 
 .session-footer__link {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
+  justify-content: flex-end;
+  gap: 0.05rem;
+  width: 100%;
   min-height: 2.85rem;
-  padding: 0.15rem var(--space-1);
+  padding: 0 0.1rem 0.15rem;
   border-radius: 0.5rem;
   text-decoration: none;
-  color: rgb(255 255 255 / 65%);
-  font-size: 0.625rem;
+  color: rgb(255 255 255 / 72%);
+  font-size: 0.56rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  line-height: 1.1;
   -webkit-tap-highlight-color: transparent;
+  overflow: visible;
 }
 
 .session-footer__link:hover {
-  color: rgb(255 255 255 / 85%);
+  color: rgb(255 255 255 / 90%);
 }
 
 .session-footer__link.is-active {
@@ -463,37 +449,65 @@ a.session-header__avatar {
 }
 
 .session-footer__icon {
-  width: var(--icon-rwd-nav);
-  height: var(--icon-rwd-nav);
-  opacity: 0.85;
-  transform: scale(1);
-  transform-origin: center 40%;
+  display: block;
+  width: 1.25rem;
+  margin-bottom: 0.4rem;
+  height: auto;
+  max-height: 1.25rem;
+  object-fit: contain;
+  flex-shrink: 0;
   transition:
-    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.2s ease,
-    color 0.2s ease;
+    transform 0.2s ease,
+    filter 0.2s ease;
 }
 
-.session-footer__link.is-active .session-footer__icon {
-  opacity: 1;
-  color: var(--session-footer-accent);
-  transform: scale(1.08);
-  filter: drop-shadow(0 0 6px var(--session-footer-accent));
+.session-footer__label {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+/* LOBBY 中央固定凸起（lobby-sel-gc）；active 僅改色與 icon 圖 */
+.session-footer__link--lobby {
+  z-index: 1;
+  min-height: 3.15rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.6rem;
+}
+
+.session-footer__link--lobby::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.5rem;
+  transform: translateX(-50%);
+  width: var(--session-footer-lobby-bump-w);
+  aspect-ratio: var(--session-footer-lobby-bump-ratio);
+  background: var(--session-footer-lobby-bump) center bottom / contain no-repeat;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.session-footer__link--lobby .session-footer__icon {
+  position: relative;
+  z-index: 1;
+  width: clamp(1.85rem, 5.5vw, 2.35rem);
+  max-width: none;
+  max-height: clamp(1.6rem, 6vw, 2.5rem);
+  margin-top: clamp(-1.45rem, -4.2vw, -1.1rem);
+  margin-bottom: 0.05rem;
+  transform: none;
+  filter: none;
+}
+
+.session-footer__link.is-active:not(.session-footer__link--lobby)
+  .session-footer__icon {
+  filter: drop-shadow(0 0 6px rgb(88 120 255 / 35%));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .session-footer__slide {
-    transition: none;
-  }
-
-  .session-footer[data-footer-active-index="-1"] .session-footer__slide {
-    transition: none;
-  }
-
   .session-footer__icon {
-    transition:
-      opacity 0.12s ease,
-      color 0.12s ease;
+    transition: none;
   }
 
   .session-footer__link.is-active .session-footer__icon {

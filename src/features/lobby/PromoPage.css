@@ -39,7 +39,7 @@
 .promo-page__list {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-5) + clamp(0.45rem, 1.8vw, 1rem));
+  gap: calc(var(--space-6) + clamp(0.55rem, 2vw, 1.1rem));
   list-style: none;
   margin: 0;
   margin-inline: 0;
@@ -47,49 +47,62 @@
   padding-inline: 0;
 }
 
-/* 卡片與上一區塊留白 */
-.promo-page__list > li {
+/* 卡片 slot：上方留出血空間 */
+.promo-page__card-slot {
   list-style: none;
   min-width: 0;
   width: 90%;
   max-width: 25rem;
   box-sizing: border-box;
   margin: 0 auto;
+  overflow: visible;
+  padding-top: 0.85rem;
 }
 
-/* 整卡可點：role=button 的 div，背景由 --promo-card-bg 提供（與美術 1050×320 同比例） */
+.promo-page__list > li {
+  list-style: none;
+}
+
+/* 整卡可點：左側美術圖層放大出血，標題／CTA 疊於右側 */
 .promo-page__card {
   display: block;
   min-height: 0;
   width: 100%;
-  aspect-ratio: 1050 / 320;
+  aspect-ratio: 1728 / 640;
   container-type: inline-size;
   container-name: promo-card;
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   font: inherit;
-  /* 基準字級跟卡片寬度走；子層用 em 一併縮放 */
   font-size: clamp(0.75rem, 3.55cqw, 1.05rem);
   text-align: inherit;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
   border-radius: var(--crown-surface-card-radius);
-  overflow: hidden;
+  overflow: visible;
   border: none;
   box-shadow: 0 0.3rem 0.75rem rgb(0 0 0 / 28%);
   position: relative;
   z-index: 0;
   cursor: pointer;
   transition: box-shadow 0.12s ease;
-  background-color: transparent;
-  background-image: var(--promo-card-bg);
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
-  background-clip: border-box;
-  background-origin: border-box;
-  transform: scale(1.1) translate(-0.4rem, 0);
+  background-color: var(--crown-surface-card-bg);
+}
+
+/* 左側禮物／人物略放大並向上、向左出血（對齊 v2 稿） */
+.promo-page__card-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left center;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  transform: scale(1.18) translate(-3%, -4%);
+  transform-origin: 18% 78%;
 }
 
 /* role="button" 的 div：滑鼠聚焦不強制 ring，keyboard :focus-visible 顯示金框 */
@@ -119,9 +132,9 @@
   align-items: center;
   justify-content: center;
   gap: 0.26em;
-  /* 上多下少：標題＋ CTA 在右欄略偏下，貼近美術深色帶視覺重心（em 隨卡片基準字級） */
   padding: 1.2em 0.4em 0.26em;
   text-align: center;
+  z-index: 1;
 }
 
 .promo-page__h {
@@ -209,6 +222,8 @@
 
 .promo-page__hint {
   margin: 0;
+  text-align: center;
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 20rem) {

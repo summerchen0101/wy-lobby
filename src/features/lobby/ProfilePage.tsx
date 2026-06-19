@@ -32,8 +32,12 @@ import {
   notifyLobbySoundPreferenceChanged,
 } from "../../lib/lobbySound";
 import { profileVipProgress } from "./profileVipProgress";
+import { resolveProfileVipTitle } from "./profileVipTitle";
 import "./ProfilePage.css";
 import "./SessionPageDecor.css";
+
+const AVATAR_SELECTION_UNAVAILABLE_MSG =
+  "Avatar selection is temporarily unavailable while adjustments are in progress.";
 
 export function ProfilePage() {
   const { show } = useAlert();
@@ -56,6 +60,7 @@ export function ProfilePage() {
     required: vipProgressRequired,
     fillPct: vipProgressFillPct,
   } = profileVipProgress(user);
+  const vipTitle = resolveProfileVipTitle(user?.vipLevel);
 
   const onRefresh = useCallback(async () => {
     try {
@@ -199,6 +204,10 @@ export function ProfilePage() {
     });
   }
 
+  const onEditAvatar = useCallback(() => {
+    show(AVATAR_SELECTION_UNAVAILABLE_MSG, { variant: "info" });
+  }, [show]);
+
   function onMyProfile() {
     setMyProfileOpen(true);
   }
@@ -217,31 +226,38 @@ export function ProfilePage() {
       <div className="profile-page__card">
         <div className="profile-page__hero">
           <div className="profile-page__avatar-stack">
-            <button
-              type="button"
-              className={
-                "profile-page__avatar" +
-                (showAvatarImage ? " profile-page__avatar--has-image" : "")
-              }
-              onClick={() => setHeadIconOpen(true)}
-              aria-label="Change head icon"
-              title="Change head icon">
-              <span className="profile-page__avatar-media">
-                {showAvatarImage && pickedAvatar ? (
-                  <img
-                    className="profile-page__avatar-img"
-                    src={pickedAvatar.imageSrc}
-                    alt=""
-                    onError={() => setAvatarImgFailed(true)}
-                  />
-                ) : (
-                  <span className="profile-page__avatar-initial">{initial}</span>
-                )}
-              </span>
-              <span className="profile-page__edit" aria-hidden>
+            <div className="profile-page__avatar-wrap">
+              <button
+                type="button"
+                className={
+                  "profile-page__avatar" +
+                  (showAvatarImage ? " profile-page__avatar--has-image" : "")
+                }
+                onClick={onEditAvatar}
+                aria-label="Change head icon"
+                title="Change head icon">
+                <span className="profile-page__avatar-media">
+                  {showAvatarImage && pickedAvatar ? (
+                    <img
+                      className="profile-page__avatar-img"
+                      src={pickedAvatar.imageSrc}
+                      alt=""
+                      onError={() => setAvatarImgFailed(true)}
+                    />
+                  ) : (
+                    <span className="profile-page__avatar-initial">{initial}</span>
+                  )}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="profile-page__edit"
+                onClick={onEditAvatar}
+                aria-label="Change head icon"
+                title="Change head icon">
                 <HiPencil className="profile-page__edit-icon" aria-hidden />
-              </span>
-            </button>
+              </button>
+            </div>
           </div>
           <p className="profile-page__display-name">{displayHandle}</p>
           <div className="profile-page__uid-inline">
@@ -264,7 +280,7 @@ export function ProfilePage() {
             </button>
           </div>
           <div className="profile-page__level-row">
-            <span className="profile-page__level-label">Entry level</span>
+            <span className="profile-page__level-label">{vipTitle}</span>
             <InfoPopover
               align="end"
               content={
