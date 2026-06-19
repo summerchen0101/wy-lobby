@@ -1,5 +1,4 @@
 import { publicImageUrl } from '../lib/publicImageUrl'
-import { GUEST_FOOT_PAGE_BG } from '../features/lobby/landingContent'
 import './LobbyComplianceFooter.css'
 
 const LOGO_SRC = publicImageUrl('/images/compliance/img_logo.png')
@@ -32,18 +31,7 @@ export function LobbyComplianceFooter({ variant }: LobbyComplianceFooterProps) {
   const showPurchaseHeadline = variant === 'guest'
 
   return (
-    <footer
-      className={
-        'lobby-comp' + (variant === 'guest' ? ' lobby-comp--guest' : '')
-      }
-      style={
-        variant === 'guest'
-          ? {
-              backgroundImage: `url("${GUEST_FOOT_PAGE_BG}")`,
-            }
-          : undefined
-      }
-    >
+    <footer className="lobby-comp">
       <div className="lobby-comp__inner page-container">
         {showPurchaseHeadline ? (
           <h2 className="lobby-comp__purchase-title">

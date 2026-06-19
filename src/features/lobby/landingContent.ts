@@ -18,10 +18,6 @@ export const LOBBY_BANNER_TITLE = `${LOBBY_BANNER_BASE}/title.png`;
 export const LOBBY_BANNER_SUBTITLE = `${LOBBY_BANNER_BASE}/subtitle.png`;
 export const LOBBY_BANNER_SUBTITLE_ANIM = `${LOBBY_BANNER_BASE}/subtitle_anim.png`;
 
-/** 訪客落地頁裝飾圖 */
-export const GUEST_DECOR_BASE = publicImageUrl("/images/lobby/guest");
-export const GUEST_FOOT_PAGE_BG = `${GUEST_DECOR_BASE}/img_footPage_2x.png`;
-
 const DEFAULT_UNITY_DEMO_URL =
   "https://unityweb-alpha.ffglobaltech.com/0000/Single1/index.html";
 
