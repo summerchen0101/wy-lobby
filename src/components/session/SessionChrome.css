@@ -351,6 +351,12 @@
 /* —— Footer —— */
 .session-footer {
   --session-footer-accent: #ffed00;
+  --session-footer-gutter: max(var(--safe-left), var(--space-2));
+  --session-footer-gutter-end: max(var(--safe-right), var(--space-2));
+  --session-footer-lobby-bump: none;
+  --session-footer-lobby-bump-w: clamp(3.85rem, 35vw, 7.5rem);
+  --session-footer-lobby-bump-ratio: 384 / 203;
+  --session-footer-lobby-side-gap: clamp(0.65rem, 4vw, 1.15rem);
 
   position: fixed;
   left: 0;
@@ -358,9 +364,18 @@
   bottom: 0;
   z-index: 200;
   padding-bottom: var(--safe-bottom);
-  background: linear-gradient(180deg, #4a1a6e 0%, #1d1f51 55%, #0c0324 100%);
-  border-top: none;
-  box-shadow: 0 -8px 32px rgb(0 0 0 / 55%);
+  /* 取色參考大廳分類列（#110d86 / #070538 / #020010），footer 專用由上而下漸深 */
+  background: linear-gradient(
+    180deg,
+    #4a46d6 0%,
+    #110d86 5%,
+    #070538 48%,
+    #020010 100%
+  );
+  border-top: 1px solid rgb(0 58 223 / 28%);
+  box-shadow:
+    0 -8px 32px rgb(0 0 0 / 55%),
+    inset 0 1px 0 rgb(0 58 223 / 16%);
   overflow: visible;
 }
 
@@ -375,7 +390,8 @@
   grid-template-columns: repeat(5, 1fr);
   list-style: none;
   margin: 0;
-  padding: 0.35rem var(--session-chrome-gutter) 0.25rem;
+  padding: 0 var(--session-footer-gutter-end) 0.45rem
+    var(--session-footer-gutter);
   max-width: var(--session-chrome-max);
   margin-inline: auto;
   gap: 0;
@@ -387,9 +403,23 @@
   display: flex;
   justify-content: center;
   min-width: 0;
+  overflow: visible;
+}
+
+.session-footer__list > li:has(.session-footer__link--lobby) {
+  z-index: 2;
+}
+
+.session-footer__list > li:nth-child(2) {
+  padding-inline-end: var(--session-footer-lobby-side-gap);
+}
+
+.session-footer__list > li:nth-child(4) {
+  padding-inline-start: var(--session-footer-lobby-side-gap);
 }
 
 .session-footer__link {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -407,6 +437,7 @@
   text-transform: uppercase;
   line-height: 1.1;
   -webkit-tap-highlight-color: transparent;
+  overflow: visible;
 }
 
 .session-footer__link:hover {
@@ -419,9 +450,10 @@
 
 .session-footer__icon {
   display: block;
-  width: 1.65rem;
+  width: 1.25rem;
+  margin-bottom: 0.4rem;
   height: auto;
-  max-height: 1.65rem;
+  max-height: 1.25rem;
   object-fit: contain;
   flex-shrink: 0;
   transition:
@@ -429,13 +461,41 @@
     filter 0.2s ease;
 }
 
-/* LOBBY 選中圖已含凸起底台，不再另疊 lobby-sel 背景 */
-.session-footer__link--lobby.is-active .session-footer__icon {
-  width: auto;
-  max-width: 4.25rem;
-  max-height: 2.65rem;
-  margin-top: -0.55rem;
-  margin-bottom: -0.1rem;
+.session-footer__label {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+/* LOBBY 中央固定凸起（lobby-sel-gc）；active 僅改色與 icon 圖 */
+.session-footer__link--lobby {
+  z-index: 1;
+  min-height: 3.15rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.6rem;
+}
+
+.session-footer__link--lobby::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.5rem;
+  transform: translateX(-50%);
+  width: var(--session-footer-lobby-bump-w);
+  aspect-ratio: var(--session-footer-lobby-bump-ratio);
+  background: var(--session-footer-lobby-bump) center bottom / contain no-repeat;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.session-footer__link--lobby .session-footer__icon {
+  position: relative;
+  z-index: 1;
+  width: clamp(1.85rem, 5.5vw, 2.35rem);
+  max-width: none;
+  max-height: clamp(1.6rem, 6vw, 2.5rem);
+  margin-top: clamp(-1.45rem, -4.2vw, -1.1rem);
+  margin-bottom: 0.05rem;
   transform: none;
   filter: none;
 }

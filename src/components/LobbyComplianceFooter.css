@@ -6,12 +6,6 @@
   margin-top: var(--space-4);
 }
 
-.lobby-comp--guest {
-  background-repeat: no-repeat;
-  background-position: center top;
-  background-size: cover;
-}
-
 .lobby-comp__inner {
   display: flex;
   flex-direction: column;

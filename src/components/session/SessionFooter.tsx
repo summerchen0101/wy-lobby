@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useGatewayLobby } from '../../realtime/useGatewayLobby'
 import {
   footerIconUrl,
+  footerLobbyBumpUrl,
   type FooterIconId,
 } from '../../lib/sessionChromeAssets'
 import { useWallet } from '../../wallet/walletContext'
@@ -25,6 +26,11 @@ export function SessionFooter() {
     <nav
       className="session-footer"
       data-active-wallet={activeWallet}
+      style={
+        {
+          '--session-footer-lobby-bump': `url("${footerLobbyBumpUrl(activeWallet)}")`,
+        } as React.CSSProperties
+      }
       aria-label="Main navigation"
     >
       <ul className="session-footer__list">
@@ -52,7 +58,7 @@ export function SessionFooter() {
                     height={56}
                     decoding="async"
                   />
-                  {label}
+                  <span className="session-footer__label">{label}</span>
                 </>
               )}
             </NavLink>

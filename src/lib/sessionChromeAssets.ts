@@ -75,4 +75,12 @@ export function footerIconUrl(id: FooterIconId, selected: boolean): string {
   return selected ? pair.selected : pair.normal;
 }
 
-export const FOOTER_LOBBY_BUMP = `${FOOTER}/lobby-sel-gc.png`;
+export const FOOTER_LOBBY_BUMP_GC = `${FOOTER}/lobby-sel-gc.png`;
+
+/** LOBBY 選中時中間凸起底圖（384×203）；SC 專用圖就緒前沿用 GC。 */
+export function footerLobbyBumpUrl(_wallet: ActiveWallet): string {
+  return FOOTER_LOBBY_BUMP_GC;
+}
+
+/** @deprecated 使用 `footerLobbyBumpUrl` */
+export const FOOTER_LOBBY_BUMP = FOOTER_LOBBY_BUMP_GC;
