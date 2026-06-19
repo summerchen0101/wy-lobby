@@ -74,7 +74,10 @@ html.session-lobby-page {
   --lobby-filter-pill-glow: var(--session-header-pill-glow);
   --lobby-filter-active-fg: var(--color-text);
   --lobby-filter-tab-fg: rgb(255 255 255 / 58%);
+  --lobby-filter-bar-h: 2.85rem;
 
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -85,20 +88,44 @@ html.session-lobby-page {
   width: calc(100% + 2 * var(--page-pad-inline));
   max-width: none;
   min-width: 0;
-  padding: var(--space-2) var(--page-pad-inline);
+  min-height: var(--lobby-filter-bar-h);
+  padding: 0 var(--page-pad-inline);
   overflow: hidden;
-  background: linear-gradient(180deg, #0c0080 0%, #06003b 52%, #030022 100%);
-  box-shadow:
-    inset 0 1px 0 rgb(0 58 223 / 28%),
-    0 4px 14px rgb(0 0 0 / 28%);
+  background: transparent;
   border-radius: 0;
   border: none;
 }
 
+.lobby-games-filter-strip::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    #110d86 0%,
+    #070538 30%,
+    #020010 50%,
+    #070538 70%,
+    #110d86 100%
+  );
+  border-top: 1px solid rgb(0 58 223 / 22%);
+  border-bottom: 1px solid rgb(0 58 223 / 22%);
+  box-shadow:
+    inset 0 1px 0 rgb(0 58 223 / 14%),
+    inset 0 -1px 0 rgb(0 58 223 / 14%);
+}
+
+.lobby-games-filter-strip > * {
+  position: relative;
+  z-index: 1;
+}
+
 .lobby-game-search {
-  flex: 0 0 30%;
-  width: 30%;
-  max-width: 30%;
+  flex: 0 0 35%;
+  width: 35%;
+  max-width: 35%;
   min-width: 0;
   display: flex;
   align-items: center;
