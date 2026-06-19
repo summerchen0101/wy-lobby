@@ -110,6 +110,11 @@ export const UNITY_DEMO_LOBBY_GAME: Game = {
   thumbnailUrl: `${G}/crownslots/olympics-alternate-all-KXkAo.webp`,
 };
 
+/** 已登入大廳 banner 影片（v2）；走 app origin `/public`，不走 image CDN。 */
+export const LOBBY_BANNER_VIDEO_BASE = "/videos/lobby";
+export const LOBBY_BANNER_VIDEO_SC = `${LOBBY_BANNER_VIDEO_BASE}/Export_WebMp4_SC.mp4`;
+export const LOBBY_BANNER_VIDEO_GC = `${LOBBY_BANNER_VIDEO_BASE}/Export_WebMp4_GC.mp4`;
+
 /**
  * 已登入大廳 banner：依目前選中錢包 GC/SC 切圖；`VITE_LOBBY_HERO_IMAGE` 若設定則覆寫兩者。
  */
@@ -117,6 +122,11 @@ export function getSessionLobbyBannerImage(activeWallet: ActiveWallet): string {
   const u = import.meta.env.VITE_LOBBY_HERO_IMAGE?.trim();
   if (u) return u;
   return activeWallet === "SC" ? PANEL_BG_SC : PANEL_BG_GC;
+}
+
+/** 已登入大廳 banner 影片：依目前選中錢包 GC/SC 切換。 */
+export function getSessionLobbyBannerVideo(activeWallet: ActiveWallet): string {
+  return activeWallet === "SC" ? LOBBY_BANNER_VIDEO_SC : LOBBY_BANNER_VIDEO_GC;
 }
 
 /** 訪客 hero：預設未登入 Panel 圖；`VITE_GUEST_HERO_IMAGE` 可覆寫。 */

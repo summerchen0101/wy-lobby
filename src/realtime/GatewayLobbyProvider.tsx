@@ -164,7 +164,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     tryRefreshSession,
     invalidateSessionToLogin,
   } = useAuth();
-  const { setActiveWallet, activeWallet } = useWallet();
+  const { activeWallet } = useWallet();
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const gatewayWsEnabled =
     devGatewayWsProbeEnabled() || wsLobbyEnabled;
@@ -366,12 +366,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
                   const userPatch = lobbyDecodedToUserPatch(decoded);
                   if (Object.keys(userPatch).length > 0) {
                     mergeUser(userPatch);
-                    if (
-                      userPatch.lobbyWalletType === "GC" ||
-                      userPatch.lobbyWalletType === "SC"
-                    ) {
-                      setActiveWallet(userPatch.lobbyWalletType);
-                    }
                   }
                 }
                 setLobbyGames(items);
@@ -448,7 +442,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [handleWsSessionInvalid, mergeUser, setActiveWallet, wsLobbyEnabled],
+    [handleWsSessionInvalid, mergeUser, wsLobbyEnabled],
   );
 
   /** WS `open` 後有 access token 時背景送出；訪客跳過。回傳 false 表示 session 失效（不阻塞大廳 bootstrap）。 */
