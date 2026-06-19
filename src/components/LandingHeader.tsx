@@ -29,7 +29,7 @@ export function LandingHeader({ onJoinUs, onLogin, overHero = false }: Props) {
         <Link to="/" className="landing-header__brand">
           <img
             src={LANDING_HEADER_LOGO}
-            alt="WYNOCO"
+            alt="LukLok"
             className="landing-header__mark"
             decoding="async"
           />

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { AuthModalsContext, type PostTermsAction, type PhoneVerifyPayload } from './authModalsContext'
 
-const TERMS_KEY = 'wynoco_terms_ok'
+const TERMS_KEY = 'luklok_terms_ok'
 
 export function AuthModalsProvider({ children }: { children: ReactNode }) {
   const [termsOpen, setTermsOpen] = useState(false)

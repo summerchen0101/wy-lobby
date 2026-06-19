@@ -1,4 +1,4 @@
-# Wynoco Web 大廳
+# LukLok Web 大廳
 
 Vite + React + TypeScript。開發在 `web/`，產線請將 **`dist/` 內容部署為網站根**（`https://<domain>/`），與本倉庫根目錄舊的 Unity WebGL 靜態包分開。
 

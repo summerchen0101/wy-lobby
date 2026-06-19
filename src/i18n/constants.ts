@@ -1,4 +1,4 @@
-export const I18N_STORAGE_KEY = "wynoco-ui-locale";
+export const I18N_STORAGE_KEY = "luklok-ui-locale";
 
 export const SUPPORTED_LANGUAGES = ["en", "zh-TW"] as const;
 export type AppLanguage = (typeof SUPPORTED_LANGUAGES)[number];

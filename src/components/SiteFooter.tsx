@@ -14,7 +14,7 @@ export function SiteFooter() {
       <div className="page-container">
         <div className="site-footer__brand">
           <CrownLogo width={56} aria-hidden />
-          <span className="site-footer__brand-text">Wynoco</span>
+          <span className="site-footer__brand-text">LukLok</span>
         </div>
 
         <div className="site-footer__top">
@@ -50,7 +50,7 @@ export function SiteFooter() {
             ))}
           </nav>
           <p className="site-footer__para">
-            The Wynoco lobby is a game entry point. Purchases and game content are provided by
+            The LukLok lobby is a game entry point. Purchases and game content are provided by
             partners under their own terms.
           </p>
         </div>
