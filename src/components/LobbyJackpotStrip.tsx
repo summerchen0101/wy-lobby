@@ -181,16 +181,16 @@ export function LobbyJackpotStrip({ wallet, amounts, variant = 'demo' }: Props) 
                 className="lobby-jackpot-strip__word-img"
                 src={JP_TEXT_LABEL}
                 alt=""
-                width={120}
-                height={32}
+                width={260}
+                height={80}
                 decoding="async"
               />
               <img
                 className="lobby-jackpot-strip__index-img"
                 src={JP_TEXT_INDEX[i]}
                 alt=""
-                width={32}
-                height={32}
+                width={60}
+                height={80}
                 decoding="async"
               />
             </div>
