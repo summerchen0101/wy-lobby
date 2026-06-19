@@ -32,6 +32,7 @@ import {
   notifyLobbySoundPreferenceChanged,
 } from "../../lib/lobbySound";
 import { profileVipProgress } from "./profileVipProgress";
+import { resolveProfileVipTitle } from "./profileVipTitle";
 import "./ProfilePage.css";
 import "./SessionPageDecor.css";
 
@@ -59,6 +60,7 @@ export function ProfilePage() {
     required: vipProgressRequired,
     fillPct: vipProgressFillPct,
   } = profileVipProgress(user);
+  const vipTitle = resolveProfileVipTitle(user?.vipLevel);
 
   const onRefresh = useCallback(async () => {
     try {
@@ -278,7 +280,7 @@ export function ProfilePage() {
             </button>
           </div>
           <div className="profile-page__level-row">
-            <span className="profile-page__level-label">Entry level</span>
+            <span className="profile-page__level-label">{vipTitle}</span>
             <InfoPopover
               align="end"
               content={
