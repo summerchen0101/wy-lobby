@@ -63,7 +63,7 @@ export function LoginModal({
   onSwitchRegister,
   onForgotPassword,
 }: Props) {
-  const { login, ingestAuthResponse } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const titleId = useId();
@@ -157,7 +157,7 @@ export function LoginModal({
     } finally {
       setAppleLoading(false);
     }
-  }, [searchParams, ingestAuthResponse, finishLogin]);
+  }, [searchParams]);
 
   async function onSignIn(e: FormEvent) {
     e.preventDefault();

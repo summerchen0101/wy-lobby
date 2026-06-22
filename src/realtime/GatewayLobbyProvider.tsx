@@ -164,7 +164,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     tryRefreshSession,
     invalidateSessionToLogin,
   } = useAuth();
-  const { setActiveWallet, activeWallet } = useWallet();
+  const { activeWallet } = useWallet();
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const gatewayWsEnabled =
     devGatewayWsProbeEnabled() || wsLobbyEnabled;
@@ -366,12 +366,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
                   const userPatch = lobbyDecodedToUserPatch(decoded);
                   if (Object.keys(userPatch).length > 0) {
                     mergeUser(userPatch);
-                    if (
-                      userPatch.lobbyWalletType === "GC" ||
-                      userPatch.lobbyWalletType === "SC"
-                    ) {
-                      setActiveWallet(userPatch.lobbyWalletType);
-                    }
                   }
                 }
                 setLobbyGames(items);
@@ -448,10 +442,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [handleWsSessionInvalid, mergeUser, setActiveWallet, wsLobbyEnabled],
+    [handleWsSessionInvalid, mergeUser, wsLobbyEnabled],
   );
 
-  /** 每次 WS `open`（含重連）有 access token 時必跑；訪客跳過。回傳 false 表示 session 失效應中止 bootstrap。 */
+  /** WS `open` 後有 access token 時背景送出；訪客跳過。回傳 false 表示 session 失效（不阻塞大廳 bootstrap）。 */
   const runServerLoginOnOpen = useCallback(
     async (request: GatewayWsRequestFn): Promise<boolean> => {
       const wsAccessToken = sessionTokenRef.current;
@@ -790,9 +784,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       requestRef.current = request;
 
       try {
-        const continueBootstrap = await runServerLoginOnOpen(request);
-        if (!continueBootstrap) return;
-
         if (shouldRunLobbyGetOnOpen) {
           await runLobbyGetRequest(request, { bootstrap: true });
         }
@@ -806,6 +797,9 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         } catch (e) {
           console.warn("[gateway-ws] GET_JACKPOT_INFO failed", e);
         }
+
+        // 後端未實作或無回應時不阻塞大廳；session 失效仍由 runServerLoginOnOpen 非同步處理
+        void runServerLoginOnOpen(request);
       } finally {
         setGatewayRequestReady(true);
       }

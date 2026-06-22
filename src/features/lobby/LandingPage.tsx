@@ -11,6 +11,7 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { LandingHeader } from "../../components/LandingHeader";
 import { LobbyJackpotStrip } from "../../components/LobbyJackpotStrip";
+import { LobbyHeroBanner } from "../../components/LobbyHeroBanner";
 import { SessionChromeShell } from "../../components/session/SessionChromeShell";
 import { SupportFab } from "../../components/session/SupportFab";
 import { LobbyComplianceFooter } from "../../components/LobbyComplianceFooter";
@@ -56,6 +57,7 @@ import {
   lobbyGameCardThumbnail,
   thirdPartyGameEntryThumbnailUrl,
   getSessionLobbyBannerImage,
+  getSessionLobbyBannerVideo,
   UNITY_DEMO_LOBBY_GAME,
   unityDemoGameUrl,
 } from "./landingContent";
@@ -332,8 +334,7 @@ function LobbyGameCardThumb({
     }
   }, [loadThumb, thumb]);
   const thumbLoading =
-    Boolean(thumb) &&
-    (!inView || (loadThumb && !imageLoaded && !imageFailed));
+    Boolean(thumb) && (!inView || (loadThumb && !imageLoaded && !imageFailed));
   const showTextFallback = !thumb || (loadThumb && imageFailed);
   const bgStyle =
     thumb && loadThumb && imageLoaded && !imageFailed
@@ -413,7 +414,11 @@ export function LandingPage() {
   } = useAuthModals();
 
   const tpId = trustpilotBusinessUnitId();
-  const sessionHeroSrc = useMemo(
+  const sessionHeroVideoSrc = useMemo(
+    () => getSessionLobbyBannerVideo(activeWallet),
+    [activeWallet],
+  );
+  const sessionHeroPosterSrc = useMemo(
     () => getSessionLobbyBannerImage(activeWallet),
     [activeWallet],
   );
@@ -569,6 +574,7 @@ export function LandingPage() {
       if (e.key === "Escape") {
         setLobbySearch("");
         setLobbySearchExpanded(false);
+        lobbySearchInputRef.current?.blur();
       }
     };
     document.addEventListener("keydown", onKey);
@@ -899,15 +905,9 @@ export function LandingPage() {
     <>
       <main className="lobby-landing__main">
         <section className="lobby-hero-banner" aria-label="Promotional banner">
-          <div className="lobby-hero-banner__art-wrap">
-            <img
-              className="lobby-hero-banner__img"
-              src={sessionHeroSrc}
-              alt=""
-              width={1200}
-              height={420}
-              decoding="async"
-            />
+          <LobbyHeroBanner
+            videoSrc={sessionHeroVideoSrc}
+            posterSrc={sessionHeroPosterSrc}>
             {liveJackpotAmounts ? (
               <LobbyJackpotStrip
                 wallet={activeWallet}
@@ -915,7 +915,7 @@ export function LandingPage() {
                 variant="live"
               />
             ) : null}
-          </div>
+          </LobbyHeroBanner>
         </section>
 
         <section
@@ -931,28 +931,43 @@ export function LandingPage() {
                     (lobbySearchExpanded ? " is-expanded" : "")
                   }
                   aria-expanded={lobbySearchExpanded}>
-                  {lobbySearchExpanded ? (
-                    <div className="lobby-game-search__pill" role="search">
-                      <span
-                        className="lobby-game-search__lead-icon"
-                        aria-hidden>
-                        <Search strokeWidth={2.25} />
-                      </span>
-                      <input
-                        ref={lobbySearchInputRef}
-                        type="search"
-                        className="lobby-game-search__input"
-                        value={lobbySearch}
-                        onChange={(e) => setLobbySearch(e.target.value)}
-                        autoComplete="off"
-                        enterKeyHint="search"
-                        placeholder="Search games"
-                        aria-label="Search games"
-                      />
+                  <div
+                    className="lobby-game-search__pill"
+                    role="search"
+                    onClick={() => {
+                      if (!lobbySearchExpanded) setLobbySearchExpanded(true);
+                    }}>
+                    <span className="lobby-game-search__lead-icon" aria-hidden>
+                      <Search strokeWidth={2.25} />
+                    </span>
+                    <input
+                      ref={lobbySearchInputRef}
+                      type="search"
+                      className="lobby-game-search__input"
+                      value={lobbySearch}
+                      onChange={(e) => setLobbySearch(e.target.value)}
+                      onFocus={() => setLobbySearchExpanded(true)}
+                      onBlur={() => {
+                        window.setTimeout(() => {
+                          if (
+                            document.activeElement !==
+                            lobbySearchInputRef.current
+                          ) {
+                            setLobbySearchExpanded(false);
+                          }
+                        }, 120);
+                      }}
+                      autoComplete="off"
+                      enterKeyHint="search"
+                      placeholder="BGAMING"
+                      aria-label="BGAMING"
+                    />
+                    {lobbySearchExpanded ? (
                       <button
                         type="button"
                         className="lobby-game-search__close"
                         aria-label="Close search"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => {
                           setLobbySearch("");
                           setLobbySearchExpanded(false);
@@ -960,16 +975,8 @@ export function LandingPage() {
                         }}>
                         <X strokeWidth={2.25} aria-hidden />
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="lobby-game-search__trigger"
-                      aria-label="Search games"
-                      onClick={() => setLobbySearchExpanded(true)}>
-                      <Search strokeWidth={2.25} aria-hidden />
-                    </button>
-                  )}
+                    ) : null}
+                  </div>
                 </div>
                 <div
                   ref={lobbyGameFilterRef}
@@ -1128,7 +1135,6 @@ export function LandingPage() {
         displayEmail={phoneVerifyPayload?.displayEmail ?? ""}
         pendingBody={phoneVerifyPayload?.body ?? null}
       />
-
     </div>
   );
 }

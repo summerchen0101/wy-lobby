@@ -8,10 +8,7 @@ import {
   getProfileAvatarById,
 } from "../../features/lobby/profileAvatars";
 import { useProfileAvatarId } from "../../features/lobby/profileAvatarStorage";
-import {
-  getCurrencyIconUrl,
-  getCurrencyTextIconUrl,
-} from "../../lib/currencyIcons";
+import { getCurrencyIconUrl } from "../../lib/currencyIcons";
 import { getHeaderBrandLogoUrl } from "../../lib/brandLogos";
 import { GATEWAY_API_WALLET_USE } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
@@ -30,7 +27,7 @@ export function SessionHeader() {
   const [avatarImgFailed, setAvatarImgFailed] = useState(false);
   const [walletSwitchBusy, setWalletSwitchBusy] = useState(false);
   const { activeWallet, setActiveWallet } = useWallet();
-  const { label, amount } = getWalletDisplay(user ?? undefined, activeWallet);
+  const { amount } = getWalletDisplay(user ?? undefined, activeWallet);
 
   const initial = (
     user?.displayName?.trim()?.[0] ??
@@ -88,37 +85,33 @@ export function SessionHeader() {
             className="session-header__logo"
             decoding="async"
           />
-          <Link
-            to="/profile"
-            className={
-              "session-header__avatar" +
-              (showAvatarImage ? " session-header__avatar--has-image" : "")
-            }
-            aria-label="Open profile">
-            {showAvatarImage && picked ? (
-              <img
-                className="session-header__avatar-img"
-                src={picked.imageSrc}
-                alt=""
-                onError={() => setAvatarImgFailed(true)}
-                decoding="async"
-              />
-            ) : (
-              initial
-            )}
-          </Link>
         </div>
         <div className="session-header__center">
-          <div className="session-header__pill" title="Wallet balance">
+          <div className="session-header__pill-wrap">
+            <Link
+              to="/profile"
+              className={
+                "session-header__avatar" +
+                (showAvatarImage ? " session-header__avatar--has-image" : "")
+              }
+              aria-label="Open profile">
+              {showAvatarImage && picked ? (
+                <img
+                  className="session-header__avatar-img"
+                  src={picked.imageSrc}
+                  alt=""
+                  onError={() => setAvatarImgFailed(true)}
+                  decoding="async"
+                />
+              ) : (
+                initial
+              )}
+            </Link>
+            <div className="session-header__pill" title="Wallet balance">
             <span className="session-header__pill-label">
-              <img
-                src={getCurrencyTextIconUrl(activeWallet)}
-                alt=""
-                className="session-header__pill-label-img"
-                width={30}
-                height={30}
-              />
-              <span className="session-header__pill-label-sr">{label}</span>
+              <span className="session-header__pill-label-text">
+                {activeWallet}
+              </span>
             </span>
             <span className="session-header__pill-amount">{amount}</span>
             <Link
@@ -131,6 +124,7 @@ export function SessionHeader() {
                 aria-hidden
               />
             </Link>
+            </div>
           </div>
         </div>
         <div className="session-header__right">
@@ -151,8 +145,8 @@ export function SessionHeader() {
                 src={getCurrencyIconUrl(activeWallet)}
                 alt=""
                 className="session-header__wallet-thumb-img"
-                width={20}
-                height={20}
+                width={24}
+                height={24}
               />
             </span>
           </button>

@@ -1,5 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { getCurrencyIconUrl } from '../lib/currencyIcons'
+import {
+  JP_CELL_BG,
+  JP_TEXT_INDEX,
+  JP_TEXT_LABEL,
+} from '../lib/sessionChromeAssets'
 import { formatScFromRaw, formatWalletPillAmount } from '../wallet/formatWalletAmount'
 import type { ActiveWallet } from '../wallet/walletContext'
 import './LobbyJackpotStrip.css'
@@ -18,7 +23,6 @@ function randomInt(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min + 1))
 }
 
-/** 示範用：每輪小額遞增，大／中／小 JP 幅度不同 */
 function withIncrement(from: number, i: 0 | 1 | 2): number {
   const ranges: readonly [number, number][] = [
     [80, 4800],
@@ -33,7 +37,6 @@ function clampPositive(n: number): number {
   return Math.max(0, Math.round(n))
 }
 
-/** scramble 幀：越接近最後一幀，亂度越小 */
 function scrambleFrame(from: Triple, to: Triple, step: number): [number, number, number] {
   const t = 1 - (step + 1) / (SCRAMBLE_STEPS - 1)
   const out: [number, number, number] = [0, 0, 0]
@@ -47,9 +50,7 @@ function scrambleFrame(from: Triple, to: Triple, step: number): [number, number,
 
 type Props = {
   wallet: ActiveWallet
-  /** 三格金額，順序 JACKPOT 1~3 */
   amounts: readonly [number, number, number]
-  /** demo：本地假遞增；live：僅依伺服器推播更新（變更時 scramble） */
   variant?: 'demo' | 'live'
 }
 
@@ -125,7 +126,7 @@ export function LobbyJackpotStrip({ wallet, amounts, variant = 'demo' }: Props) 
       clearInterval(intervalId)
       clearScrambleTimeouts()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- demo ticker; runScramble closure is intentional
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- demo ticker
   }, [variant])
 
   const amountsTriple = `${amounts[0]},${amounts[1]},${amounts[2]}`
@@ -153,7 +154,7 @@ export function LobbyJackpotStrip({ wallet, amounts, variant = 'demo' }: Props) 
       abortedRef.current = true
       clearScrambleTimeouts()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- amountsTriple encodes amounts; runScramble is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- amountsTriple encodes amounts
   }, [variant, amountsTriple])
 
   const aria =
@@ -164,45 +165,54 @@ export function LobbyJackpotStrip({ wallet, amounts, variant = 'demo' }: Props) 
   return (
     <div className="lobby-jackpot-strip" aria-label={aria}>
       <div className="lobby-jackpot-strip__cluster" role="list" aria-hidden>
-        {values.map((amount, i) => {
-          return (
-            <div
-              key={i}
-              className="lobby-jackpot-strip__cell"
-              role="listitem"
-            >
-              <div className="lobby-jackpot-strip__title">
-                <span className="lobby-jackpot-strip__word">JACKPOT</span>
-                <span
-                  className={
-                    'lobby-jackpot-strip__index' +
-                    (i === 0 ? ' is-one' : i === 1 ? ' is-two' : ' is-three')
-                  }
-                  aria-hidden
-                >
-                  {i + 1}
-                </span>
-              </div>
-              <div className="lobby-jackpot-strip__amount-row">
-                <img
-                  className="lobby-jackpot-strip__coin"
-                  src={coinSrc}
-                  alt=""
-                  width={19}
-                  height={19}
-                  decoding="async"
-                />
-                <span
-                  className={
-                    'lobby-jackpot-strip__amount' + (scrambling ? ' is-scrambling' : '')
-                  }
-                >
-                  {formatJackpotDisplayAmount(wallet, amount)}
-                </span>
-              </div>
+        {values.map((amount, i) => (
+          <div
+            key={i}
+            className="lobby-jackpot-strip__cell"
+            role="listitem"
+            style={
+              {
+                '--jp-cell-bg': `url("${JP_CELL_BG[i]}")`,
+              } as CSSProperties
+            }
+          >
+            <div className="lobby-jackpot-strip__title">
+              <img
+                className="lobby-jackpot-strip__word-img"
+                src={JP_TEXT_LABEL}
+                alt=""
+                width={260}
+                height={80}
+                decoding="async"
+              />
+              <img
+                className="lobby-jackpot-strip__index-img"
+                src={JP_TEXT_INDEX[i]}
+                alt=""
+                width={60}
+                height={80}
+                decoding="async"
+              />
             </div>
-          )
-        })}
+            <div className="lobby-jackpot-strip__amount-row">
+              <img
+                className="lobby-jackpot-strip__coin"
+                src={coinSrc}
+                alt=""
+                width={19}
+                height={19}
+                decoding="async"
+              />
+              <span
+                className={
+                  'lobby-jackpot-strip__amount' + (scrambling ? ' is-scrambling' : '')
+                }
+              >
+                {formatJackpotDisplayAmount(wallet, amount)}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

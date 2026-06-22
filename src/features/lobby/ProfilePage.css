@@ -49,6 +49,13 @@
   margin-bottom: var(--space-2);
 }
 
+.profile-page__avatar-wrap {
+  position: relative;
+  width: 5.25rem;
+  height: 5.25rem;
+  flex-shrink: 0;
+}
+
 .profile-page__avatar {
   position: relative;
   width: 5.25rem;
@@ -69,7 +76,7 @@
   line-height: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  /* 裁切圓在 .profile-page__avatar-media，避免右下鉛筆被 overflow 吃掉 */
+  /* 裁切圓在 .profile-page__avatar-media，鉛筆改為 .profile-page__avatar-wrap 內獨立按鈕 */
   overflow: visible;
 }
 
@@ -86,7 +93,7 @@
 
 .profile-page__avatar--has-image {
   color: transparent;
-  background: #1a1f35;
+  background: #151735;
 }
 
 .profile-page__avatar-initial {
@@ -125,7 +132,7 @@
   justify-content: center;
   box-shadow: 0 0 0 2px var(--profile-surface-bleed);
   -webkit-tap-highlight-color: transparent;
-  pointer-events: none;
+  font-family: inherit;
 }
 
 .profile-page__edit-icon {

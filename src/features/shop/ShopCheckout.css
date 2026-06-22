@@ -124,6 +124,14 @@
   pointer-events: none;
 }
 
+.shop-checkout__pay-img {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .shop-checkout__pay-ri {
   display: block;
   flex-shrink: 0;

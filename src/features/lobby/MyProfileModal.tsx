@@ -5,6 +5,7 @@ import { InfoPopover } from "../../components/InfoPopover";
 import { useAuth } from "../../auth/useAuth";
 import { getProfileAvatarById } from "./profileAvatars";
 import { profileVipProgress } from "./profileVipProgress";
+import { resolveProfileVipTitle } from "./profileVipTitle";
 import "./MyProfileModal.css";
 
 type Props = {
@@ -73,6 +74,7 @@ export function MyProfileModal({
     required: vipProgressRequired,
     fillPct: vipProgressFillPct,
   } = profileVipProgress(user);
+  const vipTitle = resolveProfileVipTitle(user?.vipLevel);
 
   return createPortal(
     <div
@@ -129,7 +131,7 @@ export function MyProfileModal({
           </div>
           <p className="my-profile-modal__id">{headline}</p>
           <div className="my-profile-modal__level-row">
-            <span className="my-profile-modal__level-label">Entry level</span>
+            <span className="my-profile-modal__level-label">{vipTitle}</span>
             <InfoPopover
               align="end"
               content={

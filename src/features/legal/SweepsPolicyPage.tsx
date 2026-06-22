@@ -14,7 +14,7 @@ import './PrivacyPolicyPage.css'
 export function SweepsPolicyPage() {
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Sweeps Policy | Wynoco'
+    document.title = 'Sweeps Policy | LukLok'
     return () => {
       document.title = previousTitle
     }

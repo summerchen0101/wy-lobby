@@ -1,0 +1,87 @@
+.lobby-hero-banner__art-wrap {
+  position: relative;
+  z-index: 0;
+  margin: 0;
+  max-width: none;
+  border-radius: 0;
+  overflow: hidden;
+  line-height: 0;
+  box-shadow: none;
+  padding-top: 1.5rem;
+  box-sizing: border-box;
+}
+
+.lobby-hero-banner__img--base,
+.lobby-hero-banner__video {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.lobby-hero-banner__img--base {
+  height: auto;
+  max-height: min(58vh, 480px);
+}
+
+.lobby-hero-banner__video {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 1.5rem;
+  width: 100%;
+  height: auto;
+  max-height: min(58vh, 480px);
+}
+
+.lobby-hero-banner__layer {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+}
+
+.lobby-hero-banner__layer--title {
+  left: 50%;
+  top: 8%;
+  transform: translateX(-50%);
+  width: 94%;
+  max-width: 28rem;
+  height: auto;
+  object-fit: contain;
+}
+
+.lobby-hero-banner__layer--subtitle {
+  left: 0;
+  right: 0;
+  bottom: 12%;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.lobby-hero-banner__layer--subtitle-anim {
+  left: 50%;
+  bottom: 18%;
+  transform: translateX(-50%);
+  width: min(42%, 14rem);
+  height: auto;
+  object-fit: contain;
+}
+
+@media (min-width: 30rem) {
+  .lobby-hero-banner__img--base,
+  .lobby-hero-banner__video {
+    max-height: min(60vh, 520px);
+  }
+
+  .lobby-hero-banner__layer--title {
+    top: 10%;
+    max-width: 32rem;
+  }
+
+  .lobby-hero-banner__layer--subtitle-anim {
+    width: min(38%, 16rem);
+    bottom: 20%;
+  }
+}
