@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react'
 
 export type ActiveWallet = 'GC' | 'SC'
 
-const STORAGE_KEY = 'wynoco_active_wallet'
+const STORAGE_KEY = 'luklok_active_wallet'
 
 export function readStoredWallet(): ActiveWallet {
   if (typeof sessionStorage === 'undefined') return 'GC'

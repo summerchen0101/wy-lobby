@@ -75,7 +75,7 @@ export function PwaInstallBanner() {
     >
       <div className="pwa-install__card">
         <p id="pwa-install-title" className="pwa-install__text">
-          安裝「Wynoco」到主畫面，體驗更好喔！
+          安裝「LukLok」到主畫面，體驗更好喔！
         </p>
         <div className="pwa-install__actions">
           <button

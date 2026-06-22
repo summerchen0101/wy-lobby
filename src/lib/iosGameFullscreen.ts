@@ -1,6 +1,6 @@
 import { isStandalonePWA } from './pwaMode'
 
-const LS_IOS_SCROLL_HINT_KEY = 'wynoco.game.iosScrollHint.dismissed'
+const LS_IOS_SCROLL_HINT_KEY = 'luklok.game.iosScrollHint.dismissed'
 
 /** iOS WebKit（Safari / 內嵌 WebView 常見）且非 MSStream 舊 hack（含 iPad／iPhone／iPod UA） */
 export function isIOSWebKit(): boolean {

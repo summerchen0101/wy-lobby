@@ -57,6 +57,7 @@ import {
   lobbyGameCardThumbnail,
   thirdPartyGameEntryThumbnailUrl,
   getSessionLobbyBannerImage,
+  getSessionLobbyBannerVideo,
   UNITY_DEMO_LOBBY_GAME,
   unityDemoGameUrl,
 } from "./landingContent";
@@ -413,7 +414,11 @@ export function LandingPage() {
   } = useAuthModals();
 
   const tpId = trustpilotBusinessUnitId();
-  const sessionHeroSrc = useMemo(
+  const sessionHeroVideoSrc = useMemo(
+    () => getSessionLobbyBannerVideo(activeWallet),
+    [activeWallet],
+  );
+  const sessionHeroPosterSrc = useMemo(
     () => getSessionLobbyBannerImage(activeWallet),
     [activeWallet],
   );
@@ -900,7 +905,9 @@ export function LandingPage() {
     <>
       <main className="lobby-landing__main">
         <section className="lobby-hero-banner" aria-label="Promotional banner">
-          <LobbyHeroBanner baseSrc={sessionHeroSrc}>
+          <LobbyHeroBanner
+            videoSrc={sessionHeroVideoSrc}
+            posterSrc={sessionHeroPosterSrc}>
             {liveJackpotAmounts ? (
               <LobbyJackpotStrip
                 wallet={activeWallet}

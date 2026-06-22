@@ -1,5 +1,4 @@
 import { publicImageUrl } from '../lib/publicImageUrl'
-import { GUEST_FOOT_PAGE_BG } from '../features/lobby/landingContent'
 import './LobbyComplianceFooter.css'
 
 const LOGO_SRC = publicImageUrl('/images/compliance/img_logo.png')
@@ -19,10 +18,10 @@ const LINK_COL_B: { href: string; label: string }[] = [
 ]
 
 const LEGAL_GUEST =
-  'You are aware and understand that you are providing information to WYNOCO. The sole use of this information will be to manage this promotion. NO PURCHASE NECESSARY to participate in Sweepstakes. SWEEPSTAKES ARE VOID WHERE PROHIBITED BY LAW. For more information about sweepstakes rules, please refer to the Sweeps Policy. Copyright WYNOCO. All rights reserved.'
+  'You are aware and understand that you are providing information to LUKLOK. The sole use of this information will be to manage this promotion. NO PURCHASE NECESSARY to participate in Sweepstakes. SWEEPSTAKES ARE VOID WHERE PROHIBITED BY LAW. For more information about sweepstakes rules, please refer to the Sweeps Policy. Copyright LUKLOK. All rights reserved.'
 
 const LEGAL_SESSION =
-  'You are aware and understand that you are providing information to WYNOCO. The sole use of this information will be to manage this promotion. SWEEPSTAKES ARE VOID WHERE PROHIBITED BY LAW. For more information about sweepstakes rules, please refer to the Sweeps Policy. Copyright WYNOCO. All rights reserved.'
+  'You are aware and understand that you are providing information to LUKLOK. The sole use of this information will be to manage this promotion. SWEEPSTAKES ARE VOID WHERE PROHIBITED BY LAW. For more information about sweepstakes rules, please refer to the Sweeps Policy. Copyright LUKLOK. All rights reserved.'
 
 export type LobbyComplianceFooterProps = {
   variant: 'guest' | 'session'
@@ -32,18 +31,7 @@ export function LobbyComplianceFooter({ variant }: LobbyComplianceFooterProps) {
   const showPurchaseHeadline = variant === 'guest'
 
   return (
-    <footer
-      className={
-        'lobby-comp' + (variant === 'guest' ? ' lobby-comp--guest' : '')
-      }
-      style={
-        variant === 'guest'
-          ? {
-              backgroundImage: `url("${GUEST_FOOT_PAGE_BG}")`,
-            }
-          : undefined
-      }
-    >
+    <footer className="lobby-comp">
       <div className="lobby-comp__inner page-container">
         {showPurchaseHeadline ? (
           <h2 className="lobby-comp__purchase-title">
@@ -66,10 +54,10 @@ export function LobbyComplianceFooter({ variant }: LobbyComplianceFooterProps) {
           <div className="lobby-comp__tagline-underline" aria-hidden />
         </div>
 
-        <img className="lobby-comp__logo" src={LOGO_SRC} alt="WYNOCO" width={340} height={108} decoding="async" />
+        <img className="lobby-comp__logo" src={LOGO_SRC} alt="LukLok" width={340} height={108} decoding="async" />
 
         <p className="lobby-comp__rsp-text">
-          Responsible gaming is a fundamental priority at WYNOCO. For more information, visit our
+          Responsible gaming is a fundamental priority at LukLok. For more information, visit our
           Responsible Social Play page.
         </p>
 

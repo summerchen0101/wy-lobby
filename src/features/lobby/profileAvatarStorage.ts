@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore } from "react"
-const KEY = "wynoco_profile_avatar_id"
-const LOCAL_EVENT = "wynoco-profile-avatar"
+const KEY = "luklok_profile_avatar_id"
+const LOCAL_EVENT = "luklok-profile-avatar"
 
 function read(): string {
   if (typeof window === "undefined") return ""

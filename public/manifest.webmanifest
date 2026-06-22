@@ -1,7 +1,7 @@
 {
-  "name": "Wynoco",
-  "short_name": "Wynoco",
-  "description": "Wynoco game lobby",
+  "name": "LukLok",
+  "short_name": "LukLok",
+  "description": "LukLok game lobby",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#141b22",

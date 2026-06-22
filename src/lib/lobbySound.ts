@@ -1,11 +1,11 @@
 /** localStorage key — shared with Profile sound toggle */
-export const LOBBY_SOUND_PREF_STORAGE_KEY = "wynoco_profile_sound_on";
+export const LOBBY_SOUND_PREF_STORAGE_KEY = "luklok_profile_sound_on";
 
 /** Dispatched on same tab when the user toggles sound in Profile */
-export const LOBBY_SOUND_PREF_EVENT = "wynoco-lobby-sound-pref";
+export const LOBBY_SOUND_PREF_EVENT = "luklok-lobby-sound-pref";
 
 /** Dispatched when lobby BGM should pause for overlays (e.g. newbie tutorial video). */
-export const LOBBY_BGM_SUPPRESS_EVENT = "wynoco-lobby-bgm-suppress";
+export const LOBBY_BGM_SUPPRESS_EVENT = "luklok-lobby-bgm-suppress";
 
 let lobbyBgmSuppressed = false;
 

@@ -14,7 +14,7 @@ import './PrivacyPolicyPage.css'
 export function TermsOfServicePage() {
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Terms of Service | Wynoco'
+    document.title = 'Terms of Service | LukLok'
     return () => {
       document.title = previousTitle
     }

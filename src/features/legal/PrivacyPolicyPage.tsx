@@ -14,7 +14,7 @@ import './PrivacyPolicyPage.css'
 export function PrivacyPolicyPage() {
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Privacy Policy | Wynoco'
+    document.title = 'Privacy Policy | LukLok'
     return () => {
       document.title = previousTitle
     }

@@ -2,7 +2,7 @@
  * `app_meta` 對齊產品規格：Web 客戶端 `apk` 為 `web`（對應舊 megarich_web）；另含 `device_type`、`version`、`device`、`resolution`。
  * `device` 可含平台與 user agent（如 iOS Safari 字串）。
  */
-const DEVICE_ID_KEY = "wynoco_device_id";
+const DEVICE_ID_KEY = "luklok_device_id";
 
 function randomId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
