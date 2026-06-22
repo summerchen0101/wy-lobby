@@ -1,10 +1,14 @@
 /* My profile — 外殼在 AppModal.css；內文底與 Change head icon 對齊 */
 .app-modal.my-profile-modal {
+  --profile-bar-track: #0a0a0a;
+  --profile-bar-cap-bg: color-mix(in srgb, var(--crown-gold) 55%, #fff6a0 45%);
   max-width: 20.5rem;
   max-height: min(90dvh, 560px);
+  background: #1e2542;
 }
 
 .app-modal.my-profile-modal .app-modal__header {
+  background: #1e2542;
   padding-bottom: var(--space-2);
 }
 
@@ -78,7 +82,9 @@
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  margin: 0 0 var(--space-5);
+  margin: 0 auto var(--space-2);
+  width: 100%;
+  max-width: 16rem;
 }
 
 .my-profile-modal__level-label {
@@ -118,6 +124,79 @@
 .my-profile-modal__info-popover-text {
   margin: 0;
   text-align: left;
+}
+
+.my-profile-modal__progress {
+  margin: 0 0 var(--space-5);
+  /* Room for crown circle half past the bar end */
+  padding-right: 0.85rem;
+}
+
+.my-profile-modal__bar {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: var(--profile-bar-track);
+  overflow: visible;
+  border: 2px solid color-mix(in srgb, #000 55%, transparent);
+}
+
+.my-profile-modal__bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+  max-width: 100%;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    var(--crown-gold) 0%,
+    var(--crown-gold-hover) 100%
+  );
+  pointer-events: none;
+}
+
+.my-profile-modal__bar-label {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 calc(1.85rem * 0.45) 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--color-text);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.65);
+  letter-spacing: 0.04em;
+}
+
+.my-profile-modal__bar-cap {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  z-index: 2;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--profile-bar-cap-bg);
+  border: 2px solid color-mix(in srgb, var(--crown-gold) 35%, #fff 20%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1a1a0a;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  pointer-events: none;
+}
+
+.my-profile-modal__bar-crown-icon {
+  flex-shrink: 0;
+  width: var(--icon-rwd-xs);
+  height: var(--icon-rwd-xs);
 }
 
 .my-profile-modal__fields {
