@@ -51,6 +51,22 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.funds-history-modal__scroll:has(> .funds-history-modal__empty:only-child) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.funds-history-modal__empty {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 72%);
+  text-align: center;
+  line-height: 1.45;
+}
+
 .funds-history-modal__list {
   margin: 0;
   padding: var(--space-4) var(--space-4) var(--space-5);
