@@ -298,7 +298,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     applyAuthResponse(res);
     return res.accessToken.trim();
-  }, [token, applyAuthResponse, handleRefreshFailed]);
+  }, [applyAuthResponse, handleRefreshFailed]);
 
   const value = useMemo(
     () => ({

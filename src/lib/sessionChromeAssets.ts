@@ -77,9 +77,12 @@ export function footerIconUrl(id: FooterIconId, selected: boolean): string {
 
 export const FOOTER_LOBBY_BUMP_GC = `${FOOTER}/lobby-sel-gc.png`;
 
+/** SC 專用圖就緒後改為 `${FOOTER}/lobby-sel-sc.png`。 */
+export const FOOTER_LOBBY_BUMP_SC = FOOTER_LOBBY_BUMP_GC;
+
 /** LOBBY 選中時中間凸起底圖（384×203）；SC 專用圖就緒前沿用 GC。 */
-export function footerLobbyBumpUrl(_wallet: ActiveWallet): string {
-  return FOOTER_LOBBY_BUMP_GC;
+export function footerLobbyBumpUrl(wallet: ActiveWallet): string {
+  return wallet === "SC" ? FOOTER_LOBBY_BUMP_SC : FOOTER_LOBBY_BUMP_GC;
 }
 
 /** @deprecated 使用 `footerLobbyBumpUrl` */
