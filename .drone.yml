@@ -16,7 +16,7 @@ steps:
     image: node:20-alpine
     commands:
       - node --version
-      - npm ci --no-audit --no-fund
+      - npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 
   # ────────────────────────────────────────────────
   # 共用：Lint（PR / push / tag 都跑）
