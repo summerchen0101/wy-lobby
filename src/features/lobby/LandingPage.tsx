@@ -35,6 +35,10 @@ import {
   isWsLobbyGamesEnabled,
   buildGameCallbackUrl,
 } from "../../lib/env";
+import {
+  buildGameShellLobbyReturn,
+  consumeGameShellLobbyReturn,
+} from "../../lib/gameShellLobbyReturn";
 import { GATEWAY_API_GET_THIRD_PARTY_GAME_INFO } from "../../realtime/gatewayApi";
 import {
   decodeGetThirdPartyGameInfoResponseBytes,
@@ -423,6 +427,25 @@ export function LandingPage() {
   const lobbyGamesSectionRef = useRef<HTMLElement | null>(null);
   const providerTabBtnRef = useRef<HTMLButtonElement | null>(null);
 
+  useLayoutEffect(() => {
+    const ret = consumeGameShellLobbyReturn();
+    if (!ret) return;
+    let filter: LobbyFilterTab = ret.lobbyFilter;
+    if (filter === "providers" && !thirdPartyGamesEnabled) {
+      filter = "all";
+    }
+    setLobbyFilter(filter);
+    if (filter === "providers") {
+      setProviderPlatformFilter(ret.providerPlatform);
+    }
+    const scrollY = ret.scrollY;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollY, behavior: "auto" });
+      });
+    });
+  }, [thirdPartyGamesEnabled]);
+
   const loading = user && wsLobbyEnabled ? lobbyLoading : false;
   const error = user && wsLobbyEnabled ? lobbyError : null;
   const {
@@ -738,6 +761,10 @@ export function LandingPage() {
               heightPercent: card.embedHeightPercent,
               isPayment: false,
               openInNewWindow: card.openInNewWindow,
+              lobbyReturn: buildGameShellLobbyReturn(
+                lobbyFilter,
+                providerPlatformFilter,
+              ),
             });
           }
         }
@@ -745,7 +772,7 @@ export function LandingPage() {
         console.warn("[gateway-ws] GetThirdPartyGameInfo failed", e);
       }
     },
-    [requestRef, openShell],
+    [requestRef, openShell, lobbyFilter, providerPlatformFilter],
   );
 
   const scrollLobbyGamesSectionIntoView = useCallback(() => {
@@ -898,6 +925,10 @@ export function LandingPage() {
         heightPercent: card.embedHeightPercent,
         isPayment: false,
         openInNewWindow: card.openInNewWindow,
+        lobbyReturn: buildGameShellLobbyReturn(
+          lobbyFilter,
+          providerPlatformFilter,
+        ),
       });
     };
 

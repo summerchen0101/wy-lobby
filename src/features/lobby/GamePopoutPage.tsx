@@ -11,6 +11,7 @@ import {
   logGameOverlayClosed,
   logPerfMemorySnapshot,
 } from "../../lib/gameShellTelemetry";
+import { usePaymentCallbackListener } from "../payment/usePaymentCallbackListener";
 
 export function GamePopoutPage() {
   const [params] = useSearchParams();
@@ -45,6 +46,8 @@ export function GamePopoutPage() {
       window.location.replace("/");
     }, 0);
   }, [k]);
+
+  usePaymentCallbackListener("game", Boolean(frameUrl), handleClose);
 
   if (!frameUrl) {
     return <Navigate to="/" replace />;

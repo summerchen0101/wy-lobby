@@ -8,6 +8,7 @@ import {
   buildGamePopoutPathQuery,
   shouldOpenInNewWindow,
 } from '../lib/gameShell'
+import { writeGameShellLobbyReturn } from '../lib/gameShellLobbyReturn'
 import { GAME_SHELL_POPOUT_CLOSED_TYPE } from '../lib/gameShellMessages'
 import {
   logGameOpenedNewTab,
@@ -61,6 +62,9 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
     if (!o.url) {
       console.warn('[GameShell] empty url')
       return
+    }
+    if (o.lobbyReturn) {
+      writeGameShellLobbyReturn(o.lobbyReturn)
     }
     if (shouldOpenInNewWindow(o.openInNewWindow)) {
       const trimmed = o.url.trim()
