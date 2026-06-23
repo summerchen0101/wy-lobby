@@ -142,6 +142,48 @@ export function isThirdPartyPaymentEnabled(): boolean {
   return import.meta.env.VITE_PAYMENT_FEATURES_ENABLED === "true";
 }
 
+/** Shop 付款完成 callback 路徑（不含 origin）。 */
+export function paymentCallbackPath(): string {
+  const v = import.meta.env.VITE_PAYMENT_CALLBACK_BASE?.trim();
+  return v || "/payment/callback";
+}
+
+/** Redeem 提現完成 callback 路徑（不含 origin）。 */
+export function redeemCallbackPath(): string {
+  const v = import.meta.env.VITE_REDEEM_CALLBACK_BASE?.trim();
+  return v || "/redeem/callback";
+}
+
+/** 第三方遊戲結束 callback 路徑（不含 origin）。 */
+export function gameCallbackPath(): string {
+  const v = import.meta.env.VITE_GAME_CALLBACK_BASE?.trim();
+  return v || "/game/callback";
+}
+
+function callbackOrigin(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.origin.replace(/\/+$/, "");
+}
+
+/** 組裝第三方 redirect 用 callback URL（`state=1` 成功、`state=2` 失敗）。 */
+export function buildPaymentCallbackUrl(state: 1 | 2): string {
+  const base = callbackOrigin();
+  const path = paymentCallbackPath().replace(/\/+$/, "");
+  return `${base}${path.startsWith("/") ? path : `/${path}`}?state=${state}`;
+}
+
+export function buildRedeemCallbackUrl(state: 1 | 2): string {
+  const base = callbackOrigin();
+  const path = redeemCallbackPath().replace(/\/+$/, "");
+  return `${base}${path.startsWith("/") ? path : `/${path}`}?state=${state}`;
+}
+
+export function buildGameCallbackUrl(state: 1 | 2): string {
+  const base = callbackOrigin();
+  const path = gameCallbackPath().replace(/\/+$/, "");
+  return `${base}${path.startsWith("/") ? path : `/${path}`}?state=${state}`;
+}
+
 /** @deprecated 請改用 `isThirdPartyPaymentEnabled()` */
 export function isPaymentFeaturesEnabled(): boolean {
   return isThirdPartyPaymentEnabled();

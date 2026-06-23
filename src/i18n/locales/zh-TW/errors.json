@@ -1,4 +1,9 @@
 {
   "unknown": "發生錯誤，請再試一次。",
-  "RATE_LIMITED": "請求過於頻繁，請稍候再試。"
+  "RATE_LIMITED": "請求過於頻繁，請稍候再試。",
+  "geo.regionBlocked": "您所在的地區不在允許範圍內，無法使用本服務。",
+  "geo.proxyBlocked": "請關閉 VPN 或代理後再試。",
+  "geo.permissionsRequired": "需要位置權限以驗證您所在的地區。",
+  "geo.networkError": "無法驗證位置，請檢查網路連線。",
+  "geo.locationError": "位置驗證逾時，請再試一次。"
 }

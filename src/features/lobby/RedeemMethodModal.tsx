@@ -1,14 +1,16 @@
 import {
-  type FormEvent,
   useCallback,
   useEffect,
   useId,
-  useMemo,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
+import {
+  buildRedeemCallbackUrl,
+  isThirdPartyPaymentEnabled,
+} from "../../lib/env";
 import { GATEWAY_API_CREATE_WITHDRAW_ORDER } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
@@ -17,45 +19,28 @@ import {
 } from "../../realtime/withdrawLobbyWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import {
-  MIN_REDEEM_SC_DISPLAY,
-  MIN_REDEEM_SC_RAW,
+  formatScFromRaw,
   SC_POINT_SCALE,
 } from "../../wallet/formatWalletAmount";
-import { REDEEM_METHOD_TO_WITHDRAW_PAYMENT_TYPE } from "./redeemPaymentTypeMap";
-import { REDEEM_METHOD_SLUGS, type RedeemMethodSlug } from "./redeemFlow";
+import { usePaymentCallbackListener } from "../payment/usePaymentCallbackListener";
+import {
+  resolveMinRedeemDisplay,
+  resolveMinRedeemRaw,
+} from "./redeemMinAmount";
+import type { LobbyGetDecoded } from "../../realtime/lobbyDecode";
 import "./RedeemFormPage.css";
 import "./RedeemMethodModal.css";
 
-const METHOD_LABEL: Record<RedeemMethodSlug, string> = {
-  "credit-card": "CreditCard",
-  paypal: "PayPal",
-  cashapp: "CashAPP",
-  ach: "ACH",
-};
-
-type Step = "pick" | "form" | "success";
+type Step = "amount" | "payment" | "success";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  /** 建立訂單成功後（刷新列表等） */
   onOrderCreated?: () => void | Promise<void>;
-  /** Lobby 可提領餘額（後端萬分之一單位），用於金額驗證 */
   redeemableAmountRaw?: number;
+  lobbyGet?: LobbyGetDecoded | null;
 };
 
-type SubmitFields = {
-  method: RedeemMethodSlug;
-  amountStr: string;
-  cardNumber?: string;
-  cardValidCode?: string;
-  paypalEmail?: string;
-  accountNumber?: string;
-  routingNumber?: string;
-  appAccount?: string;
-};
-
-/** 使用者輸入為整數 SC，後端為 ×SC_POINT_SCALE 之原始值 */
 function parseWithdrawDisplayToWire(amountStr: string): bigint | null {
   const t = amountStr.trim().replace(/,/g, "");
   if (!/^\d+$/.test(t)) return null;
@@ -64,211 +49,6 @@ function parseWithdrawDisplayToWire(amountStr: string): bigint | null {
   } catch {
     return null;
   }
-}
-
-function RedeemCashAppForm({
-  busy,
-  onSubmit,
-}: {
-  busy: boolean;
-  onSubmit: (appAccount: string) => Promise<void>;
-}) {
-  const [appAccount, setAppAccount] = useState("");
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!appAccount.trim() || busy) return;
-    await onSubmit(appAccount.trim());
-  };
-
-  return (
-    <form className="redeem-form-page__form" onSubmit={handleSubmit}>
-      <label
-        className="redeem-form-page__label"
-        htmlFor="redeem-modal-cashapp-account">
-        Choose AppAccount*
-      </label>
-      <input
-        id="redeem-modal-cashapp-account"
-        className="redeem-form-page__input"
-        value={appAccount}
-        onChange={(e) => setAppAccount(e.target.value)}
-        autoComplete="off"
-        required
-        disabled={busy}
-      />
-
-      <p className="redeem-form-page__hint">REDEEM TO CashAPP ACCOUNT</p>
-
-      <button
-        type="submit"
-        className="redeem-form-page__confirm"
-        disabled={busy}>
-        {busy ? "…" : "CONFIRM"}
-      </button>
-    </form>
-  );
-}
-
-function RedeemAchForm({
-  busy,
-  onSubmit,
-}: {
-  busy: boolean;
-  onSubmit: (accountNumber: string, routingNumber: string) => Promise<void>;
-}) {
-  const [accountNumber, setAccountNumber] = useState("");
-  const [routingNumber, setRoutingNumber] = useState("");
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!accountNumber.trim() || !routingNumber.trim() || busy) return;
-    await onSubmit(accountNumber.trim(), routingNumber.trim());
-  };
-
-  return (
-    <form className="redeem-form-page__form" onSubmit={handleSubmit}>
-      <label
-        className="redeem-form-page__label"
-        htmlFor="redeem-modal-ach-acct">
-        Choose AccountNumber*
-      </label>
-      <input
-        id="redeem-modal-ach-acct"
-        className="redeem-form-page__input"
-        value={accountNumber}
-        onChange={(e) => setAccountNumber(e.target.value)}
-        autoComplete="off"
-        required
-        disabled={busy}
-      />
-
-      <label
-        className="redeem-form-page__label"
-        htmlFor="redeem-modal-ach-route">
-        Choose RoutingNumber*
-      </label>
-      <input
-        id="redeem-modal-ach-route"
-        className="redeem-form-page__input"
-        value={routingNumber}
-        onChange={(e) => setRoutingNumber(e.target.value)}
-        autoComplete="off"
-        required
-        disabled={busy}
-      />
-
-      <p className="redeem-form-page__hint">REDEEM TO ACH ACCOUNT</p>
-
-      <button
-        type="submit"
-        className="redeem-form-page__confirm"
-        disabled={busy}>
-        {busy ? "…" : "CONFIRM"}
-      </button>
-    </form>
-  );
-}
-
-function RedeemCreditCardForm({
-  busy,
-  onSubmit,
-}: {
-  busy: boolean;
-  onSubmit: (cardNumber: string, cardValidCode: string) => Promise<void>;
-}) {
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardCode, setCardCode] = useState("");
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!cardNumber.trim() || !cardCode.trim() || busy) return;
-    await onSubmit(cardNumber.trim(), cardCode.trim());
-  };
-
-  return (
-    <form className="redeem-form-page__form" onSubmit={handleSubmit}>
-      <label className="redeem-form-page__label" htmlFor="redeem-modal-cc-num">
-        Choose CardNumber*
-      </label>
-      <input
-        id="redeem-modal-cc-num"
-        className="redeem-form-page__input"
-        value={cardNumber}
-        onChange={(e) => setCardNumber(e.target.value)}
-        autoComplete="off"
-        required
-        disabled={busy}
-      />
-
-      <label className="redeem-form-page__label" htmlFor="redeem-modal-cc-cvv">
-        Choose CardValidCode*
-      </label>
-      <input
-        id="redeem-modal-cc-cvv"
-        className="redeem-form-page__input"
-        value={cardCode}
-        onChange={(e) => setCardCode(e.target.value)}
-        autoComplete="off"
-        required
-        disabled={busy}
-      />
-
-      <p className="redeem-form-page__hint">REDEEM TO CreditCard ACCOUNT</p>
-
-      <button
-        type="submit"
-        className="redeem-form-page__confirm"
-        disabled={busy}>
-        {busy ? "…" : "CONFIRM"}
-      </button>
-    </form>
-  );
-}
-
-function RedeemPayPalForm({
-  busy,
-  onSubmit,
-}: {
-  busy: boolean;
-  onSubmit: (paypalEmail: string) => Promise<void>;
-}) {
-  const [email, setEmail] = useState("");
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || busy) return;
-    await onSubmit(email.trim());
-  };
-
-  return (
-    <form className="redeem-form-page__form" onSubmit={handleSubmit}>
-      <label
-        className="redeem-form-page__label"
-        htmlFor="redeem-modal-paypal-email">
-        Choose PaypalEmail*
-      </label>
-      <input
-        id="redeem-modal-paypal-email"
-        className="redeem-form-page__input"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        autoComplete="email"
-        required
-        disabled={busy}
-      />
-
-      <p className="redeem-form-page__hint">REDEEM TO PayPal ACCOUNT</p>
-
-      <button
-        type="submit"
-        className="redeem-form-page__confirm"
-        disabled={busy}>
-        {busy ? "…" : "CONFIRM"}
-      </button>
-    </form>
-  );
 }
 
 function RedeemWithdrawSuccessView({
@@ -307,7 +87,7 @@ function RedeemWithdrawSuccessView({
           {orderUid}
         </div>
         <p className="redeem-method-modal__success-field-label">Status</p>
-        <div className="redeem-method-modal__success-status-box">pending</div>
+        <div className="redeem-method-modal__success-status-box">Reviewing</div>
         <button
           type="button"
           className="redeem-method-modal__success-cta"
@@ -324,6 +104,7 @@ export function RedeemMethodModal({
   onClose,
   onOrderCreated,
   redeemableAmountRaw,
+  lobbyGet,
 }: Props) {
   const { show } = useAlert();
   const { user } = useAuth();
@@ -331,21 +112,22 @@ export function RedeemMethodModal({
   const titleId = useId();
   const amountId = useId();
 
-  const [step, setStep] = useState<Step>("pick");
+  const minRaw = resolveMinRedeemRaw(lobbyGet, user);
+  const minDisplay = resolveMinRedeemDisplay(lobbyGet, user);
+
+  const [step, setStep] = useState<Step>("amount");
   const [pickAmount, setPickAmount] = useState("");
-  const [selectedMethod, setSelectedMethod] = useState<RedeemMethodSlug | null>(
-    null,
-  );
   const [submitBusy, setSubmitBusy] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [successOrderUid, setSuccessOrderUid] = useState("");
   const [successAmountDisplay, setSuccessAmountDisplay] = useState("");
 
   useEffect(() => {
     if (!open) return;
-    setStep("pick");
+    setStep("amount");
     setPickAmount("");
-    setSelectedMethod(null);
     setSubmitBusy(false);
+    setPaymentUrl(null);
     setSuccessOrderUid("");
     setSuccessAmountDisplay("");
   }, [open]);
@@ -354,211 +136,174 @@ export function RedeemMethodModal({
     async (orderUid: string, amountStr: string) => {
       setSuccessOrderUid(orderUid);
       setSuccessAmountDisplay(amountStr.trim());
+      setPaymentUrl(null);
       await onOrderCreated?.();
       setStep("success");
     },
     [onOrderCreated],
   );
 
-  const submitWithdrawOrder = useCallback(
-    async (fields: SubmitFields) => {
-      const wireAmt = parseWithdrawDisplayToWire(fields.amountStr);
-      if (wireAmt === null || wireAmt <= BigInt(0)) {
-        show("Enter a valid whole-number SC amount.", { variant: "error" });
+  const handleRedeemCallback = useCallback(
+    (payload: { state: 1 | 2 }) => {
+      if (step !== "payment" || !paymentUrl) return;
+      if (payload.state === 2) {
+        show("Redemption was not completed.", { variant: "error" });
+        setPaymentUrl(null);
+        setStep("amount");
         return;
       }
-      if (wireAmt < BigInt(MIN_REDEEM_SC_RAW)) {
-        show(`Minimum redemption is ${MIN_REDEEM_SC_DISPLAY} SC.`, {
-          variant: "error",
-        });
-        return;
-      }
-      if (redeemableAmountRaw !== undefined) {
-        const maxRaw = BigInt(Math.floor(Math.max(0, redeemableAmountRaw)));
-        if (wireAmt > maxRaw) {
-          show("Amount exceeds your redeemable balance.", { variant: "error" });
-          return;
-        }
-      }
-      const req = requestRef.current;
-      if (!req || !gatewayRequestReady) {
-        show("Not connected to server. Try again.", { variant: "error" });
-        return;
-      }
-      const paymentType = REDEEM_METHOD_TO_WITHDRAW_PAYMENT_TYPE[fields.method];
-      const data = encodeCreateWithdrawOrderRequestBytes({
-        userID: user?.id,
-        amount: wireAmt,
-        paymentType,
-        cardNumber: fields.cardNumber,
-        cardValidCode: fields.cardValidCode,
-        paypalEmail: fields.paypalEmail,
-        accountNumber: fields.accountNumber,
-        routingNumber: fields.routingNumber,
-        appAccount: fields.appAccount,
-      });
-
-      setSubmitBusy(true);
-      try {
-        const r = await req({
-          type: GATEWAY_API_CREATE_WITHDRAW_ORDER,
-          data,
-          debugLabel: "CREATE_WITHDRAW_ORDER",
-        });
-        const code = String(r.code ?? "");
-        if (!isGatewaySuccessCode(code)) {
-          show(r.errMessage?.trim() || `Withdrawal failed (${code})`, {
-            variant: "error",
-          });
-          return;
-        }
-        const raw = r.data;
-        if (!(raw instanceof Uint8Array) || raw.byteLength === 0) {
-          show("Empty withdrawal response", { variant: "error" });
-          return;
-        }
-        const { withdrawOrderUID } =
-          decodeCreateWithdrawOrderResponseBytes(raw);
-        const oid = withdrawOrderUID.trim();
-        await finalizeSuccessFlow(
-          oid || "—",
-          fields.amountStr,
-        );
-      } catch (e) {
-        show(e instanceof Error ? e.message : "Withdrawal failed", {
-          variant: "error",
-        });
-      } finally {
-        setSubmitBusy(false);
-      }
+      void finalizeSuccessFlow(successOrderUid || "—", pickAmount);
     },
     [
-      finalizeSuccessFlow,
-      gatewayRequestReady,
-      redeemableAmountRaw,
-      requestRef,
+      step,
+      paymentUrl,
       show,
-      user?.id,
+      finalizeSuccessFlow,
+      successOrderUid,
+      pickAmount,
     ],
   );
 
-  const goBackFromForm = useCallback(() => {
-    setStep("pick");
-    setSelectedMethod(null);
-  }, []);
+  usePaymentCallbackListener(
+    "redeem",
+    open && step === "payment" && !!paymentUrl,
+    handleRedeemCallback,
+  );
 
-  const trySelectMethod = useCallback(
-    (method: RedeemMethodSlug) => {
-      const raw = pickAmount.trim();
-      if (!raw) {
-        document.getElementById(amountId)?.focus();
+  const openPaymentPage = useCallback((url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return false;
+    if (!isThirdPartyPaymentEnabled()) {
+      show("Redemption payment is unavailable.", { variant: "error" });
+      return false;
+    }
+    window.open(trimmed, "_blank");
+    return true;
+  }, [show]);
+
+  const submitWithdrawOrder = useCallback(async () => {
+    const wireAmt = parseWithdrawDisplayToWire(pickAmount);
+    if (wireAmt === null || wireAmt <= BigInt(0)) {
+      show("Enter a valid whole-number SC amount.", { variant: "error" });
+      return;
+    }
+    if (wireAmt < BigInt(minRaw)) {
+      show(`Minimum redemption is ${minDisplay} SC.`, { variant: "error" });
+      return;
+    }
+    if (redeemableAmountRaw !== undefined) {
+      const maxRaw = BigInt(Math.floor(Math.max(0, redeemableAmountRaw)));
+      if (wireAmt > maxRaw) {
+        show("Amount exceeds your redeemable balance.", { variant: "error" });
         return;
       }
-      setSelectedMethod(method);
-      setStep("form");
-    },
-    [pickAmount, amountId],
-  );
+    }
+    const req = requestRef.current;
+    if (!req || !gatewayRequestReady) {
+      show("Not connected to server. Try again.", { variant: "error" });
+      return;
+    }
+    if (!isThirdPartyPaymentEnabled()) {
+      show("Redemption payment is unavailable.", { variant: "error" });
+      return;
+    }
+    const uid = user?.id?.trim();
+    if (!uid || !/^\d+$/.test(uid)) {
+      show("Missing user id.", { variant: "error" });
+      return;
+    }
+
+    setSubmitBusy(true);
+    let paymentTab: Window | null = null;
+    try {
+      paymentTab = window.open("about:blank", "_blank");
+      const data = encodeCreateWithdrawOrderRequestBytes({
+        userID: uid,
+        amount: wireAmt,
+        successUrl: buildRedeemCallbackUrl(1),
+        failUrl: buildRedeemCallbackUrl(2),
+      });
+      const r = await req({
+        type: GATEWAY_API_CREATE_WITHDRAW_ORDER,
+        data,
+        debugLabel: "CREATE_WITHDRAW_ORDER",
+      });
+      const code = String(r.code ?? "");
+      if (!isGatewaySuccessCode(code)) {
+        paymentTab?.close();
+        show(r.errMessage?.trim() || `Withdrawal failed (${code})`, {
+          variant: "error",
+        });
+        return;
+      }
+      const raw = r.data;
+      if (!(raw instanceof Uint8Array) || raw.byteLength === 0) {
+        paymentTab?.close();
+        show("Empty withdrawal response", { variant: "error" });
+        return;
+      }
+      const { withdrawOrderUID, paymentURL } =
+        decodeCreateWithdrawOrderResponseBytes(raw);
+      const oid = withdrawOrderUID.trim();
+      setSuccessOrderUid(oid || "—");
+
+      const url = paymentURL.trim();
+      if (!url) {
+        paymentTab?.close();
+        await finalizeSuccessFlow(oid || "—", pickAmount);
+        return;
+      }
+
+      if (paymentTab && !paymentTab.closed) {
+        try {
+          paymentTab.location.href = url;
+        } catch {
+          paymentTab.close();
+        }
+      }
+      setPaymentUrl(url);
+      setStep("payment");
+    } catch (e) {
+      paymentTab?.close();
+      show(e instanceof Error ? e.message : "Withdrawal failed", {
+        variant: "error",
+      });
+    } finally {
+      setSubmitBusy(false);
+    }
+  }, [
+    pickAmount,
+    minRaw,
+    minDisplay,
+    redeemableAmountRaw,
+    requestRef,
+    gatewayRequestReady,
+    user,
+    show,
+    finalizeSuccessFlow,
+  ]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (step === "form") {
-        goBackFromForm();
+      if (step === "payment") {
+        setPaymentUrl(null);
+        setStep("amount");
         return;
       }
       onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, step, goBackFromForm, onClose]);
-
-  const headerBack = useCallback(() => {
-    if (step === "success") {
-      onClose();
-      return;
-    }
-    if (step === "form") {
-      goBackFromForm();
-      return;
-    }
-    onClose();
-  }, [step, goBackFromForm, onClose]);
-
-  const handleOverlayDismiss = useCallback(() => {
-    if (step === "success") return;
-    onClose();
-  }, [step, onClose]);
-
-  const formBranch = useMemo(() => {
-    if (step !== "form" || !selectedMethod) return null;
-    switch (selectedMethod) {
-      case "cashapp":
-        return (
-          <RedeemCashAppForm
-            busy={submitBusy}
-            onSubmit={async (appAccount) =>
-              submitWithdrawOrder({
-                method: "cashapp",
-                amountStr: pickAmount,
-                appAccount,
-              })
-            }
-          />
-        );
-      case "ach":
-        return (
-          <RedeemAchForm
-            busy={submitBusy}
-            onSubmit={async (accountNumber, routingNumber) =>
-              submitWithdrawOrder({
-                method: "ach",
-                amountStr: pickAmount,
-                accountNumber,
-                routingNumber,
-              })
-            }
-          />
-        );
-      case "credit-card":
-        return (
-          <RedeemCreditCardForm
-            busy={submitBusy}
-            onSubmit={async (cardNumber, cardValidCode) =>
-              submitWithdrawOrder({
-                method: "credit-card",
-                amountStr: pickAmount,
-                cardNumber,
-                cardValidCode,
-              })
-            }
-          />
-        );
-      case "paypal":
-        return (
-          <RedeemPayPalForm
-            busy={submitBusy}
-            onSubmit={async (paypalEmail) =>
-              submitWithdrawOrder({
-                method: "paypal",
-                amountStr: pickAmount,
-                paypalEmail,
-              })
-            }
-          />
-        );
-      default:
-        return null;
-    }
-  }, [step, selectedMethod, pickAmount, submitBusy, submitWithdrawOrder]);
+  }, [open, step, onClose]);
 
   const titleText =
-    step === "pick"
-      ? "Choose redemption method"
-      : step === "success"
-        ? "Redemption submitted"
-        : `Redeem via ${selectedMethod ? METHOD_LABEL[selectedMethod] : ""}`;
+    step === "amount"
+      ? "Redeem amount"
+      : step === "payment"
+        ? "Complete redemption"
+        : "Redemption submitted";
 
   if (!open) return null;
 
@@ -566,7 +311,7 @@ export function RedeemMethodModal({
     <div
       className="app-modal-overlay"
       role="presentation"
-      onClick={handleOverlayDismiss}>
+      onClick={step === "success" ? undefined : onClose}>
       <div
         className="app-modal app-modal--scroll-y redeem-method-modal"
         role="dialog"
@@ -577,19 +322,24 @@ export function RedeemMethodModal({
           <button
             type="button"
             className="redeem-method-modal__back"
-            aria-label={step === "form" ? "Back to methods" : "Close"}
-            onClick={headerBack}>
+            aria-label={step === "payment" ? "Back" : "Close"}
+            onClick={() => {
+              if (step === "payment") {
+                setPaymentUrl(null);
+                setStep("amount");
+                return;
+              }
+              onClose();
+            }}>
             ‹
           </button>
         </div>
 
         <div
           className={
-            step === "form"
-              ? "redeem-method-modal__body redeem-method-modal__body--form"
-              : step === "success"
-                ? "redeem-method-modal__body redeem-method-modal__body--success"
-                : "redeem-method-modal__body"
+            step === "success"
+              ? "redeem-method-modal__body redeem-method-modal__body--success"
+              : "redeem-method-modal__body"
           }>
           <h2 id={titleId} className="redeem-method-modal__sr-only">
             {titleText}
@@ -601,6 +351,19 @@ export function RedeemMethodModal({
               amountDisplay={successAmountDisplay}
               onBackToLobby={onClose}
             />
+          ) : step === "payment" && paymentUrl ? (
+            <div className="redeem-method-modal__payment-wait">
+              <p className="redeem-form-page__hint">
+                Complete your redemption in the new browser tab. This dialog
+                will update when finished.
+              </p>
+              <button
+                type="button"
+                className="redeem-form-page__confirm"
+                onClick={() => openPaymentPage(paymentUrl)}>
+                Open redemption page
+              </button>
+            </div>
           ) : (
             <>
               <label className="redeem-method-modal__label" htmlFor={amountId}>
@@ -616,29 +379,22 @@ export function RedeemMethodModal({
                 aria-required
                 value={pickAmount}
                 onChange={(e) => setPickAmount(e.target.value)}
-                disabled={step === "form" && submitBusy}
+                disabled={submitBusy}
               />
-
-              {step === "pick" ? (
-                <>
-                  <p className="redeem-method-modal__label redeem-method-modal__label--spaced">
-                    REDEEM TO:
-                  </p>
-                  <div className="redeem-method-modal__methods" role="group">
-                    {REDEEM_METHOD_SLUGS.map((slug) => (
-                      <button
-                        key={slug}
-                        type="button"
-                        className="redeem-method-modal__method-btn"
-                        onClick={() => trySelectMethod(slug)}>
-                        {METHOD_LABEL[slug]}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                formBranch
-              )}
+              <p className="redeem-form-page__hint">
+                Minimum {minDisplay} SC · Redeemable{" "}
+                {redeemableAmountRaw !== undefined
+                  ? formatScFromRaw(redeemableAmountRaw)
+                  : "—"}{" "}
+                SC
+              </p>
+              <button
+                type="button"
+                className="redeem-form-page__confirm"
+                disabled={submitBusy || !pickAmount.trim()}
+                onClick={() => void submitWithdrawOrder()}>
+                {submitBusy ? "…" : "CONTINUE"}
+              </button>
             </>
           )}
         </div>
