@@ -58,6 +58,7 @@ import {
   buildSlotLaunchUrl,
 } from "../../lib/slotLaunchUrl";
 import type { Game } from "../../lib/api/types";
+import { useLobbyBannerViewport } from "../../hooks/useLobbyBannerViewport";
 import { useWallet } from "../../wallet/walletContext";
 import {
   FLOATING_CTA_IMAGE,
@@ -468,15 +469,19 @@ export function LandingPage() {
   } = useAuthModals();
 
   const tpId = trustpilotBusinessUnitId();
+  const bannerViewport = useLobbyBannerViewport();
   const sessionHeroVideoSrc = useMemo(
-    () => getSessionLobbyBannerVideo(activeWallet),
-    [activeWallet],
+    () => getSessionLobbyBannerVideo(activeWallet, bannerViewport),
+    [activeWallet, bannerViewport],
   );
   const sessionHeroPosterSrc = useMemo(
     () => getSessionLobbyBannerImage(activeWallet),
     [activeWallet],
   );
-  const guestHeroSrc = getGuestHeroImage();
+  const guestHeroSrc = useMemo(
+    () => getGuestHeroImage(bannerViewport),
+    [bannerViewport],
+  );
 
   const guestLobbyRows = useMemo(() => {
     if (lobbyGames === null) {
@@ -1054,6 +1059,13 @@ export function LandingPage() {
               height={420}
               decoding="async"
             />
+          </div>
+        </section>
+
+        <section
+          className="guest-landing__games-block page-container"
+          aria-labelledby="guest-top-games-heading">
+          <div className="guest-landing__claim-cta">
             <button
               type="button"
               className="guest-landing__claim-banner"
@@ -1061,11 +1073,6 @@ export function LandingPage() {
               CLAIM WELCOME BONUS
             </button>
           </div>
-        </section>
-
-        <section
-          className="guest-landing__games-block page-container"
-          aria-labelledby="guest-top-games-heading">
           <h2 id="guest-top-games-heading" className="guest-landing__row-title">
             <span className="guest-landing__accent">HOT</span> GAMES
           </h2>

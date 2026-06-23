@@ -70,11 +70,6 @@
 }
 
 @media (min-width: 30rem) {
-  .lobby-hero-banner__img--base,
-  .lobby-hero-banner__video {
-    max-height: min(60vh, 520px);
-  }
-
   .lobby-hero-banner__layer--title {
     top: 10%;
     max-width: 32rem;
@@ -83,5 +78,15 @@
   .lobby-hero-banner__layer--subtitle-anim {
     width: min(38%, 16rem);
     bottom: 20%;
+  }
+}
+
+@media (min-width: 48rem) {
+  .lobby-hero-banner__img--base,
+  .lobby-hero-banner__video {
+    height: clamp(22rem, 42vw, 45rem);
+    max-height: none;
+    object-fit: cover;
+    object-position: center top;
   }
 }
