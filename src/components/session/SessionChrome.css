@@ -515,3 +515,59 @@
     filter: none;
   }
 }
+
+@media (min-width: 48rem) {
+  .session-footer {
+    --session-footer-lobby-bump-w: 9rem;
+    --session-footer-lobby-side-gap: 1.2rem;
+    --session-footer-gutter: clamp(1.25rem, 3vw, 2rem);
+    --session-footer-gutter-end: clamp(1.25rem, 3vw, 2rem);
+  }
+
+  .session-footer__list {
+    max-width: min(46rem, 88vw);
+    width: 100%;
+    margin-inline: auto;
+    padding-bottom: 0.55rem;
+  }
+
+  .session-footer__link {
+    min-height: 3.15rem;
+    font-size: 0.62rem;
+  }
+
+  .session-footer__icon {
+    width: 1.5rem;
+    max-height: 1.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .session-footer__link--lobby {
+    min-height: 3.45rem;
+  }
+
+  .session-footer__link--lobby::before {
+    bottom: -0.75rem;
+  }
+
+  .session-footer__link--lobby .session-footer__icon {
+    width: 2.1rem;
+    max-height: 2.1rem;
+    margin-top: -1.25rem;
+  }
+}
+
+@media (min-width: 48rem) and (hover: hover) {
+  .session-footer__link:hover {
+    color: rgb(255 255 255 / 95%);
+  }
+
+  .session-footer__link.is-active:hover {
+    color: var(--session-footer-accent);
+  }
+
+  .session-footer__link.is-active:not(.session-footer__link--lobby):hover
+    .session-footer__icon {
+    filter: drop-shadow(0 0 8px rgb(88 120 255 / 45%));
+  }
+}

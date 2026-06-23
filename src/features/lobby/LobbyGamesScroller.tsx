@@ -46,6 +46,35 @@ export function LobbyGamesScroller({
     [scrollerRef],
   );
 
+  const syncScrollEdgeMask = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const atStart = maxScroll <= 1 || el.scrollLeft <= 1;
+    const atEnd = maxScroll <= 1 || el.scrollLeft >= maxScroll - 1;
+    el.classList.toggle("is-scroll-at-start", atStart);
+    el.classList.toggle("is-scroll-at-end", atEnd);
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    syncScrollEdgeMask();
+    const content = el.firstElementChild;
+    const onScroll = () => syncScrollEdgeMask();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    const ro = new ResizeObserver(onScroll);
+    ro.observe(el);
+    if (content) ro.observe(content);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      ro.disconnect();
+    };
+  }, [syncScrollEdgeMask]);
+
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -65,11 +94,12 @@ export function LobbyGamesScroller({
 
       el.scrollLeft = next;
       e.preventDefault();
+      syncScrollEdgeMask();
     };
 
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [syncScrollEdgeMask]);
 
   const onPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.pointerType === "touch" || e.button !== 0) return;
@@ -103,7 +133,8 @@ export function LobbyGamesScroller({
       0,
       Math.min(maxScroll, state.startScrollLeft - dx),
     );
-  }, []);
+    syncScrollEdgeMask();
+  }, [syncScrollEdgeMask]);
 
   const endDrag = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     const state = dragStateRef.current;
@@ -119,6 +150,8 @@ export function LobbyGamesScroller({
       el.releasePointerCapture(e.pointerId);
     }
 
+    syncScrollEdgeMask();
+
     if (dragged) {
       const suppressClick = (ev: MouseEvent) => {
         ev.preventDefault();
@@ -127,7 +160,7 @@ export function LobbyGamesScroller({
       };
       el.addEventListener("click", suppressClick, true);
     }
-  }, []);
+  }, [syncScrollEdgeMask]);
 
   return (
     <div

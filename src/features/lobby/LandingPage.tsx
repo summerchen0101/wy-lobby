@@ -537,11 +537,7 @@ export function LandingPage() {
         `${g.title} ${g.subtitle ?? ""} ${g.id} ${g.provider ?? ""} ${g.thirdPartyLaunch?.gameUID ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [
-    thirdPartyGamesEnabled,
-    lobbyGet?.thirdPartyGameInfoList,
-    lobbySearch,
-  ]);
+  }, [thirdPartyGamesEnabled, lobbyGet?.thirdPartyGameInfoList, lobbySearch]);
 
   const providerPlatforms = useMemo(() => {
     const seen = new Set<string>();
@@ -1159,7 +1155,7 @@ export function LandingPage() {
 
         <section
           ref={lobbyGamesSectionRef}
-          className="lobby-games-section page-container"
+          className="lobby-games-section"
           aria-label="Games">
           {user ? (
             <div className="lobby-games-toolbar">
@@ -1241,9 +1237,7 @@ export function LandingPage() {
                             (providerMenuOpen ? " is-menu-open" : "")
                           }
                           role="tab"
-                          aria-selected={
-                            lobbyFilter === id || providerMenuOpen
-                          }
+                          aria-selected={lobbyFilter === id || providerMenuOpen}
                           aria-controls="lobby-games-panel"
                           aria-haspopup="listbox"
                           aria-expanded={providerMenuOpen}
@@ -1271,9 +1265,7 @@ export function LandingPage() {
                             : "")
                         }
                         role="tab"
-                        aria-selected={
-                          lobbyFilter === id && !providerMenuOpen
-                        }
+                        aria-selected={lobbyFilter === id && !providerMenuOpen}
                         aria-controls="lobby-games-panel"
                         tabIndex={
                           lobbyFilter === id && !providerMenuOpen ? 0 : -1
@@ -1290,78 +1282,80 @@ export function LandingPage() {
               </div>
             </div>
           ) : null}
-          {error ? <p className="lobby-games-error">{error}</p> : null}
-          {user && loading && displayGames.length === 0 && !error ? (
-            <p className="lobby-games-hint">Loading…</p>
-          ) : null}
-          {user && !loading && !error && displayGames.length === 0 ? (
-            <p className="lobby-games-hint">No games available yet.</p>
-          ) : null}
-          {user &&
-          !loading &&
-          !error &&
-          displayGames.length > 0 &&
-          gamesByFilter[lobbyFilter].length === 0 ? (
-            <p className="lobby-games-hint">
-              No games match your search or filter.
-            </p>
-          ) : null}
-          {user ? (
-            <div
-              id="lobby-games-panel"
-              className="lobby-games-panel-host"
-              role="tabpanel"
-              aria-labelledby={`lobby-tab-${lobbyFilter}`}>
-              <div key={lobbyFilter} className="lobby-games-panel-swap">
-                {lobbyFilter === "all" ? (
-                  (() => {
-                    let thumbBase = 0;
-                    return lobbyAllSubsectionsList.map((subId) => {
-                      const games = gamesByFilter[subId];
-                      if (games.length === 0) return null;
-                      const off = thumbBase;
-                      thumbBase += games.length;
-                      const subLabel =
-                        lobbyFilterTabsList.find((t) => t.id === subId)
-                          ?.label ?? subId;
-                      return (
-                        <div key={subId} className="lobby-games-group">
-                          <div className="lobby-games-group-head">
-                            <h3
-                              className="lobby-games-group-title"
-                              id={`lobby-group-${subId}`}>
-                              {subLabel}
-                            </h3>
-                            <button
-                              type="button"
-                              className="lobby-games-group-see-all"
-                              aria-label={`See all in ${subLabel}`}
-                              onClick={() => onSeeAllSubcategory(subId)}>
-                              See All
-                            </button>
+          <div className="lobby-games-section__body page-container">
+            {error ? <p className="lobby-games-error">{error}</p> : null}
+            {user && loading && displayGames.length === 0 && !error ? (
+              <p className="lobby-games-hint">Loading…</p>
+            ) : null}
+            {user && !loading && !error && displayGames.length === 0 ? (
+              <p className="lobby-games-hint">No games available yet.</p>
+            ) : null}
+            {user &&
+            !loading &&
+            !error &&
+            displayGames.length > 0 &&
+            gamesByFilter[lobbyFilter].length === 0 ? (
+              <p className="lobby-games-hint">
+                No games match your search or filter.
+              </p>
+            ) : null}
+            {user ? (
+              <div
+                id="lobby-games-panel"
+                className="lobby-games-panel-host"
+                role="tabpanel"
+                aria-labelledby={`lobby-tab-${lobbyFilter}`}>
+                <div key={lobbyFilter} className="lobby-games-panel-swap">
+                  {lobbyFilter === "all" ? (
+                    (() => {
+                      let thumbBase = 0;
+                      return lobbyAllSubsectionsList.map((subId) => {
+                        const games = gamesByFilter[subId];
+                        if (games.length === 0) return null;
+                        const off = thumbBase;
+                        thumbBase += games.length;
+                        const subLabel =
+                          lobbyFilterTabsList.find((t) => t.id === subId)
+                            ?.label ?? subId;
+                        return (
+                          <div key={subId} className="lobby-games-group">
+                            <div className="lobby-games-group-head">
+                              <h3
+                                className="lobby-games-group-title"
+                                id={`lobby-group-${subId}`}>
+                                {subLabel}
+                              </h3>
+                              <button
+                                type="button"
+                                className="lobby-games-group-see-all"
+                                aria-label={`See all in ${subLabel}`}
+                                onClick={() => onSeeAllSubcategory(subId)}>
+                                See All
+                              </button>
+                            </div>
+                            <PaginatedGameTrack
+                              key={`${lobbySearch}\u0000${subId}`}
+                              games={games}
+                              thumbOffset={off}
+                              showTextLabels={false}
+                              gameCard={gameCard}
+                            />
                           </div>
-                          <PaginatedGameTrack
-                            key={`${lobbySearch}\u0000${subId}`}
-                            games={games}
-                            thumbOffset={off}
-                            showTextLabels={false}
-                            gameCard={gameCard}
-                          />
-                        </div>
-                      );
-                    });
-                  })()
-                ) : (
-                  <PaginatedGameGrid
-                    key={`${lobbyFilter}\u0000${lobbySearch}`}
-                    games={gamesByFilter[lobbyFilter]}
-                    thumbOffset={0}
-                    gameCard={gameCard}
-                  />
-                )}
+                        );
+                      });
+                    })()
+                  ) : (
+                    <PaginatedGameGrid
+                      key={`${lobbyFilter}\u0000${lobbySearch}`}
+                      games={gamesByFilter[lobbyFilter]}
+                      thumbOffset={0}
+                      gameCard={gameCard}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </section>
 
         {tpId ? <TrustpilotSection businessUnitId={tpId} /> : null}

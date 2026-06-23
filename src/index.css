@@ -68,10 +68,14 @@ html {
   background: transparent;
 }
 
-/* 平板起略放大 1rem 基準；凡用 rem 的字、間距、Session 頂底欄等一併略增 */
+/* 平板略放大 1rem 基準；PC（64rem+）維持預設，避免整體過大 */
 @media (min-width: 48rem) {
   html {
-    font-size: 180%;
+    font-size: 120%;
+  }
+
+  :root {
+    --session-footer-h: calc(4.15rem + var(--safe-bottom));
   }
 }
 
@@ -79,7 +83,11 @@ html {
 @media (max-width: 47.99rem) {
   textarea,
   select,
-  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="image"]) {
+  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not(
+      [type="checkbox"]
+    ):not([type="radio"]):not([type="range"]):not([type="file"]):not(
+      [type="hidden"]
+    ):not([type="image"]) {
     font-size: max(16px, 1rem) !important;
   }
 }

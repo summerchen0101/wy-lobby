@@ -128,7 +128,7 @@
   }
 }
 
-@media (min-width: 30rem) {
+@media (min-width: 30rem) and (max-width: 47.99rem) {
   .lobby-jackpot-strip__cluster {
     gap: 0.55rem;
   }
@@ -144,5 +144,35 @@
 
   .lobby-jackpot-strip__amount {
     font-size: clamp(0.95rem, 2.8vw, 1.25rem);
+  }
+}
+
+@media (min-width: 48rem) {
+  .lobby-jackpot-strip__cluster {
+    width: auto;
+    max-width: min(39.1rem, 82.8%);
+    flex: 0 1 auto;
+    gap: 0.52rem;
+  }
+
+  .lobby-jackpot-strip__cell {
+    flex: 0 0 auto;
+    width: clamp(7.48rem, 12.65vw, 9.78rem);
+    min-width: 0;
+    min-height: clamp(4.03rem, 5.75vw, 5.18rem);
+  }
+
+  .lobby-jackpot-strip__word-img,
+  .lobby-jackpot-strip__index-img {
+    height: clamp(0.98rem, 1.61vw, 1.32rem);
+  }
+
+  .lobby-jackpot-strip__coin {
+    width: clamp(0.98rem, 1.38vw, 1.21rem);
+    height: clamp(0.98rem, 1.38vw, 1.21rem);
+  }
+
+  .lobby-jackpot-strip__amount {
+    font-size: clamp(0.86rem, 1.27vw, 1.09rem);
   }
 }
