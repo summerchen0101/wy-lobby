@@ -1,15 +1,13 @@
-import { useCallback, useEffect, type ReactNode } from "react";
+import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { IoChevronBack } from "react-icons/io5";
 import "./ShopCheckout.css";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
-import { shopPayIconSrc } from "../../lib/shopPayIcons";
 import { ProtectAccountView } from "./ProtectAccountView";
 import type {
   ShopBindingFormPayload,
   ShopBindingPrefill,
   ShopPack,
-  ShopPaymentMethodId,
 } from "./types";
 
 export type CheckoutStep = "summary" | "protect" | "payment" | "success";
@@ -18,7 +16,6 @@ type Props = {
   open: boolean;
   pack: ShopPack;
   step: CheckoutStep;
-  visibleMethods: ShopPaymentMethodId[];
   buyBusy: boolean;
   buyError: string | null;
   paymentUrl: string | null;
@@ -30,7 +27,7 @@ type Props = {
   onProtectClose: () => void;
   onBackToProtectForm: () => void;
   onBindingSubmit: (payload: ShopBindingFormPayload) => Promise<void>;
-  onSelectPaymentMethod: (method: ShopPaymentMethodId) => void;
+  onContinuePurchase: () => void;
   onCancelPaymentFrame: () => void;
   /** 開啟第三方金流結帳 URL；回傳 false 表示已阻擋（Toast 由父層處理） */
   onOpenPaymentPage: (url: string) => boolean;
@@ -40,87 +37,19 @@ function BackIcon() {
   return <IoChevronBack className="shop-checkout__back-icon" aria-hidden />;
 }
 
-const METHOD_ROWS: {
-  id: ShopPaymentMethodId;
-  label: string;
-  icon: ReactNode;
-}[] = [
-  {
-    id: "google",
-    label: "Google Pay",
-    icon: (
-      <img
-        className="shop-checkout__pay-img"
-        src={shopPayIconSrc("google")}
-        alt=""
-        width={28}
-        height={28}
-        decoding="async"
-      />
-    ),
-  },
-  {
-    id: "apple",
-    label: "Apple Pay",
-    icon: (
-      <img
-        className="shop-checkout__pay-img"
-        src={shopPayIconSrc("apple")}
-        alt=""
-        width={28}
-        height={28}
-        decoding="async"
-      />
-    ),
-  },
-  {
-    id: "credit",
-    label: "Credit Card",
-    icon: (
-      <img
-        className="shop-checkout__pay-img"
-        src={shopPayIconSrc("credit")}
-        alt=""
-        width={28}
-        height={28}
-        decoding="async"
-      />
-    ),
-  },
-  {
-    id: "cashapp",
-    label: "Cash APP",
-    icon: (
-      <img
-        className="shop-checkout__pay-img"
-        src={shopPayIconSrc("cashapp")}
-        alt=""
-        width={28}
-        height={28}
-        decoding="async"
-      />
-    ),
-  },
-];
-
 function OrderSummaryView({
   pack,
-  visibleMethods,
   buyBusy,
   buyError,
   onClose,
-  onSelectPayment,
+  onContinuePurchase,
 }: {
   pack: ShopPack;
-  visibleMethods: ShopPaymentMethodId[];
   buyBusy: boolean;
   buyError: string | null;
   onClose: () => void;
-  onSelectPayment: (id: ShopPaymentMethodId) => void;
+  onContinuePurchase: () => void;
 }) {
-  const methodSet = new Set(visibleMethods);
-  const rows = METHOD_ROWS.filter((r) => methodSet.has(r.id));
-
   return (
     <>
       <header className="app-modal__head-row">
@@ -173,31 +102,16 @@ function OrderSummaryView({
             {buyError}
           </p>
         ) : null}
-        {rows.length === 0 ? (
-          <p className="shop-checkout__pay-error" role="status">
-            No payment methods available for this product.
-          </p>
-        ) : (
-          <ul className="shop-checkout__pay-list">
-            {rows.map((row) => (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  className="shop-checkout__pay-btn shop-checkout__pay-btn--pill"
-                  disabled={buyBusy}
-                  onClick={() => onSelectPayment(row.id)}>
-                  <span className="shop-checkout__pay-btn-icon-slot" aria-hidden>
-                    {row.icon}
-                  </span>
-                  <span className="shop-checkout__pay-btn-label">
-                    {buyBusy ? "Please wait…" : row.label}
-                  </span>
-                  <span className="shop-checkout__pay-btn-balance" aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <button
+          type="button"
+          className="shop-checkout__submit shop-checkout__submit--blue shop-checkout__continue-pay"
+          disabled={buyBusy}
+          onClick={onContinuePurchase}>
+          {buyBusy ? "Please wait…" : "CONTINUE TO PAYMENT"}
+        </button>
+        <p className="shop-checkout__footer-hint">
+          You will choose your payment method on the secure payment page.
+        </p>
       </div>
     </>
   );
@@ -287,7 +201,6 @@ export function ShopCheckoutOverlay({
   open,
   pack,
   step,
-  visibleMethods,
   buyBusy,
   buyError,
   paymentUrl,
@@ -299,7 +212,7 @@ export function ShopCheckoutOverlay({
   onProtectClose,
   onBackToProtectForm,
   onBindingSubmit,
-  onSelectPaymentMethod,
+  onContinuePurchase,
   onCancelPaymentFrame,
   onOpenPaymentPage,
 }: Props) {
@@ -345,11 +258,10 @@ export function ShopCheckoutOverlay({
         {step === "summary" ? (
           <OrderSummaryView
             pack={pack}
-            visibleMethods={visibleMethods}
             buyBusy={buyBusy}
             buyError={buyError}
             onClose={closeOverlay}
-            onSelectPayment={onSelectPaymentMethod}
+            onContinuePurchase={onContinuePurchase}
           />
         ) : step === "protect" ? (
           <ProtectAccountView

@@ -79,6 +79,7 @@ export const FOOTER_LOBBY_BUMP_GC = `${FOOTER}/lobby-sel-gc.png`;
 
 /** LOBBY 選中時中間凸起底圖（384×203）；SC 專用圖就緒前沿用 GC。 */
 export function footerLobbyBumpUrl(_wallet: ActiveWallet): string {
+  void _wallet;
   return FOOTER_LOBBY_BUMP_GC;
 }
 

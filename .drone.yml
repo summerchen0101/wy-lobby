@@ -41,8 +41,7 @@ steps:
       VITE_UNITY_WEBENTRY_URL: https://unityweb-alpha.ffglobaltech.com/0001/WebGL_Build_Alpha/index.html
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
-      # Shop 第三方金流結帳頁；串接新金流商後改為 "true"
-      VITE_PAYMENT_FEATURES_ENABLED: "false"
+      VITE_PAYMENT_FEATURES_ENABLED: "true"
       VITE_THIRD_PARTY_GAMES_ENABLED: "true"
       VITE_THIRD_PARTY_GAME_THUMB_BASE: https://nas01.ffglobaltech.com
       VITE_CLIENT_VER: "web-alpha-${DRONE_COMMIT_SHA:0:8}"
@@ -97,8 +96,7 @@ steps:
       VITE_UNITY_WEBENTRY_URL: https://unityweb-alpha.ffglobaltech.com/0001/WebGL_Build_Alpha/index.html
       VITE_USE_WS_LOBBY_GAMES: "true"
       VITE_OPEN_GAMES_IN_NEW_WINDOW: "false"
-      # Shop 第三方金流結帳頁；串接新金流商後改為 "true"
-      VITE_PAYMENT_FEATURES_ENABLED: "false"
+      VITE_PAYMENT_FEATURES_ENABLED: "true"
       VITE_THIRD_PARTY_GAMES_ENABLED: "true"
       VITE_THIRD_PARTY_GAME_THUMB_BASE: https://nas01.ffglobaltech.com
       VITE_CLIENT_VER: "web-alpha-${DRONE_COMMIT_SHA:0:8}"

@@ -57,6 +57,11 @@ const RedeemPage = lazy(() =>
 const ShopPage = lazy(() =>
   import("./features/shop/ShopPage").then((m) => ({ default: m.ShopPage })),
 );
+const PaymentCallbackPage = lazy(() =>
+  import("./features/payment/PaymentCallbackPage").then((m) => ({
+    default: m.PaymentCallbackPage,
+  })),
+);
 const SessionLayout = lazy(() =>
   import("./components/session/SessionLayout").then((m) => ({
     default: m.SessionLayout,
@@ -118,6 +123,26 @@ export default function App() {
                           <Route path="/privacy" element={<PrivacyPolicyPage />} />
                           <Route path="/terms" element={<TermsOfServicePage />} />
                           <Route path="/sweeps" element={<SweepsPolicyPage />} />
+                          <Route
+                            path="/payment/callback"
+                            element={
+                              <PaymentCallbackPage
+                                channel="shop"
+                                returnPath="/shop"
+                                returnLabel="Store"
+                              />
+                            }
+                          />
+                          <Route
+                            path="/redeem/callback"
+                            element={
+                              <PaymentCallbackPage
+                                channel="redeem"
+                                returnPath="/redeem"
+                                returnLabel="Redeem"
+                              />
+                            }
+                          />
                           <Route element={<RequireAuth />}>
                             <Route path="/events" element={<EventsRedirect />} />
                             <Route element={<SessionLayout />}>

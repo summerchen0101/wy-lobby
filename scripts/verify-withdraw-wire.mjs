@@ -1,6 +1,5 @@
 /**
- * 驗證 megaman.CreateWithdrawOrderReq：PayPal（PaymentTypeRec.PayPal = 13）encode/decode 後
- * field 3（paymentType）仍為 13。可用於排除「舊前端 paypal→2」與 wire 不一致問題。
+ * 驗證 megaman.CreateWithdrawOrderReq：新第三方僅 userID + amount + callback URLs。
  *
  * 執行：npm run verify:withdraw-wire（於 web/）
  */
@@ -15,12 +14,8 @@ const protoText = readFileSync(protoPath, "utf8");
 const parsed = protobuf.parse(protoText);
 const root = parsed.root;
 
-const PaymentTypeRecPayPal = 13;
-const PaymentTypeRecCreditCard = 14;
-const PaymentTypeRecCashAPP = 15;
-const PaymentTypeRecACH = 16;
-
 const Req = root.lookupType("megaman.CreateWithdrawOrderReq");
+const Resp = root.lookupType("megaman.CreateWithdrawOrderResp");
 
 function assert(cond, msg) {
   if (!cond) {
@@ -29,7 +24,7 @@ function assert(cond, msg) {
   }
 }
 
-function roundTrip(name, payload) {
+function roundTripReq(name, payload) {
   const err = Req.verify(payload);
   assert(!err, `verify ${name}: ${err}`);
   const encoded = Req.encode(Req.create(payload)).finish();
@@ -39,48 +34,40 @@ function roundTrip(name, payload) {
     defaults: true,
     enums: String,
   });
-  const pt = o.paymentType;
-  const ptNum =
-    typeof pt === "bigint"
-      ? Number(pt)
-      : typeof pt === "string"
-        ? Number(pt.trim())
-        : pt;
-  assert(
-    ptNum === payload.paymentType,
-    `${name}: expected paymentType ${payload.paymentType}, got ${String(pt)}`,
-  );
-  console.log(`ok ${name}: paymentType=${ptNum}`);
+  assert(String(o.userID) === String(payload.userID), `${name}: userID mismatch`);
+  assert(String(o.amount) === String(payload.amount), `${name}: amount mismatch`);
+  assert(Number(o.paymentType) === 0, `${name}: expected paymentType 0`);
+  console.log(`ok ${name}`);
 }
 
-roundTrip("PayPal", {
-  userID: 2046952017814859776,
-  amount: "100",
-  paymentType: PaymentTypeRecPayPal,
-  paypalEmail: "user@example.com",
+roundTripReq("minimal", {
+  userID: 99,
+  amount: "500000",
+  paymentType: 0,
+  successUrl: "https://example.com/redeem/callback?state=1",
+  failUrl: "https://example.com/redeem/callback?state=2",
 });
 
-roundTrip("CreditCard", {
-  userID: 1,
-  amount: "50",
-  paymentType: PaymentTypeRecCreditCard,
-  cardNumber: "4111111111111111",
-  cardValidCode: "123",
+const respErr = Resp.verify({
+  withdrawOrderUID: "order-123",
+  paymentURL: "https://pay.example.com/session/abc",
 });
-
-roundTrip("CashAPP", {
-  userID: 1,
-  amount: "50",
-  paymentType: PaymentTypeRecCashAPP,
-  appAccount: "$cashtag",
+assert(!respErr, `verify resp: ${respErr}`);
+const respEncoded = Resp.encode(
+  Resp.create({
+    withdrawOrderUID: "order-123",
+    paymentURL: "https://pay.example.com/session/abc",
+  }),
+).finish();
+const respDecoded = Resp.toObject(Resp.decode(respEncoded), {
+  longs: String,
+  defaults: true,
+  enums: String,
 });
-
-roundTrip("ACH", {
-  userID: 1,
-  amount: "50",
-  paymentType: PaymentTypeRecACH,
-  accountNumber: "000111222",
-  routingNumber: "011000015",
-});
+assert(
+  respDecoded.paymentURL === "https://pay.example.com/session/abc",
+  "resp paymentURL mismatch",
+);
+console.log("ok CreateWithdrawOrderResp paymentURL");
 
 console.log("verify-withdraw-wire: all checks passed.");

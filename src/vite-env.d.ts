@@ -82,6 +82,10 @@ interface ImportMetaEnv {
    * 設為 `"true"` 允許 Shop 開啟第三方金流結帳 URL（BUY_PRODUCT 新分頁）；未設或空值僅 Toast 阻擋，/shop、/redeem 仍可進入。
    */
   readonly VITE_PAYMENT_FEATURES_ENABLED?: string;
+  /** Shop 第三方付款完成 redirect 路徑（預設 /payment/callback） */
+  readonly VITE_PAYMENT_CALLBACK_BASE?: string;
+  /** Redeem 第三方提現完成 redirect 路徑（預設 /redeem/callback） */
+  readonly VITE_REDEEM_CALLBACK_BASE?: string;
   /**
    * 設為 `"true"` 啟用大廳第三方遊戲（PROVIDERS 分頁）；未設或空值為關閉。
    */

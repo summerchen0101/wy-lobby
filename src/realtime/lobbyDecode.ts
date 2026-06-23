@@ -399,12 +399,27 @@ export function lobbyDecodedPlayerToUserPatch(
     typeof decoded.email === "string" && decoded.email.trim()
       ? decoded.email.trim()
       : undefined;
+  const addressRaw =
+    p && typeof p === "object"
+      ? (p as { address?: unknown }).address
+      : undefined;
+  const address =
+    typeof addressRaw === "string" && addressRaw.trim()
+      ? addressRaw.trim()
+      : undefined;
+  const minTxWdraw = numFromWire(
+    p && typeof p === "object"
+      ? (p as { minTxWdraw?: unknown }).minTxWdraw
+      : undefined,
+  );
   if (
     !id &&
     !displayName &&
     vipLevel === undefined &&
     !phone &&
     !email &&
+    !address &&
+    minTxWdraw === undefined &&
     avatarId === undefined &&
     lobbyWalletType === undefined &&
     vipExp === undefined &&
@@ -427,7 +442,48 @@ export function lobbyDecodedPlayerToUserPatch(
     out.vipCurrentLevelBetExpRequired = Math.floor(vipBetReq);
   if (phone) out.phone = phone;
   if (email) out.email = email;
+  if (address) out.address = address;
+  if (minTxWdraw !== undefined) out.minTxWdraw = Math.floor(minTxWdraw);
   return out;
+}
+
+export type RedeemPlayerBindingState = {
+  hasCellPhone: boolean;
+  hasAddress: boolean;
+  /** 後端 minTxWdraw 原始單位；未提供時 undefined */
+  minTxWdrawRaw: number | undefined;
+};
+
+/** 提現前綁定閘道：依 LOBBY_GET playerInfo.cellPhone / address。 */
+export function redeemPlayerBindingFromLobby(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): RedeemPlayerBindingState {
+  const p = lobbyGet?.playerInfo as LobbyPlayerRow | null | undefined;
+  const cellRaw =
+    p && typeof p === "object"
+      ? (p as { cellPhone?: unknown }).cellPhone
+      : undefined;
+  const cellPhone =
+    typeof cellRaw === "string" && cellRaw.trim() ? cellRaw.trim() : "";
+  const addressRaw =
+    p && typeof p === "object"
+      ? (p as { address?: unknown }).address
+      : undefined;
+  const address =
+    typeof addressRaw === "string" && addressRaw.trim()
+      ? addressRaw.trim()
+      : "";
+  const minTxWdrawRaw = numFromWire(
+    p && typeof p === "object"
+      ? (p as { minTxWdraw?: unknown }).minTxWdraw
+      : undefined,
+  );
+  return {
+    hasCellPhone: cellPhone.length > 0,
+    hasAddress: address.length > 0,
+    minTxWdrawRaw:
+      minTxWdrawRaw !== undefined ? Math.floor(minTxWdrawRaw) : undefined,
+  };
 }
 
 function lobbyDecodedCurrencyToUserPatch(
