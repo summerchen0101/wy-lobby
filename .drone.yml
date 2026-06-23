@@ -50,7 +50,7 @@ steps:
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://nas01.ffglobaltech.com/us-game-lobby"
       VITE_DEV_CONSOLE: "true"
       VITE_GATEWAY_WS_TRACE: "true"
-      #VITE_RADAR_PUBLISHABLE_KEY: "prj_test_pk_a72f521bb1405c552a704ad4d925509c08acb511"
+      VITE_RADAR_PUBLISHABLE_KEY: "prj_test_pk_a72f521bb1405c552a704ad4d925509c08acb511"
     commands:
       - npm run build
       - ls -lah dist/
@@ -107,7 +107,7 @@ steps:
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://nas01.ffglobaltech.com/us-game-lobby"
       VITE_DEV_CONSOLE: "true"
       VITE_GATEWAY_WS_TRACE: "true"
-      #VITE_RADAR_PUBLISHABLE_KEY: "prj_test_pk_a72f521bb1405c552a704ad4d925509c08acb511"
+      VITE_RADAR_PUBLISHABLE_KEY: "prj_test_pk_a72f521bb1405c552a704ad4d925509c08acb511"
     commands:
       - npm run build
       - ls -lah dist/
