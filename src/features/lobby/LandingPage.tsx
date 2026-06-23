@@ -66,25 +66,26 @@ import "./LobbyPage.css";
 
 type LobbyFilterTab = "all" | "hot" | "providers" | "slots";
 
-const thirdPartyGamesEnabled = isThirdPartyGamesEnabled();
+function lobbyFilterTabs(thirdPartyGamesEnabled: boolean) {
+  return [
+    { id: "all" as const, label: "ALL" },
+    { id: "hot" as const, label: "HOT" },
+    ...(thirdPartyGamesEnabled
+      ? [{ id: "providers" as const, label: "PROVIDERS" }]
+      : []),
+    { id: "slots" as const, label: "SLOTS" },
+  ];
+}
 
-const LOBBY_FILTER_TABS: { id: LobbyFilterTab; label: string }[] = [
-  { id: "all", label: "ALL" },
-  { id: "hot", label: "HOT" },
-  ...(thirdPartyGamesEnabled
-    ? [{ id: "providers" as const, label: "PROVIDERS" }]
-    : []),
-  { id: "slots", label: "SLOTS" },
-];
-
-const LOBBY_FILTER_ORDER: LobbyFilterTab[] = LOBBY_FILTER_TABS.map((t) => t.id);
-
-/** 已登入「ALL」分頁內小節順序（與分類 tab 名稱對應，不含 ALL） */
-const LOBBY_ALL_SUBSECTIONS: Array<Exclude<LobbyFilterTab, "all">> = [
-  "hot",
-  ...(thirdPartyGamesEnabled ? (["providers"] as const) : []),
-  "slots",
-];
+function lobbyAllSubsections(
+  thirdPartyGamesEnabled: boolean,
+): Array<Exclude<LobbyFilterTab, "all">> {
+  return [
+    "hot",
+    ...(thirdPartyGamesEnabled ? (["providers"] as const) : []),
+    "slots",
+  ];
+}
 
 /** 已登入大廳：每批渲染的遊戲卡數量 */
 const LOBBY_GAMES_PAGE_SIZE = 50;
@@ -378,6 +379,19 @@ export function LandingPage() {
   } = useGatewayLobby();
 
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
+  const thirdPartyGamesEnabled = isThirdPartyGamesEnabled();
+  const lobbyFilterTabsList = useMemo(
+    () => lobbyFilterTabs(thirdPartyGamesEnabled),
+    [thirdPartyGamesEnabled],
+  );
+  const lobbyFilterOrder = useMemo(
+    () => lobbyFilterTabsList.map((t) => t.id),
+    [lobbyFilterTabsList],
+  );
+  const lobbyAllSubsectionsList = useMemo(
+    () => lobbyAllSubsections(thirdPartyGamesEnabled),
+    [thirdPartyGamesEnabled],
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const [lobbyFilter, setLobbyFilter] = useState<LobbyFilterTab>("all");
 
@@ -385,7 +399,7 @@ export function LandingPage() {
     if (!thirdPartyGamesEnabled) {
       setLobbyFilter((f) => (f === "providers" ? "all" : f));
     }
-  }, []);
+  }, [thirdPartyGamesEnabled]);
   const [lobbySearch, setLobbySearch] = useState("");
   const [lobbySearchExpanded, setLobbySearchExpanded] = useState(false);
   const lobbySearchInputRef = useRef<HTMLInputElement | null>(null);
@@ -465,7 +479,7 @@ export function LandingPage() {
     });
   }, [displayGames, lobbySearch]);
 
-  /** 第三方遊戲：`thirdPartyGameInfoList` 僅 `status === "ACTIVE"`，順序不變，僅依搜尋過濾（不重排）。 */
+  /** 第三方遊戲：`thirdPartyGameInfoList` 略過明確下架 status；順序不變，僅依搜尋過濾（不重排）。 */
   const providerGamesFiltered = useMemo(() => {
     if (!thirdPartyGamesEnabled) return [];
     const list = lobbyThirdPartyListToApiGames(
@@ -478,16 +492,18 @@ export function LandingPage() {
         `${g.title} ${g.subtitle ?? ""} ${g.id} ${g.provider ?? ""} ${g.thirdPartyLaunch?.gameUID ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [lobbyGet?.thirdPartyGameInfoList, lobbySearch]);
+  }, [
+    thirdPartyGamesEnabled,
+    lobbyGet?.thirdPartyGameInfoList,
+    lobbySearch,
+  ]);
 
   /** 各分類一份列表（已登入分頁用） */
   const gamesByFilter = useMemo(() => {
     const out = {} as Record<LobbyFilterTab, Game[]>;
     const sessionProviders =
-      thirdPartyGamesEnabled && user && wsLobbyEnabled
-        ? providerGamesFiltered
-        : [];
-    for (const f of LOBBY_FILTER_ORDER) {
+      thirdPartyGamesEnabled && user ? providerGamesFiltered : [];
+    for (const f of lobbyFilterOrder) {
       if (f === "providers") {
         out[f] = sessionProviders;
         continue;
@@ -496,7 +512,13 @@ export function LandingPage() {
       out[f] = sortLobbyGamesByMenu(filtered, lobbySortMenuForTab(f));
     }
     return out;
-  }, [searchFilteredGames, providerGamesFiltered, user, wsLobbyEnabled]);
+  }, [
+    searchFilteredGames,
+    providerGamesFiltered,
+    user,
+    thirdPartyGamesEnabled,
+    lobbyFilterOrder,
+  ]);
 
   const launchThirdPartyGame = useCallback(
     async (card: Game) => {
@@ -983,7 +1005,7 @@ export function LandingPage() {
                   className="lobby-game-filter"
                   role="tablist"
                   aria-label="Game categories">
-                  {LOBBY_FILTER_TABS.map(({ id, label }) => (
+                  {lobbyFilterTabsList.map(({ id, label }) => (
                     <button
                       key={id}
                       id={`lobby-tab-${id}`}
@@ -1030,14 +1052,14 @@ export function LandingPage() {
                 {lobbyFilter === "all" ? (
                   (() => {
                     let thumbBase = 0;
-                    return LOBBY_ALL_SUBSECTIONS.map((subId) => {
+                    return lobbyAllSubsectionsList.map((subId) => {
                       const games = gamesByFilter[subId];
                       if (games.length === 0) return null;
                       const off = thumbBase;
                       thumbBase += games.length;
                       const subLabel =
-                        LOBBY_FILTER_TABS.find((t) => t.id === subId)?.label ??
-                        subId;
+                        lobbyFilterTabsList.find((t) => t.id === subId)
+                          ?.label ?? subId;
                       return (
                         <div key={subId} className="lobby-games-group">
                           <div className="lobby-games-group-head">

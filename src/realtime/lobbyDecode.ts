@@ -211,16 +211,40 @@ type LobbyThirdPartyRow = NonNullable<
   NonNullable<LobbyGetDecoded["thirdPartyGameInfoList"]>
 >[number];
 
-/** 大廳僅顯示後端標為上架中之第三方遊戲。 */
+function thirdPartyRowString(
+  row: LobbyThirdPartyRow,
+  ...keys: string[]
+): string {
+  const rec = row as Record<string, unknown>;
+  for (const key of keys) {
+    const raw = rec[key];
+    if (typeof raw === "string") {
+      const s = raw.trim();
+      if (s) return s;
+      continue;
+    }
+    if (raw !== undefined && raw !== null && typeof raw !== "object") {
+      const s = String(raw).trim();
+      if (s) return s;
+    }
+  }
+  return "";
+}
+
+/** 大廳僅顯示後端標為上架中之第三方遊戲；缺 status 時視為可顯示（後端已列入列表）。 */
 function lobbyThirdPartyRowIsActive(row: LobbyThirdPartyRow): boolean {
-  const raw = row.status;
-  const s =
-    typeof raw === "string"
-      ? raw.trim()
-      : raw === undefined || raw === null
-        ? ""
-        : String(raw).trim();
-  return s === "ACTIVE";
+  const s = thirdPartyRowString(row, "status").toUpperCase();
+  if (!s) return true;
+  if (s === "ACTIVE" || s === "ENABLE" || s === "ENABLED" || s === "1") {
+    return true;
+  }
+  return !(
+    s === "INACTIVE" ||
+    s === "DISABLE" ||
+    s === "DISABLED" ||
+    s === "OFF" ||
+    s === "0"
+  );
 }
 
 /**
@@ -230,16 +254,11 @@ function lobbyThirdPartyRowIsActive(row: LobbyThirdPartyRow): boolean {
 export function lobbyThirdPartyRowToApiGame(
   row: LobbyThirdPartyRow,
 ): Game | null {
-  const platform = typeof row.platform === "string" ? row.platform.trim() : "";
-  const uid =
-    typeof row.gameUID === "string"
-      ? row.gameUID.trim()
-      : String(row.gameUID ?? "").trim();
+  const platform = thirdPartyRowString(row, "platform", "Platform");
+  const uid = thirdPartyRowString(row, "gameUID", "gameUid", "GameUID");
   if (!platform || !uid) return null;
   const name =
-    typeof row.gameName === "string" && row.gameName.trim()
-      ? row.gameName.trim()
-      : uid;
+    thirdPartyRowString(row, "gameName", "GameName") || uid;
   return {
     id: `tp:${encodeURIComponent(platform)}:${encodeURIComponent(uid)}`,
     title: name,
@@ -250,7 +269,7 @@ export function lobbyThirdPartyRowToApiGame(
   };
 }
 
-/** 後端已排序之第三方列表（僅 `status === "ACTIVE"`）；勿再呼叫 sortLobbyGamesByMenu。 */
+/** 後端已排序之第三方列表（略過明確下架 status）；勿再呼叫 sortLobbyGamesByMenu。 */
 export function lobbyThirdPartyListToApiGames(
   list: LobbyGetDecoded["thirdPartyGameInfoList"] | undefined | null,
 ): Game[] {
