@@ -549,6 +549,14 @@ export default {
             "gameUID": {
               "type": "string",
               "id": 2
+            },
+            "successUrl": {
+              "type": "string",
+              "id": 3
+            },
+            "failUrl": {
+              "type": "string",
+              "id": 4
             }
           }
         },

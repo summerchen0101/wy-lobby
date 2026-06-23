@@ -143,6 +143,16 @@ export default function App() {
                               />
                             }
                           />
+                          <Route
+                            path="/game/callback"
+                            element={
+                              <PaymentCallbackPage
+                                channel="game"
+                                returnPath="/"
+                                returnLabel="Lobby"
+                              />
+                            }
+                          />
                           <Route element={<RequireAuth />}>
                             <Route path="/events" element={<EventsRedirect />} />
                             <Route element={<SessionLayout />}>

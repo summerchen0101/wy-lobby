@@ -1,4 +1,4 @@
-export type PaymentCallbackChannel = "shop" | "redeem";
+export type PaymentCallbackChannel = "shop" | "redeem" | "game";
 
 export type PaymentCallbackPayload = {
   channel: PaymentCallbackChannel;
@@ -10,6 +10,7 @@ export type PaymentCallbackPayload = {
 const STORAGE_KEYS: Record<PaymentCallbackChannel, string> = {
   shop: "shop-payment-callback",
   redeem: "redeem-payment-callback",
+  game: "game-callback",
 };
 
 const MESSAGE_TYPE = "ffgt-payment-callback";

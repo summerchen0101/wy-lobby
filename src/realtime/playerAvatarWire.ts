@@ -61,12 +61,29 @@ export function encodeUpdatePlayerCurrentAvatarRequest(params: {
 export function encodeGetThirdPartyGameInfoRequest(
   platform: string,
   gameUID: string,
+  callbackUrls?: { successUrl?: string; failUrl?: string },
 ): Uint8Array {
-  const payload = { platform, gameUID };
+  const payload = {
+    platform,
+    gameUID,
+    successUrl: callbackUrls?.successUrl?.trim() ?? "",
+    failUrl: callbackUrls?.failUrl?.trim() ?? "",
+  };
   const err = GetThirdPartyGameInfoRequestType.verify(payload);
   if (err) throw new Error(`GetThirdPartyGameInfoRequest: ${err}`);
   const msg = GetThirdPartyGameInfoRequestType.create(payload);
   return GetThirdPartyGameInfoRequestType.encode(msg).finish();
+}
+
+export function decodeGetThirdPartyGameInfoRequestForDevLog(
+  data: Uint8Array,
+): Record<string, unknown> {
+  const msg = GetThirdPartyGameInfoRequestType.decode(data);
+  return GetThirdPartyGameInfoRequestType.toObject(msg, {
+    longs: String,
+    defaults: true,
+    enums: String,
+  }) as Record<string, unknown>;
 }
 
 export type ThirdPartyGameInfoDecoded = {

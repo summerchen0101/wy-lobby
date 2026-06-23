@@ -51,7 +51,7 @@ describe("lobbyDecodedGamesToApiGames", () => {
 });
 
 describe("lobbyThirdPartyListToApiGames", () => {
-  it("保留 ACTIVE／缺 status 列，略過明確下架", () => {
+  it("僅保留 status 為 ACTIVE 的列", () => {
     const decoded = {
       thirdPartyGameInfoList: [
         {
@@ -77,13 +77,18 @@ describe("lobbyThirdPartyListToApiGames", () => {
           gameName: "Game D",
           status: "INACTIVE",
         },
+        {
+          platform: "BGAMING",
+          gameUID: "game-e",
+          gameName: "Game E",
+          status: "ENABLE",
+        },
       ],
     } as unknown as LobbyGetDecoded;
     const items = lobbyThirdPartyListToApiGames(decoded.thirdPartyGameInfoList);
     expect(items.map((g) => g.thirdPartyLaunch?.gameUID)).toEqual([
       "game-a",
       "game-b",
-      "game-c",
     ]);
   });
 

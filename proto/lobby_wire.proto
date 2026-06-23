@@ -248,6 +248,8 @@ message ThirdPartyGameInfo {
 message GetThirdPartyGameInfoRequest {
   string platform = 1;
   string gameUID = 2;
+  string successUrl = 3;
+  string failUrl = 4;
 }
 
 message GetThirdPartyGameInfoResponse {

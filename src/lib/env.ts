@@ -154,6 +154,12 @@ export function redeemCallbackPath(): string {
   return v || "/redeem/callback";
 }
 
+/** 第三方遊戲結束 callback 路徑（不含 origin）。 */
+export function gameCallbackPath(): string {
+  const v = import.meta.env.VITE_GAME_CALLBACK_BASE?.trim();
+  return v || "/game/callback";
+}
+
 function callbackOrigin(): string {
   if (typeof window === "undefined") return "";
   return window.location.origin.replace(/\/+$/, "");
@@ -169,6 +175,12 @@ export function buildPaymentCallbackUrl(state: 1 | 2): string {
 export function buildRedeemCallbackUrl(state: 1 | 2): string {
   const base = callbackOrigin();
   const path = redeemCallbackPath().replace(/\/+$/, "");
+  return `${base}${path.startsWith("/") ? path : `/${path}`}?state=${state}`;
+}
+
+export function buildGameCallbackUrl(state: 1 | 2): string {
+  const base = callbackOrigin();
+  const path = gameCallbackPath().replace(/\/+$/, "");
   return `${base}${path.startsWith("/") ? path : `/${path}`}?state=${state}`;
 }
 

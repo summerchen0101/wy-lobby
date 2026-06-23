@@ -231,20 +231,9 @@ function thirdPartyRowString(
   return "";
 }
 
-/** 大廳僅顯示後端標為上架中之第三方遊戲；缺 status 時視為可顯示（後端已列入列表）。 */
+/** 大廳僅顯示 status 為 ACTIVE 之第三方遊戲（大小寫不敏感）。 */
 function lobbyThirdPartyRowIsActive(row: LobbyThirdPartyRow): boolean {
-  const s = thirdPartyRowString(row, "status").toUpperCase();
-  if (!s) return true;
-  if (s === "ACTIVE" || s === "ENABLE" || s === "ENABLED" || s === "1") {
-    return true;
-  }
-  return !(
-    s === "INACTIVE" ||
-    s === "DISABLE" ||
-    s === "DISABLED" ||
-    s === "OFF" ||
-    s === "0"
-  );
+  return thirdPartyRowString(row, "status").toUpperCase() === "ACTIVE";
 }
 
 /**
@@ -269,7 +258,7 @@ export function lobbyThirdPartyRowToApiGame(
   };
 }
 
-/** 後端已排序之第三方列表（略過明確下架 status）；勿再呼叫 sortLobbyGamesByMenu。 */
+/** 後端已排序之第三方列表（僅 ACTIVE）；勿再呼叫 sortLobbyGamesByMenu。 */
 export function lobbyThirdPartyListToApiGames(
   list: LobbyGetDecoded["thirdPartyGameInfoList"] | undefined | null,
 ): Game[] {

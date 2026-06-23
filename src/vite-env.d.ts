@@ -86,6 +86,8 @@ interface ImportMetaEnv {
   readonly VITE_PAYMENT_CALLBACK_BASE?: string;
   /** Redeem 第三方提現完成 redirect 路徑（預設 /redeem/callback） */
   readonly VITE_REDEEM_CALLBACK_BASE?: string;
+  /** 第三方遊戲結束 redirect 路徑（預設 /game/callback） */
+  readonly VITE_GAME_CALLBACK_BASE?: string;
   /**
    * 設為 `"true"` 啟用大廳第三方遊戲（PROVIDERS 分頁）；未設或空值為關閉。
    */

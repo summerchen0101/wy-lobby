@@ -1,12 +1,14 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { Search, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ChevronDown, Search, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { LandingHeader } from "../../components/LandingHeader";
@@ -31,6 +33,7 @@ import {
   isDevConsoleEnabled,
   isThirdPartyGamesEnabled,
   isWsLobbyGamesEnabled,
+  buildGameCallbackUrl,
 } from "../../lib/env";
 import { GATEWAY_API_GET_THIRD_PARTY_GAME_INFO } from "../../realtime/gatewayApi";
 import {
@@ -43,6 +46,8 @@ import {
   sortLobbyGamesByMenu,
 } from "../../realtime/lobbyDecode";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
+import { useAlert } from "../../components/alert/alertContext";
+import { usePaymentCallbackListener } from "../payment/usePaymentCallbackListener";
 import {
   activeWalletToSlotMode,
   amountForActiveWallet,
@@ -366,6 +371,7 @@ function LobbyGameCardThumb({
 
 export function LandingPage() {
   const { token, user, refreshUser, ensureFreshAccessForGame } = useAuth();
+  const { show } = useAlert();
   const { withBlocking } = useBlockingLoad();
   const { activeWallet } = useWallet();
   const { open: openShell } = useGameShell();
@@ -376,6 +382,7 @@ export function LandingPage() {
     liveJackpotAmounts,
     lobbyGet,
     requestRef,
+    refreshLobbyGet,
   } = useGatewayLobby();
 
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
@@ -394,6 +401,15 @@ export function LandingPage() {
   );
   const [searchParams, setSearchParams] = useSearchParams();
   const [lobbyFilter, setLobbyFilter] = useState<LobbyFilterTab>("all");
+  const [providerPlatformFilter, setProviderPlatformFilter] = useState<
+    string | null
+  >(null);
+  const [providerMenuOpen, setProviderMenuOpen] = useState(false);
+  const [providerMenuPos, setProviderMenuPos] = useState<{
+    top: number;
+    left: number;
+    minWidth: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!thirdPartyGamesEnabled) {
@@ -405,6 +421,7 @@ export function LandingPage() {
   const lobbySearchInputRef = useRef<HTMLInputElement | null>(null);
   const lobbyGameFilterRef = useRef<HTMLDivElement | null>(null);
   const lobbyGamesSectionRef = useRef<HTMLElement | null>(null);
+  const providerTabBtnRef = useRef<HTMLButtonElement | null>(null);
 
   const loading = user && wsLobbyEnabled ? lobbyLoading : false;
   const error = user && wsLobbyEnabled ? lobbyError : null;
@@ -479,7 +496,7 @@ export function LandingPage() {
     });
   }, [displayGames, lobbySearch]);
 
-  /** 第三方遊戲：`thirdPartyGameInfoList` 略過明確下架 status；順序不變，僅依搜尋過濾（不重排）。 */
+  /** 第三方遊戲：僅 ACTIVE；順序不變，僅依搜尋過濾（不重排）。 */
   const providerGamesFiltered = useMemo(() => {
     if (!thirdPartyGamesEnabled) return [];
     const list = lobbyThirdPartyListToApiGames(
@@ -498,11 +515,30 @@ export function LandingPage() {
     lobbySearch,
   ]);
 
+  const providerPlatforms = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const g of providerGamesFiltered) {
+      const p = g.thirdPartyLaunch?.platform?.trim();
+      if (!p || seen.has(p)) continue;
+      seen.add(p);
+      out.push(p);
+    }
+    return out;
+  }, [providerGamesFiltered]);
+
+  const providerGamesForFilter = useMemo(() => {
+    if (!providerPlatformFilter) return providerGamesFiltered;
+    return providerGamesFiltered.filter(
+      (g) => g.thirdPartyLaunch?.platform === providerPlatformFilter,
+    );
+  }, [providerGamesFiltered, providerPlatformFilter]);
+
   /** 各分類一份列表（已登入分頁用） */
   const gamesByFilter = useMemo(() => {
     const out = {} as Record<LobbyFilterTab, Game[]>;
     const sessionProviders =
-      thirdPartyGamesEnabled && user ? providerGamesFiltered : [];
+      thirdPartyGamesEnabled && user ? providerGamesForFilter : [];
     for (const f of lobbyFilterOrder) {
       if (f === "providers") {
         out[f] = sessionProviders;
@@ -514,11 +550,151 @@ export function LandingPage() {
     return out;
   }, [
     searchFilteredGames,
-    providerGamesFiltered,
+    providerGamesForFilter,
     user,
     thirdPartyGamesEnabled,
     lobbyFilterOrder,
   ]);
+
+  useEffect(() => {
+    if (
+      providerPlatformFilter &&
+      !providerPlatforms.includes(providerPlatformFilter)
+    ) {
+      setProviderPlatformFilter(null);
+    }
+  }, [providerPlatformFilter, providerPlatforms]);
+
+  const updateProviderMenuPos = useCallback(() => {
+    const el = providerTabBtnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setProviderMenuPos({
+      top: r.bottom + 4,
+      left: r.left,
+      minWidth: r.width,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!providerMenuOpen) return;
+    updateProviderMenuPos();
+    const filterEl = lobbyGameFilterRef.current;
+    window.addEventListener("resize", updateProviderMenuPos);
+    filterEl?.addEventListener("scroll", updateProviderMenuPos, {
+      passive: true,
+    });
+    return () => {
+      window.removeEventListener("resize", updateProviderMenuPos);
+      filterEl?.removeEventListener("scroll", updateProviderMenuPos);
+    };
+  }, [providerMenuOpen, updateProviderMenuPos, providerPlatforms.length]);
+
+  useEffect(() => {
+    if (!providerMenuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const t = e.target;
+      if (!(t instanceof Node)) return;
+      if (providerTabBtnRef.current?.contains(t)) return;
+      const menu = document.getElementById("lobby-provider-tab-menu");
+      if (menu?.contains(t)) return;
+      setProviderMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setProviderMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [providerMenuOpen]);
+
+  const selectProviderPlatform = useCallback((platform: string | null) => {
+    setLobbyFilter("providers");
+    setProviderPlatformFilter(platform);
+    setProviderMenuOpen(false);
+  }, []);
+
+  /** 點 PROVIDERS tab 只開／關下拉；選完 platform 後才切到 providers 遊戲列表。 */
+  const onProvidersTabClick = useCallback(() => {
+    setProviderMenuOpen((open) => !open);
+  }, []);
+
+  const providerMenuPortal = useMemo(() => {
+    if (
+      !providerMenuOpen ||
+      providerPlatforms.length === 0 ||
+      !providerMenuPos
+    ) {
+      return null;
+    }
+    return createPortal(
+      <ul
+        id="lobby-provider-tab-menu"
+        className="lobby-provider-tab__menu"
+        role="listbox"
+        aria-label="Provider platforms"
+        style={{
+          top: providerMenuPos.top,
+          left: providerMenuPos.left,
+          minWidth: providerMenuPos.minWidth,
+        }}>
+        <li role="presentation">
+          <button
+            type="button"
+            className={
+              "lobby-provider-tab__option" +
+              (!providerPlatformFilter ? " is-selected" : "")
+            }
+            role="option"
+            aria-selected={!providerPlatformFilter}
+            onClick={() => selectProviderPlatform(null)}>
+            All
+          </button>
+        </li>
+        {providerPlatforms.map((p) => (
+          <li key={p} role="presentation">
+            <button
+              type="button"
+              className={
+                "lobby-provider-tab__option" +
+                (providerPlatformFilter === p ? " is-selected" : "")
+              }
+              role="option"
+              aria-selected={providerPlatformFilter === p}
+              onClick={() => selectProviderPlatform(p)}>
+              {p}
+            </button>
+          </li>
+        ))}
+      </ul>,
+      document.body,
+    );
+  }, [
+    providerMenuOpen,
+    providerPlatforms,
+    providerMenuPos,
+    providerPlatformFilter,
+    selectProviderPlatform,
+  ]);
+
+  const handleGameCallback = useCallback(
+    (payload: { state: 1 | 2 }) => {
+      if (payload.state === 2) {
+        show("Game session ended with an error.", { variant: "error" });
+      }
+      void refreshLobbyGet();
+    },
+    [show, refreshLobbyGet],
+  );
+
+  usePaymentCallbackListener(
+    "game",
+    Boolean(user && thirdPartyGamesEnabled),
+    handleGameCallback,
+  );
 
   const launchThirdPartyGame = useCallback(
     async (card: Game) => {
@@ -529,7 +705,10 @@ export function LandingPage() {
       const req = requestRef.current;
       if (!req || !platform || !gameUID) return;
       try {
-        const data = encodeGetThirdPartyGameInfoRequest(platform, gameUID);
+        const data = encodeGetThirdPartyGameInfoRequest(platform, gameUID, {
+          successUrl: buildGameCallbackUrl(1),
+          failUrl: buildGameCallbackUrl(2),
+        });
         const r = await req({
           type: GATEWAY_API_GET_THIRD_PARTY_GAME_INFO,
           data,
@@ -946,7 +1125,11 @@ export function LandingPage() {
           aria-label="Games">
           {user ? (
             <div className="lobby-games-toolbar">
-              <div className="lobby-games-filter-strip">
+              <div
+                className={
+                  "lobby-games-filter-strip" +
+                  (providerMenuOpen ? " is-provider-menu-open" : "")
+                }>
                 <div
                   className={
                     "lobby-game-search" +
@@ -1005,23 +1188,66 @@ export function LandingPage() {
                   className="lobby-game-filter"
                   role="tablist"
                   aria-label="Game categories">
-                  {lobbyFilterTabsList.map(({ id, label }) => (
-                    <button
-                      key={id}
-                      id={`lobby-tab-${id}`}
-                      type="button"
-                      className={
-                        "lobby-game-filter__tab" +
-                        (lobbyFilter === id ? " is-active" : "")
-                      }
-                      role="tab"
-                      aria-selected={lobbyFilter === id}
-                      aria-controls="lobby-games-panel"
-                      tabIndex={lobbyFilter === id ? 0 : -1}
-                      onClick={() => setLobbyFilter(id)}>
-                      {label}
-                    </button>
-                  ))}
+                  {lobbyFilterTabsList.map(({ id, label }) =>
+                    id === "providers" && thirdPartyGamesEnabled ? (
+                      <div key={id} className="lobby-provider-tab">
+                        <button
+                          ref={providerTabBtnRef}
+                          id={`lobby-tab-${id}`}
+                          type="button"
+                          className={
+                            "lobby-game-filter__tab lobby-game-filter__tab--providers" +
+                            (lobbyFilter === id || providerMenuOpen
+                              ? " is-active"
+                              : "") +
+                            (providerMenuOpen ? " is-menu-open" : "")
+                          }
+                          role="tab"
+                          aria-selected={
+                            lobbyFilter === id || providerMenuOpen
+                          }
+                          aria-controls="lobby-games-panel"
+                          aria-haspopup="listbox"
+                          aria-expanded={providerMenuOpen}
+                          tabIndex={
+                            lobbyFilter === id || providerMenuOpen ? 0 : -1
+                          }
+                          onClick={onProvidersTabClick}>
+                          <span>{label}</span>
+                          <ChevronDown
+                            className="lobby-provider-tab__chevron"
+                            strokeWidth={2.5}
+                            aria-hidden
+                          />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        key={id}
+                        id={`lobby-tab-${id}`}
+                        type="button"
+                        className={
+                          "lobby-game-filter__tab" +
+                          (lobbyFilter === id && !providerMenuOpen
+                            ? " is-active"
+                            : "")
+                        }
+                        role="tab"
+                        aria-selected={
+                          lobbyFilter === id && !providerMenuOpen
+                        }
+                        aria-controls="lobby-games-panel"
+                        tabIndex={
+                          lobbyFilter === id && !providerMenuOpen ? 0 : -1
+                        }
+                        onClick={() => {
+                          setProviderMenuOpen(false);
+                          setLobbyFilter(id);
+                        }}>
+                        {label}
+                      </button>
+                    ),
+                  )}
                 </div>
               </div>
             </div>
@@ -1157,6 +1383,7 @@ export function LandingPage() {
         displayEmail={phoneVerifyPayload?.displayEmail ?? ""}
         pendingBody={phoneVerifyPayload?.body ?? null}
       />
+      {providerMenuPortal}
     </div>
   );
 }
