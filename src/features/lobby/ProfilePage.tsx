@@ -2,7 +2,6 @@ import { useCallback, useEffect, useId, useState } from "react";
 import { Copy, Crown, Info, Volume2 } from "lucide-react";
 import { HiPencil } from "react-icons/hi2";
 import { useAlert } from "../../components/alert/alertContext";
-import { InfoPopover } from "../../components/InfoPopover";
 import { useAuth } from "../../auth/useAuth";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
 import {
@@ -17,6 +16,7 @@ import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { ChangeHeadIconModal } from "./ChangeHeadIconModal";
 import { FundsHistoryModal } from "./FundsHistoryModal";
 import { MyProfileModal } from "./MyProfileModal";
+import { VipModal } from "./VipModal";
 import {
   effectiveAvatarId,
   getProfileAvatarById,
@@ -49,13 +49,13 @@ export function ProfilePage() {
     HeadIconChoice[] | null
   >(null);
   const [myProfileOpen, setMyProfileOpen] = useState(false);
+  const [vipOpen, setVipOpen] = useState(false);
   const [fundsHistoryOpen, setFundsHistoryOpen] = useState(false);
   const [avatarImgFailed, setAvatarImgFailed] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const soundLabelId = useId();
 
   const {
-    useServerVipBar,
     current: vipProgressCurrent,
     required: vipProgressRequired,
     fillPct: vipProgressFillPct,
@@ -212,6 +212,10 @@ export function ProfilePage() {
     setMyProfileOpen(true);
   }
 
+  function onOpenVip() {
+    setVipOpen(true);
+  }
+
   function onSupport() {
     openZendeskOrFallback();
   }
@@ -281,29 +285,17 @@ export function ProfilePage() {
           </div>
           <div className="profile-page__level-row">
             <span className="profile-page__level-label">{vipTitle}</span>
-            <InfoPopover
-              align="end"
-              content={
-                <p className="profile-page__info-popover-text">
-                  {useServerVipBar
-                    ? "VIP point progress toward the next loyalty tier."
-                    : "Level details will be available when your account is connected to the loyalty system."}
-                </p>
-              }>
-              {(p, triggerRef) => (
-                <button
-                  ref={triggerRef}
-                  {...p}
-                  className="profile-page__info-btn"
-                  aria-label="Level info">
-                  <Info
-                    className="profile-page__level-info-icon"
-                    strokeWidth={2.5}
-                    aria-hidden
-                  />
-                </button>
-              )}
-            </InfoPopover>
+            <button
+              type="button"
+              className="profile-page__info-btn"
+              aria-label="Open VIP level details"
+              onClick={onOpenVip}>
+              <Info
+                className="profile-page__level-info-icon"
+                strokeWidth={2.5}
+                aria-hidden
+              />
+            </button>
           </div>
         </div>
         <div className="profile-page__progress">
@@ -389,6 +381,7 @@ export function ProfilePage() {
       <MyProfileModal
         open={myProfileOpen}
         onClose={() => setMyProfileOpen(false)}
+        onOpenVip={onOpenVip}
         userId={user?.id}
         displayName={user?.displayName}
         avatarId={displayAvatarId ?? ""}
@@ -409,6 +402,8 @@ export function ProfilePage() {
         open={fundsHistoryOpen}
         onClose={() => setFundsHistoryOpen(false)}
       />
+
+      <VipModal open={vipOpen} onClose={() => setVipOpen(false)} />
     </section>
   );
 }

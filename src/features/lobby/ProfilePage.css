@@ -1,10 +1,10 @@
-/* Scoped tokens — reference surface #242A45, dark dividers, near-black bar track */
+/* Scoped tokens — card surface uses site-wide --crown-surface-card-bg */
 .profile-page {
-  --profile-surface-bleed: #242a45;
-  --profile-hairline: color-mix(in srgb, #000000 42%, #242a45 58%);
-  --profile-hairline-soft: color-mix(in srgb, #000000 24%, #242a45 76%);
+  --profile-surface-bleed: var(--crown-surface-card-bg);
+  --profile-hairline: color-mix(in srgb, #000000 42%, var(--crown-surface-card-bg) 58%);
+  --profile-hairline-soft: color-mix(in srgb, #000000 24%, var(--crown-surface-card-bg) 76%);
   --profile-bar-track: #0a0a0a;
-  --profile-switch-off: color-mix(in srgb, #121620 88%, #242a45 12%);
+  --profile-switch-off: color-mix(in srgb, #121620 88%, var(--crown-surface-card-bg) 12%);
   --profile-bar-cap-bg: color-mix(in srgb, var(--crown-gold) 55%, #fff6a0 45%);
   --profile-pill-fg: #242a45;
   padding-top: var(--space-4);
@@ -27,7 +27,7 @@
 
 .profile-page__card {
   border-radius: var(--crown-surface-card-radius);
-  background: #242a45;
+  background: var(--crown-surface-card-bg);
   border: none;
   padding: var(--space-5) var(--space-4) var(--space-4);
   box-shadow: var(--crown-surface-card-shadow);
