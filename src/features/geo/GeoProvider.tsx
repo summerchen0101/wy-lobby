@@ -6,7 +6,9 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "../../auth/useAuth";
+import { shouldVerifyOnTokenChange } from "../../lib/geo/geoSession";
 import {
+  identifyRadarPlayer,
   isRadarGeoEnabled,
   runGeoVerification,
   startGeoTracking,
@@ -21,13 +23,15 @@ import {
 } from "./geoContext";
 
 export function GeoProvider({ children }: { children: ReactNode }) {
-  const { user, ready } = useAuth();
+  const { user, ready, token } = useAuth();
   const [status, setStatus] = useState<GeoStatus>(() =>
-    isRadarGeoEnabled() ? "checking" : "skipped",
+    isRadarGeoEnabled() ? "allowed" : "skipped",
   );
   const [blockReason, setBlockReason] = useState<GeoBlockReason | undefined>();
   const verifySeqRef = useRef(0);
   const userIdRef = useRef<string | undefined>(user?.id);
+  const prevTokenRef = useRef<string | null | undefined>(undefined);
+  const identifiedUserIdRef = useRef<string | undefined>();
 
   useEffect(() => {
     userIdRef.current = user?.id;
@@ -55,6 +59,15 @@ export function GeoProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const verifyInBackground = useCallback(async () => {
+    if (!isRadarGeoEnabled()) return;
+
+    const seq = ++verifySeqRef.current;
+    const result = await runGeoVerification(userIdRef.current);
+    if (seq !== verifySeqRef.current) return;
+    applyVerificationResult(result);
+  }, [applyVerificationResult]);
+
   const recheck = useCallback(async () => {
     if (!isRadarGeoEnabled()) {
       setStatus("skipped");
@@ -73,8 +86,37 @@ export function GeoProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready) return;
-    void recheck();
-  }, [ready, user?.id, recheck]);
+
+    if (!isRadarGeoEnabled()) {
+      setStatus("skipped");
+      setBlockReason(undefined);
+      return;
+    }
+
+    const current = token?.trim() || null;
+    const prev = prevTokenRef.current;
+    prevTokenRef.current = current;
+
+    if (!current) {
+      stopGeoTracking();
+      setBlockReason(undefined);
+      setStatus("allowed");
+      identifiedUserIdRef.current = undefined;
+      return;
+    }
+
+    if (shouldVerifyOnTokenChange(prev, current)) {
+      void verifyInBackground();
+    }
+  }, [ready, token, verifyInBackground]);
+
+  useEffect(() => {
+    const playerId = user?.id?.trim();
+    if (!playerId || !isRadarGeoEnabled()) return;
+    if (identifiedUserIdRef.current === playerId) return;
+    identifiedUserIdRef.current = playerId;
+    identifyRadarPlayer(playerId);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isRadarGeoEnabled()) return;
