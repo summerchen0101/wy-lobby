@@ -161,7 +161,7 @@ steps:
       VITE_USE_WS_LOBBY_GAMES: "true"
       # Shop 第三方金流結帳頁；串接新金流商後改為 "true"
       VITE_PAYMENT_FEATURES_ENABLED: "false"
-      VITE_THIRD_PARTY_GAMES_ENABLED: "false"
+      VITE_THIRD_PARTY_GAMES_ENABLED: "true"
       VITE_CLIENT_VER: "web-us-${DRONE_TAG}"
       VITE_ZENDESK_KEY: "9720e0de-05e6-449b-be95-f5b42d5e7df4"
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://unityweb-cdn.luklokcasino.com/us-game-lobby"
