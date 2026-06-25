@@ -22,19 +22,12 @@
   position: relative;
   aspect-ratio: 1;
   border-radius: 50%;
-  border: 2px solid rgb(0 0 0 / 45%);
+  border: none;
   padding: 0;
   background: #14182a;
   cursor: pointer;
-  overflow: hidden;
+  overflow: visible;
   -webkit-tap-highlight-color: transparent;
-}
-
-.change-head-icon-modal__tile--selected {
-  border-color: #22d3ee;
-  box-shadow:
-    0 0 0 2px #22d3ee,
-    0 0 0.5rem rgb(34 211 238 / 35%);
 }
 
 .change-head-icon-modal__tile--disabled {
@@ -43,6 +36,8 @@
 }
 
 .change-head-icon-modal__img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;

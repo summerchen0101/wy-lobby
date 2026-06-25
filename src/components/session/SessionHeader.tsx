@@ -10,6 +10,7 @@ import {
 import { useProfileAvatarId } from "../../features/lobby/profileAvatarStorage";
 import { getCurrencyIconUrl } from "../../lib/currencyIcons";
 import { getHeaderBrandLogoUrl } from "../../lib/brandLogos";
+import { profileAvatarFrameUrl } from "../../lib/profileAssets";
 import { GATEWAY_API_WALLET_USE } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
@@ -18,6 +19,7 @@ import { getWalletDisplay } from "../../wallet/formatWalletAmount";
 import type { ActiveWallet } from "../../wallet/walletContext";
 import { useWallet } from "../../wallet/walletContext";
 import "./SessionChrome.css";
+import "../profile/ProfileAvatarFrame.css";
 
 export function SessionHeader() {
   const { user } = useAuth();
@@ -95,17 +97,25 @@ export function SessionHeader() {
                 (showAvatarImage ? " session-header__avatar--has-image" : "")
               }
               aria-label="Open profile">
-              {showAvatarImage && picked ? (
-                <img
-                  className="session-header__avatar-img"
-                  src={picked.imageSrc}
-                  alt=""
-                  onError={() => setAvatarImgFailed(true)}
-                  decoding="async"
-                />
-              ) : (
-                initial
-              )}
+              <span className="session-header__avatar-media">
+                {showAvatarImage && picked ? (
+                  <img
+                    className="session-header__avatar-img"
+                    src={picked.imageSrc}
+                    alt=""
+                    onError={() => setAvatarImgFailed(true)}
+                    decoding="async"
+                  />
+                ) : (
+                  initial
+                )}
+              </span>
+              <img
+                className="profile-avatar-frame"
+                src={profileAvatarFrameUrl()}
+                alt=""
+                aria-hidden
+              />
             </Link>
             <div className="session-header__pill" title="Wallet balance">
             <span className="session-header__pill-label">

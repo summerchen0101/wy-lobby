@@ -26,6 +26,7 @@ import {
   type HeadIconChoice,
 } from "./profileAvatarChoices";
 import { openZendeskOrFallback } from "../../lib/zendeskSupport";
+import { profileAvatarFrameUrl } from "../../lib/profileAssets";
 import { useProfileAvatarId } from "./profileAvatarStorage";
 import {
   LOBBY_SOUND_PREF_STORAGE_KEY,
@@ -35,6 +36,7 @@ import { profileVipProgress } from "./profileVipProgress";
 import { resolveProfileVipTitle } from "./profileVipTitle";
 import "./ProfilePage.css";
 import "./SessionPageDecor.css";
+import "../../components/profile/ProfileAvatarFrame.css";
 
 export function ProfilePage() {
   const { show } = useAlert();
@@ -249,6 +251,12 @@ export function ProfilePage() {
                     <span className="profile-page__avatar-initial">{initial}</span>
                   )}
                 </span>
+                <img
+                  className="profile-avatar-frame"
+                  src={profileAvatarFrameUrl()}
+                  alt=""
+                  aria-hidden
+                />
               </button>
               <button
                 type="button"

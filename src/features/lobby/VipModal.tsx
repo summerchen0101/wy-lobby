@@ -4,6 +4,10 @@ import { Check, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { InfoPopover } from "../../components/InfoPopover";
 import { useAuth } from "../../auth/useAuth";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
+import {
+  PROFILE_VIP_CLAIMED_STAMP_URL,
+  profileVipBadgeUrl,
+} from "../../lib/profileAssets";
 import { profileVipProgress } from "./profileVipProgress";
 import {
   clampVipViewLevel,
@@ -145,7 +149,11 @@ export function VipModal({ open, onClose }: Props) {
               <ChevronLeft className="vip-modal__nav-icon" aria-hidden />
             </button>
             <div className="vip-modal__badge" aria-hidden>
-              <span className="vip-modal__badge-letter">V</span>
+              <img
+                className="vip-modal__badge-img"
+                src={profileVipBadgeUrl(viewLevel)}
+                alt=""
+              />
             </div>
             <button
               type="button"
@@ -193,9 +201,11 @@ export function VipModal({ open, onClose }: Props) {
 
           <div className="vip-modal__bonus">
             {bonusClaimed ? (
-              <span className="vip-modal__claimed" aria-label="Claimed">
-                CLAIMED
-              </span>
+              <img
+                className="vip-modal__claimed"
+                src={PROFILE_VIP_CLAIMED_STAMP_URL}
+                alt="Claimed"
+              />
             ) : null}
             <p className="vip-modal__bonus-title">Level up Bonus</p>
             <div className="vip-modal__bonus-row">

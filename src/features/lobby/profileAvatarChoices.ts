@@ -1,6 +1,7 @@
 import type { PlayerAvatarRowDecoded } from '../../realtime/playerAvatarWire'
-import { publicImageUrl } from '../../lib/publicImageUrl'
+import { profileAvatarUrl } from '../../lib/profileAssets'
 import {
+  PROFILE_AVATAR_HEAD_INDEX,
   PROFILE_AVATAR_ITEM_ORDER,
   getProfileAvatarById,
 } from './profileAvatars'
@@ -32,7 +33,7 @@ export function headIconChoicesFromServerRows(
       imageSrc = getProfileAvatarById(id)?.imageSrc ?? ''
     }
     if (!imageSrc && id) {
-      imageSrc = publicImageUrl('/images/head/head1.png')
+      imageSrc = profileAvatarUrl(PROFILE_AVATAR_HEAD_INDEX[0] ?? 1)
     }
     const st = row.goodState
     const disabled =

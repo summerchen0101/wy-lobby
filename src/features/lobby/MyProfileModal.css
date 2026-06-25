@@ -34,18 +34,18 @@
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: var(--crown-surface-card-bg);
+  background: transparent;
   cursor: default;
-  overflow: hidden;
+  overflow: visible;
   -webkit-tap-highlight-color: transparent;
 }
 
 .my-profile-modal__avatar-media {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
   border-radius: 50%;
   background: #14182a;
   overflow: hidden;

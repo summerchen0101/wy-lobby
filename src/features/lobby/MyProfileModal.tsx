@@ -2,9 +2,11 @@ import { useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { Info } from "lucide-react";
 import { useAuth } from "../../auth/useAuth";
+import { profileAvatarFrameUrl } from "../../lib/profileAssets";
 import { getProfileAvatarById } from "./profileAvatars";
 import { resolveProfileVipTitle } from "./profileVipTitle";
 import "./MyProfileModal.css";
+import "../../components/profile/ProfileAvatarFrame.css";
 
 type Props = {
   open: boolean;
@@ -122,6 +124,12 @@ export function MyProfileModal({
                 </span>
               )}
             </span>
+            <img
+              className="profile-avatar-frame"
+              src={profileAvatarFrameUrl()}
+              alt=""
+              aria-hidden
+            />
           </div>
           <p className="my-profile-modal__id">{headline}</p>
           <div className="my-profile-modal__level-row">
