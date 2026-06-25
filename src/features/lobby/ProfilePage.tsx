@@ -36,9 +36,6 @@ import { resolveProfileVipTitle } from "./profileVipTitle";
 import "./ProfilePage.css";
 import "./SessionPageDecor.css";
 
-const AVATAR_SELECTION_UNAVAILABLE_MSG =
-  "Avatar selection is temporarily unavailable while adjustments are in progress.";
-
 export function ProfilePage() {
   const { show } = useAlert();
   const { user, mergeUser, refreshUser, logout } = useAuth();
@@ -205,8 +202,8 @@ export function ProfilePage() {
   }
 
   const onEditAvatar = useCallback(() => {
-    show(AVATAR_SELECTION_UNAVAILABLE_MSG, { variant: "info" });
-  }, [show]);
+    setHeadIconOpen(true);
+  }, []);
 
   function onMyProfile() {
     setMyProfileOpen(true);
