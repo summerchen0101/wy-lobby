@@ -365,8 +365,10 @@
   --session-footer-gutter: max(var(--safe-left), var(--space-2));
   --session-footer-gutter-end: max(var(--safe-right), var(--space-2));
   --session-footer-lobby-bump: none;
-  --session-footer-lobby-bump-w: clamp(3.85rem, 35vw, 7.5rem);
+  --session-footer-lobby-bump-w: clamp(3.85rem, 35vw, 7.9rem);
   --session-footer-lobby-bump-ratio: 384 / 203;
+  /* 與 index.css --session-footer-h 扣掉 safe-bottom 對齊，切 tab 時不隨 icon 比例變高 */
+  --session-footer-list-h: 3.65rem;
 
   position: fixed;
   left: 0;
@@ -400,19 +402,22 @@
   grid-template-columns: repeat(5, 1fr);
   list-style: none;
   margin: 0;
+  height: var(--session-footer-list-h);
   padding: 0 var(--session-footer-gutter-end) 0.45rem
     var(--session-footer-gutter);
   max-width: var(--session-chrome-max);
   margin-inline: auto;
   gap: 0;
   box-sizing: border-box;
-  align-items: end;
+  align-items: stretch;
 }
 
 .session-footer__list > li {
   display: flex;
   justify-content: center;
+  align-items: stretch;
   min-width: 0;
+  height: 100%;
   overflow: visible;
 }
 
@@ -428,7 +433,8 @@
   justify-content: flex-end;
   gap: 0.05rem;
   width: 100%;
-  min-height: 2.85rem;
+  height: 100%;
+  min-height: 0;
   padding: 0 0.1rem 0.15rem;
   border-radius: 0.5rem;
   text-decoration: none;
@@ -448,17 +454,15 @@
 
 .session-footer__link.is-active {
   color: var(--session-footer-accent);
-  min-height: 3.15rem;
-  padding-top: 0.35rem;
+  padding-top: 0.15rem;
   padding-bottom: 0.58rem;
 }
 
 .session-footer__icon {
   display: block;
   width: 1.25rem;
+  height: 1.25rem;
   margin-bottom: 0.4rem;
-  height: auto;
-  max-height: 1.25rem;
   object-fit: contain;
   flex-shrink: 0;
   transition:
@@ -501,8 +505,8 @@
 
 .session-footer__link.is-active .session-footer__icon {
   width: clamp(1.85rem, 5.5vw, 2.35rem);
+  height: clamp(1.6rem, 6vw, 2.5rem);
   max-width: none;
-  max-height: clamp(1.6rem, 6vw, 2.5rem);
   margin-top: clamp(-0.45rem, -1.2vw, -0.1rem);
   margin-bottom: 0.12rem;
   filter: none;
@@ -528,6 +532,7 @@
 
 @media (min-width: 48rem) {
   .session-footer {
+    --session-footer-list-h: 3.95rem;
     --session-footer-lobby-bump-w: 9rem;
     --session-footer-gutter: clamp(1.25rem, 3vw, 2rem);
     --session-footer-gutter-end: clamp(1.25rem, 3vw, 2rem);
@@ -541,18 +546,13 @@
   }
 
   .session-footer__link {
-    min-height: 3.15rem;
     font-size: 0.62rem;
   }
 
   .session-footer__icon {
     width: 1.5rem;
-    max-height: 1.5rem;
+    height: 1.5rem;
     margin-bottom: 0.35rem;
-  }
-
-  .session-footer__link.is-active {
-    min-height: 3.45rem;
   }
 
   .session-footer__link.is-active::before {
@@ -565,7 +565,7 @@
 
   .session-footer__link.is-active .session-footer__icon {
     width: 2.1rem;
-    max-height: 2.1rem;
+    height: 2.1rem;
     margin-top: -0.35rem;
   }
 
