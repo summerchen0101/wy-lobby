@@ -62,6 +62,32 @@ export type MegaAccountBindingRequestFields = {
   backImageBase64?: string;
 };
 
+/** Shop checkout: simplified binding — address/KYC fields omitted. */
+export type ShopMegaAccountBindingFields = {
+  userID: bigint | number | string;
+  countryCode: string;
+  phone: string;
+  email: string;
+  answer: string;
+  firstName: string;
+  lastName: string;
+  birthday: string;
+};
+
+export function encodeShopMegaAccountBindingRequestBytes(
+  fields: ShopMegaAccountBindingFields,
+): Uint8Array {
+  return encodeMegaAccountBindingRequestBytes({
+    ...fields,
+    address: "",
+    country: "US",
+    city: "",
+    state: "",
+    zip: "",
+    language: "en",
+  });
+}
+
 export function encodeMegaAccountBindingRequestBytes(
   fields: MegaAccountBindingRequestFields,
 ): Uint8Array {

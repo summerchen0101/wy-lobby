@@ -10,7 +10,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { splitPhoneForBindingForm } from "./splitPhoneForBindingForm";
 import type { ShopBindingFormPayload, ShopBindingPrefill } from "./types";
 
-const PHONE_COUNTRY_CODES = ["886", "1"] as const;
+const PHONE_COUNTRY_CODES = ["1"] as const;
 
 /** Digits only, leading zeros removed (e.g. 09… → 9…) for binding payload. */
 function normalizePhoneDigitsForSubmit(input: string): string {
@@ -63,7 +63,7 @@ type Props = {
   bindingError: string | null;
   protectNeedSms: boolean;
   bindingPrefill?: ShopBindingPrefill;
-  /** Full exit from protect flow (e.g. to order summary). */
+  /** Close the protect / checkout overlay. */
   onClose: () => void;
   /** From SMS verification: return to the full binding form without leaving checkout. */
   onBackToProtectForm: () => void;
@@ -188,11 +188,6 @@ export function ProtectAccountView({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       birthday,
-      address: "",
-      country: "US",
-      city: "",
-      state: "",
-      zip: "",
     };
   };
 
@@ -251,7 +246,7 @@ export function ProtectAccountView({
           aria-label={
             protectNeedSms
               ? "Back to protect account form"
-              : "Back to order summary"
+              : "Close"
           }>
           <BackIcon />
         </button>
@@ -267,7 +262,7 @@ export function ProtectAccountView({
             type="button"
             className="app-modal__close"
             onClick={onClose}
-            aria-label="Close and return to order summary">
+            aria-label="Close">
             ×
           </button>
         )}
