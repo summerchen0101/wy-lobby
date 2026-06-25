@@ -38,7 +38,7 @@ export function NewbieTutorialGate() {
         const ok = await submitNoviceTeachingGeneralDone(request, userId);
         if (!ok) {
           console.warn(
-            "[newbie-tutorial] UPDATE_NOVICE_TEACHING did not return code 200",
+            "[newbie-tutorial] UPDATE_NOVICE_TEACHING did not return a 2xx code",
           );
         }
       } catch (err) {

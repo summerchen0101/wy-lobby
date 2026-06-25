@@ -15,11 +15,14 @@ export const GatewayRequestType = mustLookup("gateway.Request");
 export const GatewayResponseType = mustLookup("gateway.Response");
 
 /**
- * Gateway HTTP 語意對應：200／201／204 皆可代表成功。
- * 成功時 response data 為空也可能是正常（例如綁定完成無 MegaAccountBindingResponse）。
+ * Gateway HTTP 語意對應：任意 2xx 皆代表成功。
+ * 成功時 response data 為空也可能是正常（例如 204 或綁定完成無 body）。
  */
 export function isGatewaySuccessCode(code: string): boolean {
-  return code === "200" || code === "201" || code === "204";
+  const trimmed = code.trim();
+  if (!trimmed) return false;
+  const n = Number.parseInt(trimmed, 10);
+  return Number.isFinite(n) && n >= 200 && n < 300;
 }
 
 export function encodeGatewayRequest(message: object): Uint8Array {

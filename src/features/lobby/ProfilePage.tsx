@@ -8,6 +8,7 @@ import {
   GATEWAY_API_LIST_PLAYER_AVATARS,
   GATEWAY_API_UPDATE_PLAYER_AVATAR,
 } from "../../realtime/gatewayApi";
+import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
   decodeListPlayerAvatarsResponseBytes,
   encodeUpdatePlayerCurrentAvatarRequest,
@@ -133,7 +134,7 @@ export function ProfilePage() {
           debugLabel: "LIST_PLAYER_AVATARS",
         });
         if (cancelled) return;
-        if (String(r.code) === "200" && r.data instanceof Uint8Array) {
+        if (isGatewaySuccessCode(String(r.code)) && r.data instanceof Uint8Array) {
           if (r.data.byteLength === 0) {
             setHeadIconChoices(null);
             return;
@@ -169,7 +170,7 @@ export function ProfilePage() {
             data: body,
             debugLabel: "UPDATE_PLAYER_AVATAR",
           });
-          if (String(r.code) !== "200") {
+          if (!isGatewaySuccessCode(String(r.code))) {
             show("Could not update avatar", { variant: "error" });
             return;
           }

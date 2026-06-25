@@ -1,4 +1,5 @@
 import { GATEWAY_API_UPDATE_NOVICE_TEACHING } from "../../realtime/gatewayApi";
+import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import { encodeUpdateNoviceTeachingRequest } from "../../realtime/noviceTeachingWire";
 import type { GatewayWsRequestFn } from "../../realtime/gatewayWs";
 
@@ -19,5 +20,5 @@ export async function submitNoviceTeachingGeneralDone(
     data: body,
     debugLabel: "UPDATE_NOVICE_TEACHING",
   });
-  return String(r.code) === "200";
+  return isGatewaySuccessCode(String(r.code ?? ""));
 }
