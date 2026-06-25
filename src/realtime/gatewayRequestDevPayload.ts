@@ -11,6 +11,7 @@ import {
   GATEWAY_API_MEGA_ACCOUNT_BINDING,
   GATEWAY_API_PING_PONG,
   GATEWAY_API_SERVER_LOGIN,
+  GATEWAY_API_UPDATE_NOVICE_TEACHING,
   GATEWAY_API_WALLET_USE,
 } from './gatewayApi'
 import {
@@ -18,6 +19,7 @@ import {
   decodeListProductsRequestForDevLog,
   decodeMegaAccountBindingRequestForDevLog,
 } from './shopLobbyWire'
+import { decodeUpdateNoviceTeachingRequestForDevLog } from './noviceTeachingWire'
 import {
   decodeCreateWithdrawOrderRequestForDevLog,
   decodeListWithdrawOrdersRequestForDevLog,
@@ -107,6 +109,14 @@ export function decodeGatewayRequestDataForDevLog(
     return {
       decodeError: 'body not decodable as WalletUseRequest',
       hexPreview: hexPreview(raw, HEX_MAX),
+    }
+  }
+
+  if (apiType === GATEWAY_API_UPDATE_NOVICE_TEACHING) {
+    try {
+      return decodeUpdateNoviceTeachingRequestForDevLog(raw)
+    } catch (e) {
+      return fallbackHex(raw, e)
     }
   }
 

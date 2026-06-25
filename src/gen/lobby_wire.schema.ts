@@ -398,6 +398,26 @@ export default {
             }
           }
         },
+        "NoviceTeaching": {
+          "fields": {
+            "general": {
+              "type": "int64",
+              "id": 1
+            }
+          }
+        },
+        "UpdateNoviceTeaching": {
+          "fields": {
+            "userID": {
+              "type": "uint64",
+              "id": 1
+            },
+            "noviceTeaching": {
+              "type": "NoviceTeaching",
+              "id": 2
+            }
+          }
+        },
         "CoinType": {
           "values": {
             "UNKNOWN_COIN_TYPE": 0,

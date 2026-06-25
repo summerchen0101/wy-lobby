@@ -1,11 +1,18 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../auth/useAuth";
+import { isWsLobbyGamesEnabled } from "../../lib/env";
 import { setLobbyBgmSuppressed } from "../../lib/lobbySound";
+import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { NewbieVideoTutorialOverlay } from "./NewbieVideoTutorialOverlay";
-import { isNewbieTutorialMarkedDone } from "./tutorialStorage";
+import { submitNoviceTeachingGeneralDone } from "./submitNoviceTeachingGeneralDone";
+import {
+  isNewbieTutorialMarkedDone,
+  markNewbieTutorialDone,
+} from "./tutorialStorage";
 
 export function NewbieTutorialGate() {
   const { user, ready } = useAuth();
+  const { requestRef, gatewayRequestReady } = useGatewayLobby();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -21,7 +28,32 @@ export function NewbieTutorialGate() {
     return () => setLobbyBgmSuppressed(false);
   }, [open]);
 
+  const handleTutorialComplete = useCallback(async () => {
+    const wsOk = isWsLobbyGamesEnabled();
+    const request = requestRef.current;
+    const userId = user?.id?.trim() ?? "";
+
+    if (wsOk && gatewayRequestReady && request && userId && userId !== "0") {
+      try {
+        const ok = await submitNoviceTeachingGeneralDone(request, userId);
+        if (!ok) {
+          console.warn(
+            "[newbie-tutorial] UPDATE_NOVICE_TEACHING did not return code 200",
+          );
+        }
+      } catch (err) {
+        console.warn("[newbie-tutorial] UPDATE_NOVICE_TEACHING failed", err);
+      }
+    }
+
+    markNewbieTutorialDone();
+    setOpen(false);
+  }, [gatewayRequestReady, requestRef, user?.id]);
+
   return (
-    <NewbieVideoTutorialOverlay open={open} onClose={() => setOpen(false)} />
+    <NewbieVideoTutorialOverlay
+      open={open}
+      onComplete={handleTutorialComplete}
+    />
   );
 }

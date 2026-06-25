@@ -191,6 +191,16 @@ message UpdatePlayerCurrentAvatarRequest {
   YesNo isFBAvatar = 3;
 }
 
+// 對齊 proto/megaman/playerinfo.proto UpdateNoviceTeaching / proto/playerinfo/model.proto NoviceTeaching
+message NoviceTeaching {
+  int64 general = 1;
+}
+
+message UpdateNoviceTeaching {
+  uint64 userID = 1;
+  NoviceTeaching noviceTeaching = 2;
+}
+
 // --- wallet.Bag（對齊 proto/wallet/wallet.proto）與 LOBBY_GET 衛星型別 ---
 
 enum CoinType {
