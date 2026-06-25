@@ -31,7 +31,7 @@ export function GeoProvider({ children }: { children: ReactNode }) {
   const verifySeqRef = useRef(0);
   const userIdRef = useRef<string | undefined>(user?.id);
   const prevTokenRef = useRef<string | null | undefined>(undefined);
-  const identifiedUserIdRef = useRef<string | undefined>();
+  const identifiedUserIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     userIdRef.current = user?.id;
