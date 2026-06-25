@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import * as protobuf from "protobufjs/light.js";
 import schema from "../gen/lobby_wire.schema.js";
 import {
+  decodeCreateWithdrawOrderRequestForDevLog,
+  decodeCreateWithdrawOrderResponseBytes,
   decodeListWithdrawOrdersRequestForDevLog,
   decodeWithdrawSuccessPushBytes,
+  encodeCreateWithdrawOrderRequestBytes,
   encodeListWithdrawOrdersRequestBytes,
 } from "./withdrawLobbyWire";
 
@@ -23,6 +26,46 @@ describe("encodeListWithdrawOrdersRequestBytes", () => {
     expect(o.userIDIn).toEqual(["2046952017814859776"]);
     expect(o.page).toBe("1");
     expect(o.perPage).toBe("4");
+  });
+});
+
+describe("encodeCreateWithdrawOrderRequestBytes", () => {
+  it("僅送 userID、amount 與 callback URLs", () => {
+    const raw = encodeCreateWithdrawOrderRequestBytes({
+      userID: "99",
+      amount: "500000",
+      successUrl: "https://example.com/redeem/callback?state=1",
+      failUrl: "https://example.com/redeem/callback?state=2",
+    });
+    const o = decodeCreateWithdrawOrderRequestForDevLog(raw);
+    expect(o.userID).toBe("99");
+    expect(o.amount).toBe("500000");
+    expect(String(o.paymentType)).toBe("0");
+    expect(o.successUrl).toBe(
+      "https://example.com/redeem/callback?state=1",
+    );
+    expect(o.failUrl).toBe("https://example.com/redeem/callback?state=2");
+  });
+});
+
+const CreateWithdrawOrderRespPb = root.lookupType(
+  "megaman.CreateWithdrawOrderResp",
+) as protobuf.Type;
+
+describe("decodeCreateWithdrawOrderResponseBytes", () => {
+  it("解碼 withdrawOrderUID 與 paymentURL", () => {
+    const raw = Uint8Array.from(
+      CreateWithdrawOrderRespPb.encode(
+        CreateWithdrawOrderRespPb.create({
+          withdrawOrderUID: "wd-1",
+          paymentURL: "https://pay.example/abc",
+        }),
+      ).finish(),
+    );
+    expect(decodeCreateWithdrawOrderResponseBytes(raw)).toEqual({
+      withdrawOrderUID: "wd-1",
+      paymentURL: "https://pay.example/abc",
+    });
   });
 });
 

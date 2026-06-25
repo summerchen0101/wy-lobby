@@ -58,6 +58,14 @@
   padding: var(--space-4);
 }
 
+.funds-history-modal__scroll--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  min-height: 8rem;
+}
+
 .funds-history-modal__empty {
   margin: 0;
   font-size: 0.9rem;
@@ -140,6 +148,13 @@
   font-size: 0.8rem;
   font-weight: 800;
   color: var(--color-text, #fff);
+}
+
+.funds-history-modal__status {
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  color: #22c55e;
 }
 
 @media (min-width: 48rem) {

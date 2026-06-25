@@ -1,4 +1,9 @@
 {
   "unknown": "Something went wrong. Please try again.",
-  "RATE_LIMITED": "Too many requests. Please wait and try again."
+  "RATE_LIMITED": "Too many requests. Please wait and try again.",
+  "geo.regionBlocked": "This service is not available in your region.",
+  "geo.proxyBlocked": "Please disconnect your VPN or proxy and try again.",
+  "geo.permissionsRequired": "Location access is required to verify your region.",
+  "geo.networkError": "Unable to verify your location. Check your connection.",
+  "geo.locationError": "Location verification timed out. Please try again."
 }

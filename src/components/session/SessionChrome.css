@@ -154,7 +154,7 @@
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: linear-gradient(145deg, #2d3a45 0%, #12181f 100%);
-  border: var(--hdr-avatar-border);
+  border: none;
   color: #fde68a;
   font-weight: 800;
   font-size: 0.85rem;
@@ -162,9 +162,19 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow: visible;
   text-decoration: none;
   cursor: pointer;
+}
+
+.session-header__avatar-media {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .session-header__avatar--has-image {
@@ -176,7 +186,6 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 50%;
   pointer-events: none;
 }
 
@@ -348,15 +357,27 @@
   transform: translate(var(--wallet-slide), -50%);
 }
 
+@media (min-width: 48rem) {
+  .session-header__center {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .session-header__pill {
+    max-width: min(var(--hdr-pill-width), calc(100vw - 14rem));
+  }
+}
+
 /* —— Footer —— */
 .session-footer {
   --session-footer-accent: #ffed00;
   --session-footer-gutter: max(var(--safe-left), var(--space-2));
   --session-footer-gutter-end: max(var(--safe-right), var(--space-2));
   --session-footer-lobby-bump: none;
-  --session-footer-lobby-bump-w: clamp(3.85rem, 35vw, 7.5rem);
+  --session-footer-lobby-bump-w: clamp(3.85rem, 35vw, 7.9rem);
   --session-footer-lobby-bump-ratio: 384 / 203;
-  --session-footer-lobby-side-gap: clamp(0.65rem, 4vw, 1.15rem);
+  /* 與 index.css --session-footer-h 扣掉 safe-bottom 對齊，切 tab 時不隨 icon 比例變高 */
+  --session-footer-list-h: 3.65rem;
 
   position: fixed;
   left: 0;
@@ -390,32 +411,27 @@
   grid-template-columns: repeat(5, 1fr);
   list-style: none;
   margin: 0;
+  height: var(--session-footer-list-h);
   padding: 0 var(--session-footer-gutter-end) 0.45rem
     var(--session-footer-gutter);
   max-width: var(--session-chrome-max);
   margin-inline: auto;
   gap: 0;
   box-sizing: border-box;
-  align-items: end;
+  align-items: stretch;
 }
 
 .session-footer__list > li {
   display: flex;
   justify-content: center;
+  align-items: stretch;
   min-width: 0;
+  height: 100%;
   overflow: visible;
 }
 
-.session-footer__list > li:has(.session-footer__link--lobby) {
-  z-index: 2;
-}
-
-.session-footer__list > li:nth-child(2) {
-  padding-inline-end: var(--session-footer-lobby-side-gap);
-}
-
-.session-footer__list > li:nth-child(4) {
-  padding-inline-start: var(--session-footer-lobby-side-gap);
+.session-footer__list > li:has(.session-footer__link.is-active) {
+  z-index: 3;
 }
 
 .session-footer__link {
@@ -426,7 +442,8 @@
   justify-content: flex-end;
   gap: 0.05rem;
   width: 100%;
-  min-height: 2.85rem;
+  height: 100%;
+  min-height: 0;
   padding: 0 0.1rem 0.15rem;
   border-radius: 0.5rem;
   text-decoration: none;
@@ -446,14 +463,15 @@
 
 .session-footer__link.is-active {
   color: var(--session-footer-accent);
+  padding-top: 0.15rem;
+  padding-bottom: 0.58rem;
 }
 
 .session-footer__icon {
   display: block;
   width: 1.25rem;
+  height: 1.25rem;
   margin-bottom: 0.4rem;
-  height: auto;
-  max-height: 1.25rem;
   object-fit: contain;
   flex-shrink: 0;
   transition:
@@ -467,15 +485,17 @@
   flex-shrink: 0;
 }
 
-/* LOBBY 中央固定凸起（lobby-sel-gc）；active 僅改色與 icon 圖 */
-.session-footer__link--lobby {
+.session-footer__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  position: relative;
   z-index: 1;
-  min-height: 3.15rem;
-  padding-top: 0.35rem;
-  padding-bottom: 0.6rem;
 }
 
-.session-footer__link--lobby::before {
+/* active 凸起（lobby-sel-gc）；五格 inactive 樣式一致 */
+.session-footer__link.is-active::before {
   content: "";
   position: absolute;
   left: 50%;
@@ -488,21 +508,21 @@
   z-index: 0;
 }
 
-.session-footer__link--lobby .session-footer__icon {
-  position: relative;
-  z-index: 1;
+.session-footer__link.is-active .session-footer__content {
+  transform: translateY(0.28rem);
+}
+
+.session-footer__link.is-active .session-footer__icon {
   width: clamp(1.85rem, 5.5vw, 2.35rem);
+  height: clamp(1.6rem, 6vw, 2.5rem);
   max-width: none;
-  max-height: clamp(1.6rem, 6vw, 2.5rem);
-  margin-top: clamp(-1.45rem, -4.2vw, -1.1rem);
-  margin-bottom: 0.05rem;
-  transform: none;
+  margin-top: clamp(-0.45rem, -1.2vw, -0.1rem);
+  margin-bottom: 0.12rem;
   filter: none;
 }
 
-.session-footer__link.is-active:not(.session-footer__link--lobby)
-  .session-footer__icon {
-  filter: drop-shadow(0 0 6px rgb(88 120 255 / 35%));
+.session-footer__link.is-active .session-footer__label {
+  margin-top: 0.28rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -510,8 +530,65 @@
     transition: none;
   }
 
-  .session-footer__link.is-active .session-footer__icon {
+  .session-footer__link.is-active .session-footer__content {
     transform: none;
+  }
+
+  .session-footer__link.is-active .session-footer__icon {
     filter: none;
+  }
+}
+
+@media (min-width: 48rem) {
+  .session-footer {
+    --session-footer-list-h: 3.95rem;
+    --session-footer-lobby-bump-w: 9rem;
+    --session-footer-gutter: clamp(1.25rem, 3vw, 2rem);
+    --session-footer-gutter-end: clamp(1.25rem, 3vw, 2rem);
+  }
+
+  .session-footer__list {
+    max-width: min(46rem, 88vw);
+    width: 100%;
+    margin-inline: auto;
+    padding-bottom: 0.55rem;
+  }
+
+  .session-footer__link {
+    font-size: 0.62rem;
+  }
+
+  .session-footer__icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .session-footer__link.is-active::before {
+    bottom: -0.75rem;
+  }
+
+  .session-footer__link.is-active .session-footer__content {
+    transform: translateY(0.32rem);
+  }
+
+  .session-footer__link.is-active .session-footer__icon {
+    width: 2.1rem;
+    height: 2.1rem;
+    margin-top: -0.35rem;
+  }
+
+  .session-footer__link.is-active .session-footer__label {
+    margin-top: 0.32rem;
+  }
+}
+
+@media (min-width: 48rem) and (hover: hover) {
+  .session-footer__link:hover {
+    color: rgb(255 255 255 / 95%);
+  }
+
+  .session-footer__link.is-active:hover {
+    color: var(--session-footer-accent);
   }
 }

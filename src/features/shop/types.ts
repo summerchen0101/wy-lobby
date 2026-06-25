@@ -21,7 +21,7 @@ export type ShopBindingPrefill = {
   phone?: string;
 };
 
-/** Payload for megaman.MegaAccountBindingRequest (shop binding step). */
+/** Payload for megaman.MegaAccountBindingRequest (shop simplified binding). */
 export type ShopBindingFormPayload = {
   countryCode: string;
   phone: string;
@@ -30,11 +30,6 @@ export type ShopBindingFormPayload = {
   firstName: string;
   lastName: string;
   birthday: string;
-  address: string;
-  country: string;
-  city: string;
-  state: string;
-  zip: string;
 };
 
 export type { ShopPaymentMethodId };

@@ -43,10 +43,11 @@
 |------|----------|------|------|
 | `GET` | `/api/payment/deposit` + query | `fetchDepositUrl` → [`wallet.ts`](../src/lib/api/wallet.ts) | 已實作；全專案目前 **沒有 import**，預留儲值導轉。Query：`returnUrl`（必填）、`channel`、`amount` 可選。回傳 `DepositResponse`（`url` 等）。 |
 
-### 2.3 尚無 REST 的 UI 區塊
+### 2.3 僅 WebSocket 的 UI 區塊
 
 - **兌換頁跑馬燈**：[`useRedeemPillMessages`](../src/features/lobby/useRedeemPillMessages.ts) 僅顯示 Gateway `WITHDRAW_SUCCESS_PUSH`（1048）即時訊息。
-- **Funds History / Promotions**：目前為空狀態，待後端 API 接上。
+- **Funds History**：Profile 開啟 [`FundsHistoryModal`](../src/features/lobby/FundsHistoryModal.tsx) 時送 Gateway `ListPurchaseAndPrizeHistories`（801），body 空；解碼 [`fundsHistoryLobbyWire.ts`](../src/realtime/fundsHistoryLobbyWire.ts)。
+- **Promotions**：目前為空狀態，待後端 API 接上。
 
 ---
 
@@ -60,6 +61,7 @@
 |------|------|----------|------|
 | `0` | `PING_PONG` | 連線成功後，若 `heartbeatIntervalMs > 0`（預設 25s 週期） | 維持連線，**不帶**業務 `data`（空 bytes）。 |
 | `11` | `LOBBY_GET` | 見下節 | 大廳遊戲列表；`data` 目前送 **空** `Uint8Array`；成功且 `code === 200` 時用 [`decodeLobbyGetResponseBytes`](../src/realtime/lobbyDecode.ts) 解 `LobbyGetResponse` 再轉成畫面用 `Game[]`。 |
+| `801` | `ListPurchaseAndPrizeHistories` | Profile → FUNDS HISTORY modal 開啟 | `data` 空；回應 `ListPurchaseAndPrizeHistoriesResponse.histories`。 |
 
 `LOBBY_GET` 僅在 **`onOpen` 內** 且 **`shouldRunLobbyGetOnOpen`** 為真時送出（[`LandingPage.tsx`](../src/features/lobby/LandingPage.tsx)）：
 

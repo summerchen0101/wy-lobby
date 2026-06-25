@@ -103,7 +103,7 @@ flowchart LR
 
 ### 第三方遊戲（`ThirdPartyGameInfo`／`thirdPartyGameInfoList`）
 
-完整協定中的 **`LobbyGetResponse`** 另含 **`repeated ThirdPartyGameInfo thirdPartyGameInfoList`**（見 [`web/proto/lobby_wire.proto`](../proto/lobby_wire.proto) 之 `ThirdPartyGameInfo`：`platform`、`gameUID`、`gameName`、`status` 等）。Web **僅顯示 `status === "ACTIVE"`** 之項目為大廳卡片；其餘略過。卡片點擊後以 **`GetThirdPartyGameInfo`**（`ApiType` 對應 megaman）取得啟動連結。
+完整協定中的 **`LobbyGetResponse`** 另含 **`repeated ThirdPartyGameInfo thirdPartyGameInfoList`**（見 [`web/proto/lobby_wire.proto`](../proto/lobby_wire.proto) 之 `ThirdPartyGameInfo`：`platform`、`gameUID`、`gameName`、`status` 等）。Web **僅顯示 `status === "ACTIVE"`** 之項目為大廳卡片；其餘略過。PROVIDERS 分頁提供依 `platform` 之下拉篩選。卡片點擊後以 **`GetThirdPartyGameInfo`**（`ApiType` 701）取得啟動連結；Request 需帶 **`successUrl`**／**`failUrl`**（Web 預設 `{origin}/game/callback?state=1|2`，規則同儲值／提現 callback）。
 
 **入口圖（大廳卡片縮圖）** 不由 proto 欄位下發；資產預設放在 CDN／NAS 上，URL 規則為：
 
@@ -493,6 +493,7 @@ Web 單檔 mirror（供 protobufjs 編解碼，欄位編號須一致）：[`web/
 | ----------------------- | --- | ------------------ |
 | `ListRichDaddies`       | 600 | 金主榜單           |
 | `LIST_WITHDRAW_ORDERS`  | 621 | 取得提現單         |
+| `LIST_PURCHASE_AND_PRIZE_HISTORIES` | 801 | 帳變／購買紀錄列表（Profile Funds History） |
 | `CREATE_WITHDRAW_ORDER` | 623 | 建立提現單         |
 | `GetThirdPartyGameInfo` | 701 | 取得第三方遊戲資訊 |
 

@@ -59,12 +59,18 @@ html.session-lobby-page {
   padding-bottom: var(--space-6);
 }
 
+.lobby-games-section__body {
+  min-width: 0;
+}
+
 /* scrollIntoView 時預留 fixed session header，避免分類列被擋住 */
 .lobby-landing--session .lobby-games-section {
   scroll-margin-top: calc(var(--safe-top) + var(--session-header-stripe-h));
 }
 
 .lobby-games-toolbar {
+  position: relative;
+  z-index: 3;
   margin-bottom: var(--space-3);
 }
 
@@ -77,6 +83,7 @@ html.session-lobby-page {
   --lobby-filter-bar-h: 2.85rem;
 
   position: relative;
+  z-index: 2;
   isolation: isolate;
   display: flex;
   flex-direction: row;
@@ -84,16 +91,22 @@ html.session-lobby-page {
   gap: var(--space-1);
   box-sizing: border-box;
   margin: calc(-0.5 * var(--space-1)) 0 var(--space-3);
-  margin-inline: calc(-1 * var(--page-pad-inline));
-  width: calc(100% + 2 * var(--page-pad-inline));
+  margin-inline: 0;
+  width: 100%;
   max-width: none;
   min-width: 0;
   min-height: var(--lobby-filter-bar-h);
-  padding: 0 var(--page-pad-inline);
-  overflow: hidden;
+  padding: 0.3rem var(--page-pad-inline);
+  overflow-x: clip;
+  overflow-y: visible;
   background: transparent;
   border-radius: 0;
   border: none;
+}
+
+.lobby-games-filter-strip.is-provider-menu-open {
+  z-index: 200;
+  overflow: visible;
 }
 
 .lobby-games-filter-strip::before {
@@ -120,6 +133,17 @@ html.session-lobby-page {
 .lobby-games-filter-strip > * {
   position: relative;
   z-index: 1;
+}
+
+@media (min-width: 48rem) {
+  .lobby-games-filter-strip {
+    margin-inline: 0;
+    width: 100%;
+    padding-inline: max(
+      var(--page-pad-inline),
+      calc((100vw - var(--content-max)) / 2 + var(--page-pad-inline))
+    );
+  }
 }
 
 .lobby-game-search {
@@ -334,14 +358,79 @@ html.session-lobby-page {
   color: var(--session-header-avatar-ring, #ffed00);
 }
 
-#lobby-tab-providers::after {
-  content: "▾";
-  display: inline-block;
-  margin-inline-start: 0.15rem;
-  font-size: 0.72em;
-  line-height: 1;
-  vertical-align: 0.05em;
-  opacity: 0.85;
+.lobby-game-filter__tab--providers {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.lobby-provider-tab__chevron {
+  flex-shrink: 0;
+  width: 0.85rem;
+  height: 0.85rem;
+  opacity: 0.9;
+  transition: transform 0.18s ease;
+}
+
+.lobby-game-filter__tab--providers.is-menu-open .lobby-provider-tab__chevron {
+  transform: rotate(180deg);
+}
+
+.lobby-provider-tab {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.lobby-provider-tab__menu {
+  position: fixed;
+  z-index: 1000;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  border-radius: 0.65rem;
+  border: 1px solid rgb(0 58 223 / 35%);
+  background: linear-gradient(180deg, #110d86 0%, #070538 55%, #020010 100%);
+  box-shadow:
+    0 10px 28px rgb(0 0 0 / 45%),
+    inset 0 1px 0 rgb(255 255 255 / 8%);
+  max-height: min(16rem, 50vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.lobby-provider-tab__option {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: rgb(255 255 255 / 88%);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lobby-provider-tab__option:hover {
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+}
+
+.lobby-provider-tab__option.is-selected {
+  background: var(--lobby-filter-pill-fill, rgb(8 0 78 / 90%));
+  color: var(--lobby-filter-active-fg, #fff);
+  box-shadow: inset 0 0 0 1px rgb(0 58 223 / 35%);
+}
+
+.lobby-provider-tab__option:focus-visible {
+  outline: 2px solid var(--session-header-avatar-ring, #ffed00);
+  outline-offset: 1px;
 }
 
 .lobby-game-filter__tab:active:not(:disabled) {
@@ -362,6 +451,8 @@ html.session-lobby-page {
 
 /* 已登入：分類切換後單一內容區（直向格狀） */
 .lobby-games-panel-host {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   perspective: 1000px;
   overflow-x: clip;
@@ -729,6 +820,66 @@ html.session-lobby-page {
   }
 }
 
+/* PC 橫向遊戲列：左右漸出；捲到頭尾時只保留另一側（見 LobbyGamesScroller） */
+@media (min-width: 64rem) {
+  .lobby-games-scroller {
+    --games-scroll-fade: clamp(1.75rem, 5cqi, 3.25rem);
+  }
+
+  .lobby-games-scroller.is-scroll-at-start:not(.is-scroll-at-end) {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      #000 0,
+      #000 calc(100% - var(--games-scroll-fade)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      #000 0,
+      #000 calc(100% - var(--games-scroll-fade)),
+      transparent 100%
+    );
+  }
+
+  .lobby-games-scroller.is-scroll-at-end:not(.is-scroll-at-start) {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 var(--games-scroll-fade),
+      #000 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 var(--games-scroll-fade),
+      #000 100%
+    );
+  }
+
+  .lobby-games-scroller:not(.is-scroll-at-start):not(.is-scroll-at-end) {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 var(--games-scroll-fade),
+      #000 calc(100% - var(--games-scroll-fade)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 var(--games-scroll-fade),
+      #000 calc(100% - var(--games-scroll-fade)),
+      transparent 100%
+    );
+  }
+}
+
+@media (min-width: 64rem) {
+  .lobby-landing--session .lobby-games-panel-host {
+    overflow-x: visible;
+  }
+}
+
 /* 已登入大廳橫向列：隱藏捲軸，仍可用觸控／滾輪捲動 */
 .lobby-landing--session .lobby-games-scroller {
   scrollbar-width: none;
@@ -982,11 +1133,10 @@ html.guest-lobby-page body::-webkit-scrollbar {
   margin: 0;
   max-width: none;
   border-radius: 0;
-  /* 不可對整區 overflow:hidden，否則絕對定位的 CTA 與 box-shadow 會被切掉 */
   overflow: visible;
   line-height: 0;
   box-shadow: none;
-  padding: 3.5rem 0 3rem;
+  padding: 3.5rem 0 0;
   background: #000;
 }
 
@@ -998,6 +1148,13 @@ html.guest-lobby-page body::-webkit-scrollbar {
   object-fit: cover;
   object-position: center top;
   max-height: min(56vh, 460px);
+}
+
+@media (min-width: 48rem) {
+  .guest-landing__hero-img {
+    height: clamp(22rem, 42vw, 45rem);
+    max-height: none;
+  }
 }
 
 .guest-landing__claim-banner,
@@ -1024,19 +1181,19 @@ html.guest-lobby-page body::-webkit-scrollbar {
   transition: filter 0.15s ease;
 }
 
-/* 壓在 banner 圖底部中央（見未登入稿，較小一號） */
+.guest-landing__claim-cta {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+}
+
 .guest-landing__claim-banner {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(0.5rem, 2dvw, 0.95rem);
-  z-index: 2;
   width: min(19.5rem, calc(100% - 2 * var(--page-pad-inline)));
   max-width: calc(100% - 1rem);
   min-height: 2.35rem;
   padding-inline: var(--space-3);
   font-size: 0.68rem;
   letter-spacing: 0.055em;
-  transform: translateX(-50%);
   box-sizing: border-box;
   box-shadow:
     0 3px 0 var(--crown-gold-shadow),

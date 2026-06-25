@@ -1,4 +1,5 @@
 import type { Game } from "../../lib/api/types";
+import type { LobbyBannerViewport } from "../../hooks/useLobbyBannerViewport";
 import { publicImageUrl } from "../../lib/publicImageUrl";
 import type { ActiveWallet } from "../../wallet/walletContext";
 
@@ -11,6 +12,10 @@ export const PANEL_BG_UNLOGIN = `${PANEL_VERTICAL_LOBBY_BG_BASE}/tmp_unLoginBg.p
 export const PANEL_BG_GC = `${PANEL_VERTICAL_LOBBY_BG_BASE}/tmp_GCbg.png`;
 export const PANEL_BG_SC = `${PANEL_VERTICAL_LOBBY_BG_BASE}/tmp_SCbg.png`;
 export const PANEL_PATTERN_BG = `${PANEL_VERTICAL_LOBBY_BG_BASE}/Pattern_bg.png`;
+
+/** 大廳 banner 依 viewport 分 mb / pc（圖走 CDN 設定） */
+export const LOBBY_BANNER_MB = publicImageUrl("/images/lobby/banner/mb");
+export const LOBBY_BANNER_PC = publicImageUrl("/images/lobby/banner/pc");
 
 /** 已登入大廳 banner 分層（v2） */
 export const LOBBY_BANNER_BASE = publicImageUrl("/images/lobby/banner");
@@ -106,10 +111,9 @@ export const UNITY_DEMO_LOBBY_GAME: Game = {
   thumbnailUrl: `${G}/crownslots/olympics-alternate-all-KXkAo.webp`,
 };
 
-/** 已登入大廳 banner 影片（v2）；走 app origin `/public`，不走 image CDN。 */
-export const LOBBY_BANNER_VIDEO_BASE = "/videos/lobby";
-export const LOBBY_BANNER_VIDEO_SC = `${LOBBY_BANNER_VIDEO_BASE}/Export_WebMp4_SC.mp4`;
-export const LOBBY_BANNER_VIDEO_GC = `${LOBBY_BANNER_VIDEO_BASE}/Export_WebMp4_GC.mp4`;
+/** 已登入大廳 banner 影片；走 app origin，不走 image CDN。 */
+const LOBBY_BANNER_VIDEO_MB_BASE = "/images/lobby/banner/mb";
+const LOBBY_BANNER_VIDEO_PC_BASE = "/images/lobby/banner/pc";
 
 /**
  * 已登入大廳 banner：依目前選中錢包 GC/SC 切圖；`VITE_LOBBY_HERO_IMAGE` 若設定則覆寫兩者。
@@ -120,15 +124,26 @@ export function getSessionLobbyBannerImage(activeWallet: ActiveWallet): string {
   return activeWallet === "SC" ? PANEL_BG_SC : PANEL_BG_GC;
 }
 
-/** 已登入大廳 banner 影片：依目前選中錢包 GC/SC 切換。 */
-export function getSessionLobbyBannerVideo(activeWallet: ActiveWallet): string {
-  return activeWallet === "SC" ? LOBBY_BANNER_VIDEO_SC : LOBBY_BANNER_VIDEO_GC;
+/** 已登入大廳 banner 影片：依錢包 GC/SC 與 viewport mb/pc 切換。 */
+export function getSessionLobbyBannerVideo(
+  activeWallet: ActiveWallet,
+  viewport: LobbyBannerViewport,
+): string {
+  const base =
+    viewport === "pc"
+      ? LOBBY_BANNER_VIDEO_PC_BASE
+      : LOBBY_BANNER_VIDEO_MB_BASE;
+  const file =
+    activeWallet === "SC" ? "Export_WebMp4_SC.mp4" : "Export_WebMp4_GC.mp4";
+  return `${base}/${file}`;
 }
 
-/** 訪客 hero：預設未登入 Panel 圖；`VITE_GUEST_HERO_IMAGE` 可覆寫。 */
-export function getGuestHeroImage(): string {
+/** 訪客 hero：依 viewport mb/pc 切未登入 banner 圖；`VITE_GUEST_HERO_IMAGE` 可覆寫。 */
+export function getGuestHeroImage(viewport: LobbyBannerViewport): string {
   const u = import.meta.env.VITE_GUEST_HERO_IMAGE?.trim();
-  return u || PANEL_BG_UNLOGIN;
+  if (u) return u;
+  const base = viewport === "pc" ? LOBBY_BANNER_PC : LOBBY_BANNER_MB;
+  return `${base}/bg_unLogin.png`;
 }
 
 export const FLOATING_CTA_IMAGE = publicImageUrl("/images/lobby/gift_box.png");

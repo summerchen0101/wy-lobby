@@ -1,24 +1,18 @@
-import { useCallback, useEffect, type ReactNode } from "react";
+import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { IoChevronBack } from "react-icons/io5";
 import "./ShopCheckout.css";
-import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
-import { shopPayIconSrc } from "../../lib/shopPayIcons";
 import { ProtectAccountView } from "./ProtectAccountView";
 import type {
   ShopBindingFormPayload,
   ShopBindingPrefill,
-  ShopPack,
-  ShopPaymentMethodId,
 } from "./types";
 
-export type CheckoutStep = "summary" | "protect" | "payment" | "success";
+export type CheckoutStep = "loading" | "protect" | "payment" | "success";
 
 type Props = {
   open: boolean;
-  pack: ShopPack;
   step: CheckoutStep;
-  visibleMethods: ShopPaymentMethodId[];
   buyBusy: boolean;
   buyError: string | null;
   paymentUrl: string | null;
@@ -27,11 +21,8 @@ type Props = {
   protectNeedSms: boolean;
   bindingPrefill?: ShopBindingPrefill;
   onClose: () => void;
-  onProtectClose: () => void;
   onBackToProtectForm: () => void;
   onBindingSubmit: (payload: ShopBindingFormPayload) => Promise<void>;
-  onSelectPaymentMethod: (method: ShopPaymentMethodId) => void;
-  onCancelPaymentFrame: () => void;
   /** 開啟第三方金流結帳 URL；回傳 false 表示已阻擋（Toast 由父層處理） */
   onOpenPaymentPage: (url: string) => boolean;
 };
@@ -40,87 +31,15 @@ function BackIcon() {
   return <IoChevronBack className="shop-checkout__back-icon" aria-hidden />;
 }
 
-const METHOD_ROWS: {
-  id: ShopPaymentMethodId;
-  label: string;
-  icon: ReactNode;
-}[] = [
-  {
-    id: "google",
-    label: "Google Pay",
-    icon: (
-      <img
-        className="shop-checkout__pay-img"
-        src={shopPayIconSrc("google")}
-        alt=""
-        width={28}
-        height={28}
-        decoding="async"
-      />
-    ),
-  },
-  {
-    id: "apple",
-    label: "Apple Pay",
-    icon: (
-      <img
-        className="shop-checkout__pay-img"
-        src={shopPayIconSrc("apple")}
-        alt=""
-        width={28}
-        height={28}
-        decoding="async"
-      />
-    ),
-  },
-  {
-    id: "credit",
-    label: "Credit Card",
-    icon: (
-      <img
-        className="shop-checkout__pay-img"
-        src={shopPayIconSrc("credit")}
-        alt=""
-        width={28}
-        height={28}
-        decoding="async"
-      />
-    ),
-  },
-  {
-    id: "cashapp",
-    label: "Cash APP",
-    icon: (
-      <img
-        className="shop-checkout__pay-img"
-        src={shopPayIconSrc("cashapp")}
-        alt=""
-        width={28}
-        height={28}
-        decoding="async"
-      />
-    ),
-  },
-];
-
-function OrderSummaryView({
-  pack,
-  visibleMethods,
+function LoadingView({
   buyBusy,
   buyError,
   onClose,
-  onSelectPayment,
 }: {
-  pack: ShopPack;
-  visibleMethods: ShopPaymentMethodId[];
   buyBusy: boolean;
   buyError: string | null;
   onClose: () => void;
-  onSelectPayment: (id: ShopPaymentMethodId) => void;
 }) {
-  const methodSet = new Set(visibleMethods);
-  const rows = METHOD_ROWS.filter((r) => methodSet.has(r.id));
-
   return (
     <>
       <header className="app-modal__head-row">
@@ -134,70 +53,35 @@ function OrderSummaryView({
         <h2
           className="app-modal__title--abs-center shop-checkout__title"
           id="shop-checkout-dialog-title">
-          ORDER SUMMARY
+          {buyError ? "PURCHASE" : "PREPARING PAYMENT"}
         </h2>
-        <span className="app-modal__head-spacer" aria-hidden />
+        <button
+          type="button"
+          className="app-modal__close"
+          onClick={onClose}
+          aria-label="Close">
+          ×
+        </button>
       </header>
       <hr className="app-modal__rule shop-checkout__head-rule" />
-      <div className="shop-checkout__summary-body">
-        <p className="shop-checkout__price">{pack.price}</p>
-        {pack.originalPrice && pack.originalPrice !== pack.price ? (
-          <p className="shop-checkout__line shop-checkout__line--muted-small">
-            <span className="shop-checkout__strike">
-              {pack.originalPrice}
-            </span>
-          </p>
-        ) : null}
-        <p className="shop-checkout__line">
-          <span className="shop-checkout__line-muted">Get</span>{" "}
-          <span className="shop-checkout__line-gc">
-            <span className="shop-page__chip shop-page__chip--gc">
-              <img src={CURRENCY_ICON_GC} alt="" />
-            </span>
-            <span className="shop-checkout__line-amt shop-checkout__line-amt--gc">
-              {pack.gcLabel}
-            </span>
-          </span>{" "}
-          <span className="shop-checkout__line-muted">+ Free</span>{" "}
-          <span className="shop-checkout__line-sc">
-            <span className="shop-page__chip shop-page__chip--sc">
-              <img src={CURRENCY_ICON_SC} alt="" />
-            </span>
-            <span className="shop-checkout__line-amt shop-checkout__line-amt--sc">
-              {pack.bonusSc}
-            </span>
-          </span>
-        </p>
+      <div className="shop-checkout__summary-body shop-checkout__payment-wait-body">
         {buyError ? (
           <p className="shop-checkout__pay-error" role="alert">
             {buyError}
           </p>
-        ) : null}
-        {rows.length === 0 ? (
-          <p className="shop-checkout__pay-error" role="status">
-            No payment methods available for this product.
-          </p>
         ) : (
-          <ul className="shop-checkout__pay-list">
-            {rows.map((row) => (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  className="shop-checkout__pay-btn shop-checkout__pay-btn--pill"
-                  disabled={buyBusy}
-                  onClick={() => onSelectPayment(row.id)}>
-                  <span className="shop-checkout__pay-btn-icon-slot" aria-hidden>
-                    {row.icon}
-                  </span>
-                  <span className="shop-checkout__pay-btn-label">
-                    {buyBusy ? "Please wait…" : row.label}
-                  </span>
-                  <span className="shop-checkout__pay-btn-balance" aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
+          <p className="shop-checkout__payment-wait-text" role="status">
+            {buyBusy ? "Please wait…" : "Starting payment…"}
+          </p>
         )}
+        {buyError ? (
+          <button
+            type="button"
+            className="shop-checkout__submit shop-checkout__submit--blue"
+            onClick={onClose}>
+            OK
+          </button>
+        ) : null}
       </div>
     </>
   );
@@ -205,11 +89,11 @@ function OrderSummaryView({
 
 function PaymentFrameView({
   paymentUrl,
-  onBack,
+  onClose,
   onOpenPaymentPage,
 }: {
   paymentUrl: string;
-  onBack: () => void;
+  onClose: () => void;
   onOpenPaymentPage: (url: string) => boolean;
 }) {
   return (
@@ -218,8 +102,8 @@ function PaymentFrameView({
         <button
           type="button"
           className="app-modal__head-btn"
-          onClick={onBack}
-          aria-label="Back to order summary">
+          onClick={onClose}
+          aria-label="Close">
           <BackIcon />
         </button>
         <h2
@@ -285,9 +169,7 @@ function SuccessView({ onClose }: { onClose: () => void }) {
 
 export function ShopCheckoutOverlay({
   open,
-  pack,
   step,
-  visibleMethods,
   buyBusy,
   buyError,
   paymentUrl,
@@ -296,35 +178,25 @@ export function ShopCheckoutOverlay({
   protectNeedSms,
   bindingPrefill,
   onClose,
-  onProtectClose,
   onBackToProtectForm,
   onBindingSubmit,
-  onSelectPaymentMethod,
-  onCancelPaymentFrame,
   onOpenPaymentPage,
 }: Props) {
-  const closeOverlay = useCallback(() => {
-    onCancelPaymentFrame();
-    onClose();
-  }, [onClose, onCancelPaymentFrame]);
-
   const handleBackdrop = useCallback(() => {
-    if (step === "payment") onCancelPaymentFrame();
-    else if (step === "protect") onProtectClose();
-    else closeOverlay();
-  }, [step, onCancelPaymentFrame, onProtectClose, closeOverlay]);
+    if (step === "success") return;
+    onClose();
+  }, [step, onClose]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (step === "payment") onCancelPaymentFrame();
-      else if (step === "protect") onProtectClose();
-      else closeOverlay();
+      if (step === "success") return;
+      onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, step, onCancelPaymentFrame, onProtectClose, closeOverlay]);
+  }, [open, step, onClose]);
 
   if (!open) return null;
 
@@ -342,33 +214,26 @@ export function ShopCheckoutOverlay({
         aria-modal="true"
         aria-labelledby="shop-checkout-dialog-title"
         onClick={(e) => e.stopPropagation()}>
-        {step === "summary" ? (
-          <OrderSummaryView
-            pack={pack}
-            visibleMethods={visibleMethods}
-            buyBusy={buyBusy}
-            buyError={buyError}
-            onClose={closeOverlay}
-            onSelectPayment={onSelectPaymentMethod}
-          />
-        ) : step === "protect" ? (
+        {step === "protect" ? (
           <ProtectAccountView
             bindingBusy={bindingBusy}
             bindingError={bindingError}
             protectNeedSms={protectNeedSms}
             bindingPrefill={bindingPrefill}
-            onClose={onProtectClose}
+            onClose={onClose}
             onBackToProtectForm={onBackToProtectForm}
             onSubmit={onBindingSubmit}
           />
+        ) : step === "loading" ? (
+          <LoadingView buyBusy={buyBusy} buyError={buyError} onClose={onClose} />
         ) : step === "payment" && paymentUrl ? (
           <PaymentFrameView
             paymentUrl={paymentUrl}
-            onBack={onCancelPaymentFrame}
+            onClose={onClose}
             onOpenPaymentPage={onOpenPaymentPage}
           />
         ) : (
-          <SuccessView onClose={closeOverlay} />
+          <SuccessView onClose={onClose} />
         )}
       </div>
     </div>,

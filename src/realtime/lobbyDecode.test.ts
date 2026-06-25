@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   lobbyDecodedGamesToApiGames,
+  lobbyThirdPartyListToApiGames,
   type LobbyGetDecoded,
 } from "./lobbyDecode";
 
@@ -46,5 +47,58 @@ describe("lobbyDecodedGamesToApiGames", () => {
     } as unknown as LobbyGetDecoded;
     const items = lobbyDecodedGamesToApiGames(decoded);
     expect(items.map((g) => g.id).sort()).toEqual(["1", "5", "6", "9"]);
+  });
+});
+
+describe("lobbyThirdPartyListToApiGames", () => {
+  it("僅保留 status 為 ACTIVE 的列", () => {
+    const decoded = {
+      thirdPartyGameInfoList: [
+        {
+          platform: "BGAMING",
+          gameUID: "game-a",
+          gameName: "Game A",
+          status: "ACTIVE",
+        },
+        {
+          platform: "BGAMING",
+          gameUID: "game-b",
+          gameName: "Game B",
+          status: "active",
+        },
+        {
+          platform: "BGAMING",
+          gameUID: "game-c",
+          gameName: "Game C",
+        },
+        {
+          platform: "BGAMING",
+          gameUID: "game-d",
+          gameName: "Game D",
+          status: "INACTIVE",
+        },
+        {
+          platform: "BGAMING",
+          gameUID: "game-e",
+          gameName: "Game E",
+          status: "ENABLE",
+        },
+      ],
+    } as unknown as LobbyGetDecoded;
+    const items = lobbyThirdPartyListToApiGames(decoded.thirdPartyGameInfoList);
+    expect(items.map((g) => g.thirdPartyLaunch?.gameUID)).toEqual([
+      "game-a",
+      "game-b",
+    ]);
+  });
+
+  it("略過缺少 platform 或 gameUID 的列", () => {
+    const items = lobbyThirdPartyListToApiGames([
+      { platform: "BGAMING", gameUID: "ok", status: "ACTIVE" },
+      { platform: "", gameUID: "missing-platform", status: "ACTIVE" },
+      { platform: "BGAMING", gameUID: "", status: "ACTIVE" },
+    ] as unknown as LobbyGetDecoded["thirdPartyGameInfoList"]);
+    expect(items).toHaveLength(1);
+    expect(items[0]?.thirdPartyLaunch?.gameUID).toBe("ok");
   });
 });

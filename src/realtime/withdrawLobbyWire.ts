@@ -20,14 +20,7 @@ const CreateWithdrawOrderRespType = mustLookup(
 );
 const WithdrawSuccessPushType = mustLookup("megaman.WithdrawSuccessPush");
 
-/**
- * megaman CreateWithdrawOrderReq.paymentType — 對齊 proto/dsk/dsk.proto PaymentTypeRec（美國提現）
- *
- * 若後端 log 出現 `paymentType: 2` 而前端已選 PayPal：多為 **舊 bundle**（曾誤將 paypal 映成 2，對應 PaymentTypeRec.OVO）。
- * 目前預期：PayPal=13、CreditCard=14、CashAPP=15、ACH=16。
- *
- * 後端若以 [`proto/payment/payment.proto`](../../../proto/payment/payment.proto) 全文 merge（含 email/phone 等 21–32），與 megaman wire **並存**時仍以 **field 3** 為準；仍報錯請對齊 **amount 單位／必填／業務規則**。
- */
+/** @deprecated 新第三方提現改由 paymentURL 頁選方式；保留供舊 wire 測試參考。 */
 export const WITHDRAW_PAYMENT_TYPE_REC = {
   PayPal: 13,
   CreditCard: 14,
@@ -110,6 +103,7 @@ export type WithdrawOrderWireRow = {
   amount: string;
   withdrawOrderPaymentStatus: string;
   statusLabel: string;
+  remark: string;
 };
 
 export type ListWithdrawOrdersWireResult = {
@@ -127,6 +121,7 @@ export function decodeListWithdrawOrdersResponseBytes(
       withdrawOrderUID?: string;
       amount?: string | number;
       withdrawOrderPaymentStatus?: string | number;
+      remark?: string;
     }>;
   };
   const rows = o.withdrawOrders ?? [];
@@ -139,6 +134,7 @@ export function decodeListWithdrawOrdersResponseBytes(
       amount: String(row.amount ?? ""),
       withdrawOrderPaymentStatus: statusStr,
       statusLabel: withdrawOrderPaymentStatusToLabel(st),
+      remark: String(row.remark ?? "").trim(),
     };
   });
   const totalRaw = o.total;
@@ -148,18 +144,11 @@ export function decodeListWithdrawOrdersResponseBytes(
 }
 
 export type CreateWithdrawOrderWireFields = {
-  /** 對齊 CreateWithdrawOrderReq.userID；未給則送 0 */
-  userID?: bigint | number | string;
-  /** 整數 SC 字串（megaman amount 為 string） */
+  userID: bigint | number | string;
+  /** 整數 SC 字串（megaman amount 為 string，後端萬分之一單位） */
   amount: bigint | number | string;
-  /** proto/dsk/dsk.proto PaymentTypeRec（PayPal=13、CreditCard=14、CashAPP=15、ACH=16） */
-  paymentType: number;
-  cardNumber?: string;
-  cardValidCode?: string;
-  paypalEmail?: string;
-  accountNumber?: string;
-  routingNumber?: string;
-  appAccount?: string;
+  successUrl?: string;
+  failUrl?: string;
 };
 
 function amountToWireString(amount: bigint | number | string): string {
@@ -176,41 +165,14 @@ export function encodeCreateWithdrawOrderRequestBytes(
   fields: CreateWithdrawOrderWireFields,
 ): Uint8Array {
   const amtStr = amountToWireString(fields.amount);
-  const pt = Math.floor(fields.paymentType);
-  const uid =
-    fields.userID !== undefined && String(fields.userID).trim() !== ""
-      ? wireUInt64Field(fields.userID)
-      : 0;
-  /**
-   * megaman CreateWithdrawOrderReq：欄位號 1→2→3，再依類型填 101–106（與 proto/megaman/payment.proto 宣告順序一致）。
-   */
+  const uid = wireUInt64Field(fields.userID);
   const msg: Record<string, unknown> = {
     userID: uid,
     amount: amtStr,
-    paymentType: pt,
+    paymentType: 0,
+    successUrl: fields.successUrl?.trim() ?? "",
+    failUrl: fields.failUrl?.trim() ?? "",
   };
-  switch (pt) {
-    case WITHDRAW_PAYMENT_TYPE_REC.PayPal: {
-      msg.paypalEmail = fields.paypalEmail ?? "";
-      break;
-    }
-    case WITHDRAW_PAYMENT_TYPE_REC.CreditCard: {
-      msg.cardNumber = fields.cardNumber ?? "";
-      msg.cardValidCode = fields.cardValidCode ?? "";
-      break;
-    }
-    case WITHDRAW_PAYMENT_TYPE_REC.CashAPP: {
-      msg.appAccount = fields.appAccount ?? "";
-      break;
-    }
-    case WITHDRAW_PAYMENT_TYPE_REC.ACH: {
-      msg.accountNumber = fields.accountNumber ?? "";
-      msg.routingNumber = fields.routingNumber ?? "";
-      break;
-    }
-    default:
-      break;
-  }
   const err = CreateWithdrawOrderReqType.verify(msg);
   if (err) throw new Error(`CreateWithdrawOrderReq: ${err}`);
   const created = CreateWithdrawOrderReqType.create(msg);
@@ -219,6 +181,7 @@ export function encodeCreateWithdrawOrderRequestBytes(
 
 export type CreateWithdrawOrderWireResult = {
   withdrawOrderUID: string;
+  paymentURL: string;
 };
 
 export function decodeCreateWithdrawOrderResponseBytes(
@@ -227,8 +190,12 @@ export function decodeCreateWithdrawOrderResponseBytes(
   const msg = CreateWithdrawOrderRespType.decode(data);
   const o = CreateWithdrawOrderRespType.toObject(msg, wireToObjectOpts) as {
     withdrawOrderUID?: string;
+    paymentURL?: string;
   };
-  return { withdrawOrderUID: String(o.withdrawOrderUID ?? "") };
+  return {
+    withdrawOrderUID: String(o.withdrawOrderUID ?? ""),
+    paymentURL: String(o.paymentURL ?? "").trim(),
+  };
 }
 
 export type WithdrawSuccessPushWire = {

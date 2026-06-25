@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
+import { profileAvatarFrameUrl } from "../../lib/profileAssets"
 import type { HeadIconChoice } from "./profileAvatarChoices"
 import { PROFILE_AVATARS } from "./profileAvatars"
 import "./ChangeHeadIconModal.css"
+import "../../components/profile/ProfileAvatarFrame.css"
 
 type Props = {
   open: boolean
@@ -117,6 +119,12 @@ export function ChangeHeadIconModal({
                   alt=""
                   loading="lazy"
                   decoding="async"
+                />
+                <img
+                  className="profile-avatar-frame"
+                  src={profileAvatarFrameUrl(draftId === a.id)}
+                  alt=""
+                  aria-hidden
                 />
               </button>
             ))}

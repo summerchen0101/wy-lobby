@@ -8,6 +8,7 @@ import {
   GATEWAY_API_JACKPOT_INFO_PUSH,
   GATEWAY_API_LIST_PLAYER_AVATARS,
   GATEWAY_API_LIST_PRODUCTS,
+  GATEWAY_API_LIST_PURCHASE_AND_PRIZE_HISTORIES,
   GATEWAY_API_LIST_WITHDRAW_ORDERS,
   GATEWAY_API_LOBBY_GET,
   GATEWAY_API_MEGA_ACCOUNT_BINDING,
@@ -47,6 +48,7 @@ import {
   decodeListWithdrawOrdersResponseBytes,
   decodeWithdrawSuccessPushBytes,
 } from "./withdrawLobbyWire";
+import { decodeListPurchaseAndPrizeHistoriesResponseBytes } from "./fundsHistoryLobbyWire";
 import { decodeUserKickBeforeReasonBytes } from "./userKickWire";
 
 const HEX_MAX = 48;
@@ -254,6 +256,17 @@ export function decodeGatewayResponseDataForDevLog(
         const decoded = decodeListWithdrawOrdersResponseBytes(raw);
         return {
           kind: "LIST_WITHDRAW_ORDERS",
+          data: decoded,
+        };
+      } catch (e) {
+        return fallbackHex(raw, e);
+      }
+    }
+    if (type === GATEWAY_API_LIST_PURCHASE_AND_PRIZE_HISTORIES) {
+      try {
+        const decoded = decodeListPurchaseAndPrizeHistoriesResponseBytes(raw);
+        return {
+          kind: "LIST_PURCHASE_AND_PRIZE_HISTORIES",
           data: decoded,
         };
       } catch (e) {

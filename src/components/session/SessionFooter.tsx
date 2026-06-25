@@ -39,17 +39,19 @@ export function SessionFooter() {
             <NavLink
               to={to}
               end={end}
-              onClick={() => {
-                void refreshLobbyGet()
-              }}
+              onClick={
+                icon === 'lobby'
+                  ? () => {
+                      void refreshLobbyGet()
+                    }
+                  : undefined
+              }
               className={({ isActive }) =>
-                'session-footer__link' +
-                (icon === 'lobby' ? ' session-footer__link--lobby' : '') +
-                (isActive ? ' is-active' : '')
+                'session-footer__link' + (isActive ? ' is-active' : '')
               }
             >
               {({ isActive }) => (
-                <>
+                <span className="session-footer__content">
                   <img
                     className="session-footer__icon"
                     src={footerIconUrl(icon, isActive)}
@@ -59,7 +61,7 @@ export function SessionFooter() {
                     decoding="async"
                   />
                   <span className="session-footer__label">{label}</span>
-                </>
+                </span>
               )}
             </NavLink>
           </li>

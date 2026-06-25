@@ -52,7 +52,41 @@ export type MegaAccountBindingRequestFields = {
   state: string;
   zip: string;
   language: string;
+  middleName?: string;
+  addressLine1?: string;
+  documentType?: number;
+  documentNumber?: string;
+  frontImageContentType?: string;
+  backImageContentType?: string;
+  frontImageBase64?: string;
+  backImageBase64?: string;
 };
+
+/** Shop checkout: simplified binding — address/KYC fields omitted. */
+export type ShopMegaAccountBindingFields = {
+  userID: bigint | number | string;
+  countryCode: string;
+  phone: string;
+  email: string;
+  answer: string;
+  firstName: string;
+  lastName: string;
+  birthday: string;
+};
+
+export function encodeShopMegaAccountBindingRequestBytes(
+  fields: ShopMegaAccountBindingFields,
+): Uint8Array {
+  return encodeMegaAccountBindingRequestBytes({
+    ...fields,
+    address: "",
+    country: "US",
+    city: "",
+    state: "",
+    zip: "",
+    language: "en",
+  });
+}
 
 export function encodeMegaAccountBindingRequestBytes(
   fields: MegaAccountBindingRequestFields,
@@ -74,6 +108,14 @@ export function encodeMegaAccountBindingRequestBytes(
     state: fields.state,
     zip: fields.zip,
     language: fields.language,
+    middleName: fields.middleName ?? "",
+    addressLine1: fields.addressLine1 ?? "",
+    documentType: fields.documentType ?? 0,
+    documentNumber: fields.documentNumber ?? "",
+    frontImageContentType: fields.frontImageContentType ?? "",
+    backImageContentType: fields.backImageContentType ?? "",
+    frontImageBase64: fields.frontImageBase64 ?? "",
+    backImageBase64: fields.backImageBase64 ?? "",
   };
   const err = MegaAccountBindingRequestType.verify(msg);
   if (err) throw new Error(`MegaAccountBindingRequest: ${err}`);

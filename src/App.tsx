@@ -11,6 +11,8 @@ import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
 import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
+import { GeoGate } from "./features/geo/GeoGate";
+import { GeoProvider } from "./features/geo/GeoProvider";
 import { PwaInstallBanner } from "./components/PwaInstallBanner";
 import { ZendeskLoader } from "./components/ZendeskLoader";
 import { AuthModalsProvider } from "./features/auth/AuthModalsProvider";
@@ -55,6 +57,11 @@ const RedeemPage = lazy(() =>
 const ShopPage = lazy(() =>
   import("./features/shop/ShopPage").then((m) => ({ default: m.ShopPage })),
 );
+const PaymentCallbackPage = lazy(() =>
+  import("./features/payment/PaymentCallbackPage").then((m) => ({
+    default: m.PaymentCallbackPage,
+  })),
+);
 const SessionLayout = lazy(() =>
   import("./components/session/SessionLayout").then((m) => ({
     default: m.SessionLayout,
@@ -87,50 +94,83 @@ export default function App() {
               <OAuthReturnHandler />
               <GatewayLobbyProvider>
                 <AuthModalsProvider>
-                  <GameShellProvider>
-                    <LobbyBgmOrchestrator />
-                    <ZendeskLoader />
-                    <PwaInstallBanner />
-                    <IosInstallGuide />
-                    <NewbieTutorialGate />
-                    <Suspense fallback={<FullScreenLoadingOverlay />}>
-                      <LobbyUiSoundRoot />
-                      <Routes>
-                        <Route path="/" element={<LandingPage />} />
-                        <Route
-                          path="/game-popout"
-                          element={<GamePopoutPage />}
-                        />
-                        <Route path="/play" element={<GamePlayPage />} />
-                        <Route path="/login" element={<LoginRedirect />} />
-                        <Route
-                          path="/register"
-                          element={<RegisterRedirect />}
-                        />
-                        <Route
-                          path="/forgot-password"
-                          element={<ForgotPasswordRedirect />}
-                        />
-                        <Route path="/privacy" element={<PrivacyPolicyPage />} />
-                        <Route path="/terms" element={<TermsOfServicePage />} />
-                        <Route path="/sweeps" element={<SweepsPolicyPage />} />
-                        <Route element={<RequireAuth />}>
-                          <Route path="/events" element={<EventsRedirect />} />
-                          <Route element={<SessionLayout />}>
-                            <Route path="/shop" element={<ShopPage />} />
-                            <Route
-                              path="/redeem/form/:method"
-                              element={<Navigate to="/redeem" replace />}
-                            />
-                            <Route path="/redeem" element={<RedeemPage />} />
-                            <Route path="/promo" element={<PromoPage />} />
-                            <Route path="/profile" element={<ProfilePage />} />
+                  <GeoProvider>
+                    <GameShellProvider>
+                      <LobbyBgmOrchestrator />
+                      <ZendeskLoader />
+                      <PwaInstallBanner />
+                      <IosInstallGuide />
+                      <NewbieTutorialGate />
+                      <GeoGate />
+                      <Suspense fallback={<FullScreenLoadingOverlay />}>
+                        <LobbyUiSoundRoot />
+                        <Routes>
+                          <Route path="/" element={<LandingPage />} />
+                          <Route
+                            path="/game-popout"
+                            element={<GamePopoutPage />}
+                          />
+                          <Route path="/play" element={<GamePlayPage />} />
+                          <Route path="/login" element={<LoginRedirect />} />
+                          <Route
+                            path="/register"
+                            element={<RegisterRedirect />}
+                          />
+                          <Route
+                            path="/forgot-password"
+                            element={<ForgotPasswordRedirect />}
+                          />
+                          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                          <Route path="/terms" element={<TermsOfServicePage />} />
+                          <Route path="/sweeps" element={<SweepsPolicyPage />} />
+                          <Route
+                            path="/payment/callback"
+                            element={
+                              <PaymentCallbackPage
+                                channel="shop"
+                                returnPath="/shop"
+                                returnLabel="Store"
+                              />
+                            }
+                          />
+                          <Route
+                            path="/redeem/callback"
+                            element={
+                              <PaymentCallbackPage
+                                channel="redeem"
+                                returnPath="/redeem"
+                                returnLabel="Redeem"
+                              />
+                            }
+                          />
+                          <Route
+                            path="/game/callback"
+                            element={
+                              <PaymentCallbackPage
+                                channel="game"
+                                returnPath="/"
+                                returnLabel="Lobby"
+                              />
+                            }
+                          />
+                          <Route element={<RequireAuth />}>
+                            <Route path="/events" element={<EventsRedirect />} />
+                            <Route element={<SessionLayout />}>
+                              <Route path="/shop" element={<ShopPage />} />
+                              <Route
+                                path="/redeem/form/:method"
+                                element={<Navigate to="/redeem" replace />}
+                              />
+                              <Route path="/redeem" element={<RedeemPage />} />
+                              <Route path="/promo" element={<PromoPage />} />
+                              <Route path="/profile" element={<ProfilePage />} />
+                            </Route>
                           </Route>
-                        </Route>
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                      </Routes>
-                    </Suspense>
-                  </GameShellProvider>
+                          <Route path="*" element={<Navigate to="/" replace />} />
+                        </Routes>
+                      </Suspense>
+                    </GameShellProvider>
+                  </GeoProvider>
                 </AuthModalsProvider>
               </GatewayLobbyProvider>
             </AlertProvider>

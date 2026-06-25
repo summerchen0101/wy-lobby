@@ -211,16 +211,29 @@ type LobbyThirdPartyRow = NonNullable<
   NonNullable<LobbyGetDecoded["thirdPartyGameInfoList"]>
 >[number];
 
-/** 大廳僅顯示後端標為上架中之第三方遊戲。 */
+function thirdPartyRowString(
+  row: LobbyThirdPartyRow,
+  ...keys: string[]
+): string {
+  const rec = row as Record<string, unknown>;
+  for (const key of keys) {
+    const raw = rec[key];
+    if (typeof raw === "string") {
+      const s = raw.trim();
+      if (s) return s;
+      continue;
+    }
+    if (raw !== undefined && raw !== null && typeof raw !== "object") {
+      const s = String(raw).trim();
+      if (s) return s;
+    }
+  }
+  return "";
+}
+
+/** 大廳僅顯示 status 為 ACTIVE 之第三方遊戲（大小寫不敏感）。 */
 function lobbyThirdPartyRowIsActive(row: LobbyThirdPartyRow): boolean {
-  const raw = row.status;
-  const s =
-    typeof raw === "string"
-      ? raw.trim()
-      : raw === undefined || raw === null
-        ? ""
-        : String(raw).trim();
-  return s === "ACTIVE";
+  return thirdPartyRowString(row, "status").toUpperCase() === "ACTIVE";
 }
 
 /**
@@ -230,16 +243,11 @@ function lobbyThirdPartyRowIsActive(row: LobbyThirdPartyRow): boolean {
 export function lobbyThirdPartyRowToApiGame(
   row: LobbyThirdPartyRow,
 ): Game | null {
-  const platform = typeof row.platform === "string" ? row.platform.trim() : "";
-  const uid =
-    typeof row.gameUID === "string"
-      ? row.gameUID.trim()
-      : String(row.gameUID ?? "").trim();
+  const platform = thirdPartyRowString(row, "platform", "Platform");
+  const uid = thirdPartyRowString(row, "gameUID", "gameUid", "GameUID");
   if (!platform || !uid) return null;
   const name =
-    typeof row.gameName === "string" && row.gameName.trim()
-      ? row.gameName.trim()
-      : uid;
+    thirdPartyRowString(row, "gameName", "GameName") || uid;
   return {
     id: `tp:${encodeURIComponent(platform)}:${encodeURIComponent(uid)}`,
     title: name,
@@ -250,7 +258,7 @@ export function lobbyThirdPartyRowToApiGame(
   };
 }
 
-/** 後端已排序之第三方列表（僅 `status === "ACTIVE"`）；勿再呼叫 sortLobbyGamesByMenu。 */
+/** 後端已排序之第三方列表（僅 ACTIVE）；勿再呼叫 sortLobbyGamesByMenu。 */
 export function lobbyThirdPartyListToApiGames(
   list: LobbyGetDecoded["thirdPartyGameInfoList"] | undefined | null,
 ): Game[] {
@@ -380,12 +388,27 @@ export function lobbyDecodedPlayerToUserPatch(
     typeof decoded.email === "string" && decoded.email.trim()
       ? decoded.email.trim()
       : undefined;
+  const addressRaw =
+    p && typeof p === "object"
+      ? (p as { address?: unknown }).address
+      : undefined;
+  const address =
+    typeof addressRaw === "string" && addressRaw.trim()
+      ? addressRaw.trim()
+      : undefined;
+  const minTxWdraw = numFromWire(
+    p && typeof p === "object"
+      ? (p as { minTxWdraw?: unknown }).minTxWdraw
+      : undefined,
+  );
   if (
     !id &&
     !displayName &&
     vipLevel === undefined &&
     !phone &&
     !email &&
+    !address &&
+    minTxWdraw === undefined &&
     avatarId === undefined &&
     lobbyWalletType === undefined &&
     vipExp === undefined &&
@@ -408,7 +431,48 @@ export function lobbyDecodedPlayerToUserPatch(
     out.vipCurrentLevelBetExpRequired = Math.floor(vipBetReq);
   if (phone) out.phone = phone;
   if (email) out.email = email;
+  if (address) out.address = address;
+  if (minTxWdraw !== undefined) out.minTxWdraw = Math.floor(minTxWdraw);
   return out;
+}
+
+export type RedeemPlayerBindingState = {
+  hasCellPhone: boolean;
+  hasAddress: boolean;
+  /** 後端 minTxWdraw 原始單位；未提供時 undefined */
+  minTxWdrawRaw: number | undefined;
+};
+
+/** 提現前綁定閘道：依 LOBBY_GET playerInfo.cellPhone / address。 */
+export function redeemPlayerBindingFromLobby(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): RedeemPlayerBindingState {
+  const p = lobbyGet?.playerInfo as LobbyPlayerRow | null | undefined;
+  const cellRaw =
+    p && typeof p === "object"
+      ? (p as { cellPhone?: unknown }).cellPhone
+      : undefined;
+  const cellPhone =
+    typeof cellRaw === "string" && cellRaw.trim() ? cellRaw.trim() : "";
+  const addressRaw =
+    p && typeof p === "object"
+      ? (p as { address?: unknown }).address
+      : undefined;
+  const address =
+    typeof addressRaw === "string" && addressRaw.trim()
+      ? addressRaw.trim()
+      : "";
+  const minTxWdrawRaw = numFromWire(
+    p && typeof p === "object"
+      ? (p as { minTxWdraw?: unknown }).minTxWdraw
+      : undefined,
+  );
+  return {
+    hasCellPhone: cellPhone.length > 0,
+    hasAddress: address.length > 0,
+    minTxWdrawRaw:
+      minTxWdrawRaw !== undefined ? Math.floor(minTxWdrawRaw) : undefined,
+  };
 }
 
 function lobbyDecodedCurrencyToUserPatch(

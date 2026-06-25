@@ -8,7 +8,6 @@ import {
   formatScFromRawWireInteger,
   formatWithdrawHistoryFiatAmount,
   MIN_REDEEM_SC_DISPLAY,
-  MIN_REDEEM_SC_RAW,
 } from "../../wallet/formatWalletAmount";
 import { GATEWAY_API_LIST_WITHDRAW_ORDERS } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
@@ -22,6 +21,15 @@ import { redeemScBalancesFromLobby } from "./redeemBalances";
 import { RedeemNotifyPill } from "./RedeemNotifyPill";
 import { useRedeemPillMessages } from "./useRedeemPillMessages";
 import { RedeemMethodModal } from "./RedeemMethodModal";
+import {
+  RedeemBindingModal,
+  type RedeemBindingMode,
+} from "./RedeemBindingModal";
+import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
+import {
+  resolveMinRedeemDisplay,
+  resolveMinRedeemRaw,
+} from "./redeemMinAmount";
 import "./RedeemPage.css";
 import "./SessionPageDecor.css";
 
@@ -89,6 +97,8 @@ export function RedeemPage() {
   const pillMessages = useRedeemPillMessages(pillExtras);
 
   const [methodModalOpen, setMethodModalOpen] = useState(false);
+  const [bindingModalOpen, setBindingModalOpen] = useState(false);
+  const [bindingMode, setBindingMode] = useState<RedeemBindingMode>("full");
   const [ordersPage, setOrdersPage] = useState(0);
   const [ordersRows, setOrdersRows] = useState<WithdrawOrderWireRow[]>([]);
   const [ordersTotal, setOrdersTotal] = useState(0);
@@ -190,7 +200,8 @@ export function RedeemPage() {
     [ordersPage, totalPages],
   );
 
-  const cannotRedeem = redeemableAmount < MIN_REDEEM_SC_RAW;
+  const cannotRedeem = redeemableAmount < resolveMinRedeemRaw(lobbyGet, user);
+  const minRedeemDisplay = resolveMinRedeemDisplay(lobbyGet, user);
 
   /** 未達門檻且無提領紀錄 → 不顯示 history 區（Insufficient 併於餘額卡） */
   const showInsufficientFullPage =
@@ -267,7 +278,7 @@ export function RedeemPage() {
             <div className="redeem-page__insufficient-panel">
               <h3 className="redeem-page__insufficient-title">Insufficient SC</h3>
               <p className="redeem-page__insufficient-text">
-                Win a minimum of {MIN_REDEEM_SC_DISPLAY} SC to redeem.
+                Win a minimum of {minRedeemDisplay} SC to redeem.
               </p>
               <p className="redeem-page__insufficient-accent">Keep playing!</p>
             </div>
@@ -345,7 +356,7 @@ export function RedeemPage() {
                       </span>
                       <span className="redeem-page__history-desc">
                         {formatWithdrawHistoryFiatAmount(row.amount)}{" "}
-                        BankTransfer
+                        {row.remark.trim() || "Redemption"}
                       </span>
                       <span
                         className={redeemHistoryStatusClassName(
@@ -372,17 +383,45 @@ export function RedeemPage() {
               !gatewayRequestReady ||
               cannotRedeem
             }
-            onClick={() => setMethodModalOpen(true)}>
+            onClick={() => {
+              const binding = redeemPlayerBindingFromLobby(lobbyGet);
+              if (!binding.hasCellPhone) {
+                setBindingMode("full");
+                setBindingModalOpen(true);
+                return;
+              }
+              if (!binding.hasAddress) {
+                setBindingMode("addressOnly");
+                setBindingModalOpen(true);
+                return;
+              }
+              setMethodModalOpen(true);
+            }}>
             NEW REDEEM
           </button>
         </div>
       ) : null}
+
+      <RedeemBindingModal
+        open={bindingModalOpen}
+        mode={bindingMode}
+        onClose={() => setBindingModalOpen(false)}
+        onBound={() => {
+          setBindingModalOpen(false);
+          setMethodModalOpen(true);
+        }}
+        bindingPrefill={{
+          email: user?.email,
+          phone: user?.phone,
+        }}
+      />
 
       <RedeemMethodModal
         open={methodModalOpen}
         onClose={() => setMethodModalOpen(false)}
         onOrderCreated={refetchOrdersAfterWithdraw}
         redeemableAmountRaw={redeemableAmount}
+        lobbyGet={lobbyGet}
       />
     </section>
   );

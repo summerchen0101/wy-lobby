@@ -24,6 +24,10 @@ export type User = {
   phone?: string;
   /** LOBBY_GET 頂層 `email`（與後端欄位 20 對齊） */
   email?: string;
+  /** LOBBY_GET `playerInfo.address` */
+  address?: string;
+  /** LOBBY_GET `playerInfo.minTxWdraw`（後端萬分之一 SC 單位） */
+  minTxWdraw?: number;
 };
 
 export type AuthResponse = {

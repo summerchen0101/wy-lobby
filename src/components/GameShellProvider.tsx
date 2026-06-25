@@ -8,6 +8,7 @@ import {
   buildGamePopoutPathQuery,
   shouldOpenInNewWindow,
 } from '../lib/gameShell'
+import { writeGameShellLobbyReturn } from '../lib/gameShellLobbyReturn'
 import { GAME_SHELL_POPOUT_CLOSED_TYPE } from '../lib/gameShellMessages'
 import {
   logGameOpenedNewTab,
@@ -16,6 +17,7 @@ import {
   logPerfMemorySnapshot,
 } from '../lib/gameShellTelemetry'
 import { useGatewayLobby } from '../realtime/useGatewayLobby'
+import { useGeoAllowed } from '../features/geo/geoContext'
 import { GameOverlay } from './GameOverlay'
 import { GameShellContext, type OpenShellOptions } from './game-shell-context'
 
@@ -26,6 +28,7 @@ function isGameShellRoute(pathname: string): boolean {
 export function GameShellProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const geoAllowed = useGeoAllowed()
   const { refreshLobbyGet } = useGatewayLobby()
   const [overlay, setOverlay] = useState<{
     url: string
@@ -52,9 +55,16 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
   }, [refreshLobbyGet])
 
   const open = useCallback((o: OpenShellOptions) => {
+    if (!geoAllowed) {
+      console.warn('[GameShell] blocked by geo gate')
+      return
+    }
     if (!o.url) {
       console.warn('[GameShell] empty url')
       return
+    }
+    if (o.lobbyReturn) {
+      writeGameShellLobbyReturn(o.lobbyReturn)
     }
     if (shouldOpenInNewWindow(o.openInNewWindow)) {
       const trimmed = o.url.trim()
@@ -119,7 +129,7 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
       return
     }
     navigate(`/play?${q}`)
-  }, [navigate])
+  }, [geoAllowed, navigate])
 
   const close = useCallback(() => {
     // #region agent log

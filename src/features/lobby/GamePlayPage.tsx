@@ -17,6 +17,7 @@ import {
   logPerfMemorySnapshot,
 } from "../../lib/gameShellTelemetry";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
+import { usePaymentCallbackListener } from "../payment/usePaymentCallbackListener";
 
 function launchUrlHadToken(url: string): boolean {
   try {
@@ -62,6 +63,8 @@ export function GamePlayPage() {
     void refreshLobbyGet();
     navigate("/", { replace: true });
   }, [k, navigate, refreshLobbyGet]);
+
+  usePaymentCallbackListener("game", Boolean(frameUrl), handleClose);
 
   if (!frameUrl) {
     return <Navigate to="/" replace />;

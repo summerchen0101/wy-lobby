@@ -10,12 +10,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { splitPhoneForBindingForm } from "./splitPhoneForBindingForm";
 import type { ShopBindingFormPayload, ShopBindingPrefill } from "./types";
 
-const US_STATE_CODES =
-  "AL,AK,AZ,AR,CA,CO,CT,DE,FL,GA,HI,ID,IL,IN,IA,KS,KY,LA,ME,MD,MA,MI,MN,MS,MO,MT,NE,NV,NH,NJ,NM,NY,NC,ND,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VT,VA,WA,WV,WI,WY,DC".split(
-    ",",
-  );
-
-const PHONE_COUNTRY_CODES = ["886", "1"] as const;
+const PHONE_COUNTRY_CODES = ["1"] as const;
 
 /** Digits only, leading zeros removed (e.g. 09… → 9…) for binding payload. */
 function normalizePhoneDigitsForSubmit(input: string): string {
@@ -29,10 +24,6 @@ type FieldKey =
   | "phoneCountry"
   | "phoneNumber"
   | "dob"
-  | "address1"
-  | "city"
-  | "state"
-  | "zip"
   | "sms";
 
 const FIELD_LABELS: Record<FieldKey, string> = {
@@ -42,10 +33,6 @@ const FIELD_LABELS: Record<FieldKey, string> = {
   phoneCountry: "Country code",
   phoneNumber: "Phone number",
   dob: "Date of birth",
-  address1: "Address line 1",
-  city: "City",
-  state: "State",
-  zip: "ZIP code",
   sms: "SMS code",
 };
 
@@ -56,10 +43,6 @@ const SCROLL_ORDER: FieldKey[] = [
   "phoneCountry",
   "phoneNumber",
   "dob",
-  "address1",
-  "city",
-  "state",
-  "zip",
   "sms",
 ];
 
@@ -80,7 +63,7 @@ type Props = {
   bindingError: string | null;
   protectNeedSms: boolean;
   bindingPrefill?: ShopBindingPrefill;
-  /** Full exit from protect flow (e.g. to order summary). */
+  /** Close the protect / checkout overlay. */
   onClose: () => void;
   /** From SMS verification: return to the full binding form without leaving checkout. */
   onBackToProtectForm: () => void;
@@ -105,12 +88,6 @@ export function ProtectAccountView({
   const [dobMonth, setDobMonth] = useState("");
   const [dobDay, setDobDay] = useState("");
   const [dobYear, setDobYear] = useState("");
-  const [address1, setAddress1] = useState("");
-  const [address2, setAddress2] = useState("");
-  const [country, setCountry] = useState("US");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [zip, setZip] = useState("");
   const [smsAnswer, setSmsAnswer] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [invalidFields, setInvalidFields] = useState<Set<FieldKey>>(
@@ -136,14 +113,6 @@ export function ProtectAccountView({
           return `${idPrefix}-phone-num`;
         case "dob":
           return `${idPrefix}-dob-m`;
-        case "address1":
-          return `${idPrefix}-a1`;
-        case "city":
-          return `${idPrefix}-city`;
-        case "state":
-          return `${idPrefix}-st`;
-        case "zip":
-          return `${idPrefix}-zip`;
         case "sms":
           return `${idPrefix}-sms`;
       }
@@ -211,8 +180,6 @@ export function ProtectAccountView({
 
   const buildPayload = (answer: string): ShopBindingFormPayload => {
     const birthday = `${dobYear}-${dobMonth}-${dobDay}`;
-    const addrParts = [address1.trim(), address2.trim()].filter(Boolean);
-    const address = addrParts.join(", ");
     return {
       countryCode: phoneCountry.trim(),
       phone: normalizePhoneDigitsForSubmit(phoneNumber),
@@ -221,11 +188,6 @@ export function ProtectAccountView({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       birthday,
-      address,
-      country,
-      city: city.trim(),
-      state: state.trim(),
-      zip: zip.trim(),
     };
   };
 
@@ -237,11 +199,8 @@ export function ProtectAccountView({
     if (!phoneCountry.trim()) s.add("phoneCountry");
     const digits = phoneNumber.replace(/\D/g, "");
     if (!phoneNumber.trim() || digits.length === 0) s.add("phoneNumber");
+    else if (phoneCountry === "1" && digits.length !== 10) s.add("phoneNumber");
     if (!dobMonth || !dobDay || !dobYear) s.add("dob");
-    if (!address1.trim()) s.add("address1");
-    if (!city.trim()) s.add("city");
-    if (!state.trim()) s.add("state");
-    if (!zip.trim()) s.add("zip");
     return s;
   };
 
@@ -287,7 +246,7 @@ export function ProtectAccountView({
           aria-label={
             protectNeedSms
               ? "Back to protect account form"
-              : "Back to order summary"
+              : "Close"
           }>
           <BackIcon />
         </button>
@@ -303,7 +262,7 @@ export function ProtectAccountView({
             type="button"
             className="app-modal__close"
             onClick={onClose}
-            aria-label="Close and return to order summary">
+            aria-label="Close">
             ×
           </button>
         )}
@@ -349,8 +308,8 @@ export function ProtectAccountView({
         ) : (
           <>
             <p className="shop-checkout__protect-lead">
-              let us help you redeem your winnings faster please ensure your
-              details are correct
+              Please confirm your name, email, phone, and date of birth to
+              continue with your purchase.
             </p>
             <div className="shop-checkout__fields shop-checkout__fields--protect">
               <div className="shop-checkout__row2">
@@ -555,160 +514,6 @@ export function ProtectAccountView({
                       </option>
                     ))}
                   </select>
-                </div>
-              </div>
-              <label
-                className="shop-checkout__field"
-                htmlFor={`${idPrefix}-a1`}>
-                <span className="shop-checkout__label-text shop-checkout__label-text--protect">
-                  Address line 1*
-                </span>
-                <input
-                  id={`${idPrefix}-a1`}
-                  className={
-                    pi +
-                    (inv("address1") ? " shop-checkout__field-invalid" : "")
-                  }
-                  name="address1"
-                  type="text"
-                  autoComplete="address-line1"
-                  placeholder="Address line 1*"
-                  value={address1}
-                  aria-invalid={inv("address1")}
-                  onChange={(e) => {
-                    setAddress1(e.target.value);
-                    removeInvalid("address1");
-                  }}
-                />
-              </label>
-              <p className="shop-checkout__helper-green">
-                Please do not enter a PO box address. Use a valid address
-              </p>
-              <label
-                className="shop-checkout__field"
-                htmlFor={`${idPrefix}-a2`}>
-                <span className="shop-checkout__label-text shop-checkout__label-text--protect">
-                  Address line 2 (optional)
-                </span>
-                <input
-                  id={`${idPrefix}-a2`}
-                  className={pi}
-                  name="address2"
-                  type="text"
-                  autoComplete="address-line2"
-                  placeholder="Address line 2(optional)"
-                  value={address2}
-                  onChange={(e) => setAddress2(e.target.value)}
-                />
-              </label>
-              <div className="shop-checkout__field shop-checkout__field--stack">
-                <span
-                  className="shop-checkout__field-heading"
-                  id={`${idPrefix}-cc-legend`}>
-                  Country:
-                </span>
-                <div
-                  className="shop-checkout__row2"
-                  role="group"
-                  aria-labelledby={`${idPrefix}-cc-legend`}>
-                  <label
-                    className="shop-checkout__field"
-                    htmlFor={`${idPrefix}-ctry`}>
-                    <span className="shop-checkout__visually-hidden">
-                      Country
-                    </span>
-                    <select
-                      id={`${idPrefix}-ctry`}
-                      className="shop-checkout__input shop-checkout__input--protect shop-checkout__select"
-                      name="country"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}>
-                      <option value="US">US</option>
-                    </select>
-                  </label>
-                  <label
-                    className="shop-checkout__field"
-                    htmlFor={`${idPrefix}-city`}>
-                    <span className="shop-checkout__visually-hidden">City</span>
-                    <input
-                      id={`${idPrefix}-city`}
-                      className={
-                        pi +
-                        (inv("city") ? " shop-checkout__field-invalid" : "")
-                      }
-                      name="city"
-                      type="text"
-                      autoComplete="address-level2"
-                      placeholder="City*"
-                      value={city}
-                      aria-invalid={inv("city")}
-                      onChange={(e) => {
-                        setCity(e.target.value);
-                        removeInvalid("city");
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
-              <div className="shop-checkout__field shop-checkout__field--stack">
-                <span
-                  className="shop-checkout__field-heading"
-                  id={`${idPrefix}-st-legend`}>
-                  State:
-                </span>
-                <div
-                  className="shop-checkout__row2"
-                  role="group"
-                  aria-labelledby={`${idPrefix}-st-legend`}>
-                  <label
-                    className="shop-checkout__field"
-                    htmlFor={`${idPrefix}-st`}>
-                    <span className="shop-checkout__visually-hidden">
-                      State
-                    </span>
-                    <select
-                      id={`${idPrefix}-st`}
-                      className={
-                        "shop-checkout__input shop-checkout__input--protect shop-checkout__select" +
-                        (inv("state") ? " shop-checkout__field-invalid" : "")
-                      }
-                      name="state"
-                      value={state}
-                      aria-invalid={inv("state")}
-                      onChange={(e) => {
-                        setState(e.target.value);
-                        removeInvalid("state");
-                      }}>
-                      <option value="">Select state</option>
-                      {US_STATE_CODES.map((code) => (
-                        <option key={code} value={code}>
-                          {code}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label
-                    className="shop-checkout__field"
-                    htmlFor={`${idPrefix}-zip`}>
-                    <span className="shop-checkout__visually-hidden">Zip</span>
-                    <input
-                      id={`${idPrefix}-zip`}
-                      className={
-                        pi + (inv("zip") ? " shop-checkout__field-invalid" : "")
-                      }
-                      name="zip"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="postal-code"
-                      placeholder="Zip*"
-                      value={zip}
-                      aria-invalid={inv("zip")}
-                      onChange={(e) => {
-                        setZip(e.target.value);
-                        removeInvalid("zip");
-                      }}
-                    />
-                  </label>
                 </div>
               </div>
             </div>

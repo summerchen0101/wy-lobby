@@ -315,10 +315,6 @@ export default {
               "type": "uint64",
               "id": 10
             },
-            "cellPhone": {
-              "type": "string",
-              "id": 26
-            },
             "vipCurrentLevelExp": {
               "type": "uint64",
               "id": 14
@@ -326,6 +322,14 @@ export default {
             "vipCurrentLevelExpRequired": {
               "type": "uint64",
               "id": 15
+            },
+            "cellPhone": {
+              "type": "string",
+              "id": 26
+            },
+            "address": {
+              "type": "string",
+              "id": 37
             },
             "vipCurrentLevelBetExp": {
               "type": "uint64",
@@ -338,6 +342,10 @@ export default {
             "walletType": {
               "type": "WalletType",
               "id": 85
+            },
+            "minTxWdraw": {
+              "type": "int64",
+              "id": 97
             }
           }
         },
@@ -541,6 +549,14 @@ export default {
             "gameUID": {
               "type": "string",
               "id": 2
+            },
+            "successUrl": {
+              "type": "string",
+              "id": 3
+            },
+            "failUrl": {
+              "type": "string",
+              "id": 4
             }
           }
         },
@@ -921,6 +937,10 @@ export default {
             "price": {
               "type": "string",
               "id": 5
+            },
+            "vipExp": {
+              "type": "int64",
+              "id": 6
             }
           }
         },
@@ -1018,6 +1038,38 @@ export default {
             "language": {
               "type": "string",
               "id": 15
+            },
+            "middleName": {
+              "type": "string",
+              "id": 16
+            },
+            "addressLine1": {
+              "type": "string",
+              "id": 17
+            },
+            "documentType": {
+              "type": "int32",
+              "id": 18
+            },
+            "documentNumber": {
+              "type": "string",
+              "id": 19
+            },
+            "frontImageContentType": {
+              "type": "string",
+              "id": 20
+            },
+            "backImageContentType": {
+              "type": "string",
+              "id": 21
+            },
+            "frontImageBase64": {
+              "type": "string",
+              "id": 22
+            },
+            "backImageBase64": {
+              "type": "string",
+              "id": 23
             }
           }
         },
@@ -1146,6 +1198,14 @@ export default {
               "type": "int64",
               "id": 3
             },
+            "successUrl": {
+              "type": "string",
+              "id": 4
+            },
+            "failUrl": {
+              "type": "string",
+              "id": 5
+            },
             "paypalEmail": {
               "type": "string",
               "id": 101
@@ -1177,6 +1237,10 @@ export default {
             "withdrawOrderUID": {
               "type": "string",
               "id": 1
+            },
+            "paymentURL": {
+              "type": "string",
+              "id": 2
             }
           }
         },
@@ -1242,6 +1306,35 @@ export default {
             "rewards": {
               "rule": "repeated",
               "type": "ReferralReward",
+              "id": 1
+            }
+          }
+        },
+        "PurchaseAndPrizeHistory": {
+          "fields": {
+            "TradeEvent": {
+              "type": "int32",
+              "id": 1
+            },
+            "gcAmount": {
+              "type": "string",
+              "id": 2
+            },
+            "scAmount": {
+              "type": "string",
+              "id": 3
+            },
+            "timestamp": {
+              "type": "int64",
+              "id": 4
+            }
+          }
+        },
+        "ListPurchaseAndPrizeHistoriesResponse": {
+          "fields": {
+            "histories": {
+              "rule": "repeated",
+              "type": "PurchaseAndPrizeHistory",
               "id": 1
             }
           }

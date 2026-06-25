@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { Crown, Info } from "lucide-react";
-import { InfoPopover } from "../../components/InfoPopover";
+import { Info } from "lucide-react";
 import { useAuth } from "../../auth/useAuth";
+import { profileAvatarFrameUrl } from "../../lib/profileAssets";
 import { getProfileAvatarById } from "./profileAvatars";
-import { profileVipProgress } from "./profileVipProgress";
 import { resolveProfileVipTitle } from "./profileVipTitle";
 import "./MyProfileModal.css";
+import "../../components/profile/ProfileAvatarFrame.css";
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  onOpenVip?: () => void;
   userId: string | undefined;
   displayName: string | undefined;
   avatarId: string;
@@ -23,6 +24,7 @@ type Props = {
 export function MyProfileModal({
   open,
   onClose,
+  onOpenVip,
   userId,
   displayName,
   avatarId,
@@ -68,12 +70,6 @@ export function MyProfileModal({
     displayName?.trim() || userId?.trim() || "—";
   const emailText = email?.trim() ?? "";
   const phoneText = phone?.trim() ?? "";
-  const {
-    useServerVipBar,
-    current: vipProgressCurrent,
-    required: vipProgressRequired,
-    fillPct: vipProgressFillPct,
-  } = profileVipProgress(user);
   const vipTitle = resolveProfileVipTitle(user?.vipLevel);
 
   return createPortal(
@@ -128,59 +124,29 @@ export function MyProfileModal({
                 </span>
               )}
             </span>
+            <img
+              className="profile-avatar-frame"
+              src={profileAvatarFrameUrl()}
+              alt=""
+              aria-hidden
+            />
           </div>
           <p className="my-profile-modal__id">{headline}</p>
           <div className="my-profile-modal__level-row">
             <span className="my-profile-modal__level-label">{vipTitle}</span>
-            <InfoPopover
-              align="end"
-              content={
-                <p className="my-profile-modal__info-popover-text">
-                  {useServerVipBar
-                    ? "VIP point progress toward the next loyalty tier."
-                    : "Level details will be available when your account is connected to the loyalty system."}
-                </p>
-              }
+            <button
+              type="button"
+              className="my-profile-modal__info-btn"
+              aria-label="Open VIP level details"
+              onClick={onOpenVip}
+              disabled={!onOpenVip}
             >
-              {(p, triggerRef) => (
-                <button
-                  ref={triggerRef}
-                  {...p}
-                  className="my-profile-modal__info-btn"
-                  aria-label="Level info"
-                >
-                  <Info
-                    className="my-profile-modal__info-icon"
-                    strokeWidth={2.75}
-                    aria-hidden
-                  />
-                </button>
-              )}
-            </InfoPopover>
-          </div>
-          <div className="my-profile-modal__progress">
-            <div
-              className="my-profile-modal__bar"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={vipProgressRequired}
-              aria-valuenow={vipProgressCurrent}
-              aria-label="Level progress"
-            >
-              <div
-                className="my-profile-modal__bar-fill"
-                style={{ width: `${vipProgressFillPct}%` }}
+              <Info
+                className="my-profile-modal__info-icon"
+                strokeWidth={2.75}
+                aria-hidden
               />
-              <span className="my-profile-modal__bar-label">
-                {vipProgressCurrent}/{vipProgressRequired}
-              </span>
-              <div className="my-profile-modal__bar-cap" aria-hidden>
-                <Crown
-                  className="my-profile-modal__bar-crown-icon"
-                  strokeWidth={2.5}
-                />
-              </div>
-            </div>
+            </button>
           </div>
           <div className="my-profile-modal__fields">
             <div className="my-profile-modal__field">
