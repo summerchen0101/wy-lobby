@@ -1309,6 +1309,35 @@ export default {
               "id": 1
             }
           }
+        },
+        "PurchaseAndPrizeHistory": {
+          "fields": {
+            "TradeEvent": {
+              "type": "int32",
+              "id": 1
+            },
+            "gcAmount": {
+              "type": "string",
+              "id": 2
+            },
+            "scAmount": {
+              "type": "string",
+              "id": 3
+            },
+            "timestamp": {
+              "type": "int64",
+              "id": 4
+            }
+          }
+        },
+        "ListPurchaseAndPrizeHistoriesResponse": {
+          "fields": {
+            "histories": {
+              "rule": "repeated",
+              "type": "PurchaseAndPrizeHistory",
+              "id": 1
+            }
+          }
         }
       }
     }

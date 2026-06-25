@@ -493,6 +493,7 @@ Web 單檔 mirror（供 protobufjs 編解碼，欄位編號須一致）：[`web/
 | ----------------------- | --- | ------------------ |
 | `ListRichDaddies`       | 600 | 金主榜單           |
 | `LIST_WITHDRAW_ORDERS`  | 621 | 取得提現單         |
+| `LIST_PURCHASE_AND_PRIZE_HISTORIES` | 801 | 帳變／購買紀錄列表（Profile Funds History） |
 | `CREATE_WITHDRAW_ORDER` | 623 | 建立提現單         |
 | `GetThirdPartyGameInfo` | 701 | 取得第三方遊戲資訊 |
 

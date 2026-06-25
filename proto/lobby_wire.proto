@@ -555,3 +555,16 @@ message GetReferralInfoResp {
 message ClaimReferralRewardResp {
   repeated ReferralReward rewards = 1;
 }
+
+// --- Funds history — Gateway ApiType ListPurchaseAndPrizeHistories=801；Request body 空 ---
+// 欄位對齊 wallet.TradeEvent 數值（TradeEvent 以 int32 傳 enum 值，如 PAYMENT_BUY_GOLD=17）。
+message PurchaseAndPrizeHistory {
+  int32 TradeEvent = 1;
+  string gcAmount = 2;
+  string scAmount = 3;
+  int64 timestamp = 4;
+}
+
+message ListPurchaseAndPrizeHistoriesResponse {
+  repeated PurchaseAndPrizeHistory histories = 1;
+}
