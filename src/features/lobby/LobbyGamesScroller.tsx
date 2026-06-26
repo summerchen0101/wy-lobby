@@ -112,7 +112,7 @@ export function LobbyGamesScroller({
       startScrollLeft: el.scrollLeft,
       dragged: false,
     };
-    el.setPointerCapture(e.pointerId);
+    // Defer capture until drag starts so button clicks inside the track still fire.
   }, []);
 
   const onPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
@@ -126,6 +126,9 @@ export function LobbyGamesScroller({
     if (!state.dragged) {
       state.dragged = true;
       el.classList.add("is-dragging");
+      if (!el.hasPointerCapture(e.pointerId)) {
+        el.setPointerCapture(e.pointerId);
+      }
     }
 
     const maxScroll = el.scrollWidth - el.clientWidth;
