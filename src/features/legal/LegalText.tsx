@@ -1,4 +1,4 @@
-import type { LegalBlock } from './legalContentTypes'
+import type { LegalActionLinkId, LegalBlock, LegalTextSegment } from './legalContentTypes'
 
 const LINK_PATTERN =
   /(https?:\/\/[^\s]+|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,})/g
@@ -33,13 +33,44 @@ function linkifyText(text: string) {
   })
 }
 
-type LegalBlockRendererProps = {
-  block: LegalBlock
+function renderSegment(
+  segment: LegalTextSegment,
+  index: number,
+  onActionLink?: (action: LegalActionLinkId) => void,
+) {
+  if (segment.type === 'actionLink') {
+    return (
+      <button
+        key={`action-${index}`}
+        type="button"
+        className="legal-page__link legal-page__action-link"
+        onClick={() => onActionLink?.(segment.action)}
+      >
+        {segment.text}
+      </button>
+    )
+  }
+
+  return <span key={`text-${index}`}>{linkifyText(segment.text)}</span>
 }
 
-export function LegalBlockRenderer({ block }: LegalBlockRendererProps) {
+type LegalBlockRendererProps = {
+  block: LegalBlock
+  onActionLink?: (action: LegalActionLinkId) => void
+}
+
+export function LegalBlockRenderer({ block, onActionLink }: LegalBlockRendererProps) {
   switch (block.type) {
     case 'paragraph':
+      if ('segments' in block) {
+        return (
+          <p className="legal-page__paragraph">
+            {block.segments.map((segment, index) =>
+              renderSegment(segment, index, onActionLink),
+            )}
+          </p>
+        )
+      }
       return <p className="legal-page__paragraph">{linkifyText(block.text)}</p>
     case 'subheading':
       return <h3 className="legal-page__subheading">{block.text}</h3>

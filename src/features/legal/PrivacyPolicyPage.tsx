@@ -32,7 +32,10 @@ export function PrivacyPolicyPage() {
 
       <article className="legal-page__body page-container">
         {PRIVACY_POLICY_INTRO.map((block) => (
-          <LegalBlockRenderer key={block.type === 'paragraph' ? block.text : block.type} block={block} />
+          <LegalBlockRenderer
+            key={block.type === 'paragraph' ? ('text' in block ? block.text : 'segments') : block.type}
+            block={block}
+          />
         ))}
 
         {PRIVACY_POLICY_SECTIONS.map((section) => (

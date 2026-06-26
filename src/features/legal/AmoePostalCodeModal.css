@@ -1,0 +1,139 @@
+.app-modal.amoe-postal-modal {
+  max-width: 26rem;
+  max-height: min(92dvh, 720px);
+}
+
+.amoe-postal-modal__title {
+  text-transform: none;
+  font-size: clamp(1rem, 0.95rem + 0.3vw, 1.15rem);
+  letter-spacing: 0.01em;
+}
+
+.amoe-postal-modal__body {
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.amoe-postal-modal__code-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: var(--space-4);
+  min-height: 2.75rem;
+}
+
+.amoe-postal-modal__digit-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 1.35rem;
+}
+
+.amoe-postal-modal__digit {
+  min-height: 1.6rem;
+  font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-accent, #5eead4);
+  letter-spacing: 0.04em;
+}
+
+.amoe-postal-modal__digit-line {
+  display: block;
+  width: 1.25rem;
+  height: 2px;
+  margin-top: 0.2rem;
+  background: color-mix(in srgb, var(--color-text-muted, #9aa8b5) 70%, transparent);
+  border-radius: 1px;
+}
+
+.amoe-postal-modal__copy {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-small);
+  line-height: 1.6;
+  color: var(--color-text, #e8edf2);
+}
+
+.amoe-postal-modal__rules-link {
+  color: var(--color-accent, #5eead4);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.amoe-postal-modal__rules-link:hover {
+  opacity: 0.9;
+}
+
+.amoe-postal-modal__warning {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin-bottom: var(--space-5);
+  padding: var(--space-3);
+  border: 1px dashed color-mix(in srgb, var(--color-text-muted, #9aa8b5) 55%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--color-bg, #141b22) 88%, #ffffff 12%);
+}
+
+.amoe-postal-modal__warning-icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-text-muted, #9aa8b5) 35%, transparent);
+  color: var(--color-text-muted, #9aa8b5);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.amoe-postal-modal__warning-text {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--color-text-muted, #9aa8b5);
+}
+
+.amoe-postal-modal__warning-text strong {
+  color: var(--color-text, #e8edf2);
+  font-weight: 700;
+}
+
+.amoe-postal-modal__generate-btn {
+  display: block;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #4f8cff 0%, #3b6fd9 100%);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #2a5099;
+  transition:
+    filter 0.15s ease,
+    transform 0.08s ease,
+    opacity 0.15s ease;
+}
+
+.amoe-postal-modal__generate-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.amoe-postal-modal__generate-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 #2a5099;
+}
+
+.amoe-postal-modal__generate-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

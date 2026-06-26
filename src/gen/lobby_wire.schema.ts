@@ -1358,6 +1358,139 @@ export default {
               "id": 1
             }
           }
+        },
+        "GenerateAmoeCodeResponse": {
+          "fields": {
+            "entryId": {
+              "type": "int64",
+              "id": 1
+            },
+            "sweepstakeCode": {
+              "type": "string",
+              "id": 2
+            }
+          }
+        },
+        "ListUserAmoeEntriesReq": {
+          "fields": {
+            "page": {
+              "type": "uint32",
+              "id": 1
+            },
+            "perPage": {
+              "type": "uint32",
+              "id": 2
+            },
+            "createdAtGteMs": {
+              "type": "int64",
+              "id": 3
+            },
+            "createdAtLteMs": {
+              "type": "int64",
+              "id": 4
+            }
+          }
+        },
+        "AmoeEntryProgress": {
+          "fields": {
+            "id": {
+              "type": "int64",
+              "id": 1
+            },
+            "sweepstakeCode": {
+              "type": "string",
+              "id": 2
+            },
+            "status": {
+              "type": "string",
+              "id": 3
+            },
+            "scAmount": {
+              "type": "int64",
+              "id": 4
+            },
+            "postcardReceivedAtMs": {
+              "type": "int64",
+              "id": 5
+            },
+            "creditedAtMs": {
+              "type": "int64",
+              "id": 6
+            },
+            "createdAtMs": {
+              "type": "int64",
+              "id": 7
+            },
+            "exceptionCodes": {
+              "type": "string",
+              "id": 8
+            }
+          }
+        },
+        "AmoePagination": {
+          "fields": {
+            "page": {
+              "type": "uint32",
+              "id": 1
+            },
+            "perPage": {
+              "type": "uint32",
+              "id": 2
+            },
+            "totalCount": {
+              "type": "uint32",
+              "id": 3
+            },
+            "totalPage": {
+              "type": "uint32",
+              "id": 4
+            }
+          }
+        },
+        "ListUserAmoeEntriesResp": {
+          "fields": {
+            "pagination": {
+              "type": "AmoePagination",
+              "id": 1
+            },
+            "entries": {
+              "rule": "repeated",
+              "type": "AmoeEntryProgress",
+              "id": 2
+            }
+          }
+        },
+        "AmoeCreditedPush": {
+          "fields": {
+            "entryId": {
+              "type": "int64",
+              "id": 1
+            },
+            "scAmount": {
+              "type": "int64",
+              "id": 2
+            },
+            "sweepstakeCode": {
+              "type": "string",
+              "id": 3
+            }
+          }
+        },
+        "AmoeInvalidPush": {
+          "fields": {
+            "entryId": {
+              "type": "int64",
+              "id": 1
+            },
+            "sweepstakeCode": {
+              "type": "string",
+              "id": 2
+            },
+            "exceptionCodes": {
+              "type": "string",
+              "id": 3
+            }
+          }
         }
       }
     }

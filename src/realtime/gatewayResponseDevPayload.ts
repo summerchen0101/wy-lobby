@@ -2,6 +2,7 @@ import {
   GATEWAY_API_BUY_PRODUCT,
   GATEWAY_API_CLAIM_REFERRAL_REWARD,
   GATEWAY_API_CREATE_WITHDRAW_ORDER,
+  GATEWAY_API_GENERATE_AMOE_CODE,
   GATEWAY_API_GET_REFERRAL_INFO,
   GATEWAY_API_GET_THIRD_PARTY_GAME_INFO,
   GATEWAY_API_GET_JACKPOT_INFO,
@@ -43,6 +44,7 @@ import {
   decodeClaimReferralRewardRespBytes,
   decodeGetReferralInfoRespBytes,
 } from "./referralLobbyWire";
+import { decodeGenerateAmoeCodeResponseBytes } from "./amoeLobbyWire";
 import {
   decodeCreateWithdrawOrderResponseBytes,
   decodeListWithdrawOrdersResponseBytes,
@@ -321,6 +323,18 @@ export function decodeGatewayResponseDataForDevLog(
         return {
           kind: "CLAIM_REFERRAL_REWARD",
           rewardCount: rewards?.length ?? 0,
+        };
+      } catch (e) {
+        return fallbackHex(raw, e);
+      }
+    }
+    if (type === GATEWAY_API_GENERATE_AMOE_CODE) {
+      try {
+        const d = decodeGenerateAmoeCodeResponseBytes(raw);
+        return {
+          kind: "GENERATE_AMOE_CODE",
+          entryId: d.entryId,
+          sweepstakeCode: d.sweepstakeCode,
         };
       } catch (e) {
         return fallbackHex(raw, e);

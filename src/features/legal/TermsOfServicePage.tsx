@@ -33,7 +33,7 @@ export function TermsOfServicePage() {
       <article className="legal-page__body page-container">
         {TERMS_OF_SERVICE_INTRO.map((block) => (
           <LegalBlockRenderer
-            key={block.type === 'paragraph' ? block.text : block.type}
+            key={block.type === 'paragraph' ? ('text' in block ? block.text : 'segments') : block.type}
             block={block}
           />
         ))}
