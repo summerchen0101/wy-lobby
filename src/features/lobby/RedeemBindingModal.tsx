@@ -15,6 +15,10 @@ import {
   decodeMegaAccountBindingResponseBytes,
   encodeMegaAccountBindingRequestBytes,
 } from "../../realtime/shopLobbyWire";
+import {
+  getSocureDiSessionToken,
+  setSocureBindingNavigationContext,
+} from "../../lib/socure/socureDevice";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { splitPhoneForBindingForm } from "../shop/splitPhoneForBindingForm";
 import "./RedeemBindingModal.css";
@@ -145,6 +149,11 @@ export function RedeemBindingModal({
     }
   }, [open, bindingPrefill?.email, bindingPrefill?.phone]);
 
+  useEffect(() => {
+    if (!open) return;
+    void setSocureBindingNavigationContext();
+  }, [open]);
+
   const goKyc = useCallback(() => {
     if (mode === "addressOnly") {
       if (!address1.trim() || !city.trim() || !state.trim() || !zip.trim()) {
@@ -237,6 +246,11 @@ export function RedeemBindingModal({
       setBusy(true);
       setError(null);
       try {
+        const socureDiSessionToken = await getSocureDiSessionToken();
+        if (!socureDiSessionToken) {
+          setError("Device verification unavailable. Please refresh and try again.");
+          return;
+        }
         const data = encodeMegaAccountBindingRequestBytes({
           userID: uid,
           countryCode,
@@ -259,6 +273,7 @@ export function RedeemBindingModal({
           backImageContentType: "image/jpeg",
           frontImageBase64,
           backImageBase64,
+          socureDiSessionToken,
         });
         const r = await req({
           type: GATEWAY_API_MEGA_ACCOUNT_BINDING,

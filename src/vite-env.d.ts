@@ -103,6 +103,8 @@ interface ImportMetaEnv {
   readonly VITE_PUBLIC_IMAGE_CDN_BASE?: string;
   /** Radar Web SDK publishable key；未設則跳過地理圍欄檢查 */
   readonly VITE_RADAR_PUBLISHABLE_KEY?: string;
+  /** Socure Digital Intelligence Web SDK key；未設則帳號綁定無法取得 di session token */
+  readonly VITE_SOCURE_SDK_KEY?: string;
 }
 
 interface ImportMeta {

@@ -1090,6 +1090,10 @@ export default {
             "backImageBase64": {
               "type": "string",
               "id": 23
+            },
+            "socureDiSessionToken": {
+              "type": "string",
+              "id": 24
             }
           }
         },
