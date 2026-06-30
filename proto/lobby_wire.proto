@@ -468,6 +468,7 @@ message MegaAccountBindingRequest {
   string backImageContentType = 21;
   string frontImageBase64 = 22;
   string backImageBase64 = 23;
+  string socureDiSessionToken = 24;
 }
 
 message MegaAccountBindingResponse {
