@@ -191,6 +191,16 @@ message UpdatePlayerCurrentAvatarRequest {
   YesNo isFBAvatar = 3;
 }
 
+// 對齊 proto/megaman/playerinfo.proto UpdateNoviceTeaching / proto/playerinfo/model.proto NoviceTeaching
+message NoviceTeaching {
+  int64 general = 1;
+}
+
+message UpdateNoviceTeaching {
+  uint64 userID = 1;
+  NoviceTeaching noviceTeaching = 2;
+}
+
 // --- wallet.Bag（對齊 proto/wallet/wallet.proto）與 LOBBY_GET 衛星型別 ---
 
 enum CoinType {
@@ -458,6 +468,7 @@ message MegaAccountBindingRequest {
   string backImageContentType = 21;
   string frontImageBase64 = 22;
   string backImageBase64 = 23;
+  string socureDiSessionToken = 24;
 }
 
 message MegaAccountBindingResponse {
@@ -567,4 +578,52 @@ message PurchaseAndPrizeHistory {
 
 message ListPurchaseAndPrizeHistoriesResponse {
   repeated PurchaseAndPrizeHistory histories = 1;
+}
+
+// --- AMOE — Gateway GenerateAmoeCode=560, ListUserAmoeEntries=561 ---
+message GenerateAmoeCodeResponse {
+  int64 entry_id = 1;
+  string sweepstake_code = 2;
+}
+
+message ListUserAmoeEntriesReq {
+  uint32 page = 1;
+  uint32 per_page = 2;
+  int64 created_at_gte_ms = 3;
+  int64 created_at_lte_ms = 4;
+}
+
+message AmoeEntryProgress {
+  int64 id = 1;
+  string sweepstake_code = 2;
+  string status = 3;
+  int64 sc_amount = 4;
+  int64 postcard_received_at_ms = 5;
+  int64 credited_at_ms = 6;
+  int64 created_at_ms = 7;
+  string exception_codes = 8;
+}
+
+message AmoePagination {
+  uint32 page = 1;
+  uint32 per_page = 2;
+  uint32 total_count = 3;
+  uint32 total_page = 4;
+}
+
+message ListUserAmoeEntriesResp {
+  AmoePagination pagination = 1;
+  repeated AmoeEntryProgress entries = 2;
+}
+
+message AmoeCreditedPush {
+  int64 entry_id = 1;
+  int64 sc_amount = 2;
+  string sweepstake_code = 3;
+}
+
+message AmoeInvalidPush {
+  int64 entry_id = 1;
+  string sweepstake_code = 2;
+  string exception_codes = 3;
 }

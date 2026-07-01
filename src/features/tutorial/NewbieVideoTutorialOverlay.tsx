@@ -2,11 +2,10 @@ import "./NewbieVideoTutorialOverlay.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { NEWBIE_VIDEO_TUTORIAL_SOURCES } from "./newbieVideoTutorialSources";
-import { markNewbieTutorialDone } from "./tutorialStorage";
 
 type Props = {
   open: boolean;
-  onClose: () => void;
+  onComplete: () => void;
 };
 
 function releaseVideos(videos: readonly (HTMLVideoElement | null)[]) {
@@ -18,7 +17,7 @@ function releaseVideos(videos: readonly (HTMLVideoElement | null)[]) {
   }
 }
 
-export function NewbieVideoTutorialOverlay({ open, onClose }: Props) {
+export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const resumePlayOnTapRef = useRef(false);
   const [index, setIndex] = useState(0);
@@ -63,9 +62,8 @@ export function NewbieVideoTutorialOverlay({ open, onClose }: Props) {
 
   const finish = useCallback(() => {
     releaseAllVideos();
-    markNewbieTutorialDone();
-    onClose();
-  }, [onClose, releaseAllVideos]);
+    onComplete();
+  }, [onComplete, releaseAllVideos]);
 
   const advance = useCallback(() => {
     if (lastClip) {

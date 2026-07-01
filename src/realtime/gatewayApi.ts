@@ -25,6 +25,8 @@ export const GATEWAY_API_WALLET_USE = 112
 export const GATEWAY_API_LIST_PLAYER_AVATARS = 22
 /** 更新玩家頭像；body 為 megaman.UpdatePlayerCurrentAvatarRequest */
 export const GATEWAY_API_UPDATE_PLAYER_AVATAR = 23
+/** 更新新手教學進度；body 為 megaman.UpdateNoviceTeaching */
+export const GATEWAY_API_UPDATE_NOVICE_TEACHING = 33
 /** 取得第三方遊戲連結；body 為 megaman.GetThirdPartyGameInfoRequest */
 export const GATEWAY_API_GET_THIRD_PARTY_GAME_INFO = 701
 
@@ -58,3 +60,13 @@ export const GATEWAY_API_LIST_PURCHASE_AND_PRIZE_HISTORIES = 801
 export const GATEWAY_API_GET_REFERRAL_INFO = 540
 /** 領取推廣獎勵；body 空；回應 megaman.ClaimReferralRewardResp */
 export const GATEWAY_API_CLAIM_REFERRAL_REWARD = 541
+
+/** 產生 AMOE 明信片抽獎代碼；body 空；回應 megaman.GenerateAmoeCodeResponse */
+export const GATEWAY_API_GENERATE_AMOE_CODE = 560
+/** 查詢自己的 AMOE 申請進度；body 為 megaman.ListUserAmoeEntriesReq */
+export const GATEWAY_API_LIST_USER_AMOE_ENTRIES = 561
+
+/** 伺服器推播：AMOE 明信片審核發幣成功；body 為 megaman.AmoeCreditedPush */
+export const GATEWAY_API_AMOE_CREDITED_PUSH = 1085
+/** 伺服器推播：AMOE 明信片審核未通過；body 為 megaman.AmoeInvalidPush */
+export const GATEWAY_API_AMOE_INVALID_PUSH = 1086

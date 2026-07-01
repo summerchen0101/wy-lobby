@@ -13,6 +13,7 @@ import { IosInstallGuide } from "./components/IosInstallGuide";
 import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
 import { GeoGate } from "./features/geo/GeoGate";
 import { GeoProvider } from "./features/geo/GeoProvider";
+import { SocureDeviceInit } from "./features/socure/SocureDeviceInit";
 import { PwaInstallBanner } from "./components/PwaInstallBanner";
 import { ZendeskLoader } from "./components/ZendeskLoader";
 import { AuthModalsProvider } from "./features/auth/AuthModalsProvider";
@@ -95,6 +96,7 @@ export default function App() {
               <GatewayLobbyProvider>
                 <AuthModalsProvider>
                   <GeoProvider>
+                    <SocureDeviceInit />
                     <GameShellProvider>
                       <LobbyBgmOrchestrator />
                       <ZendeskLoader />

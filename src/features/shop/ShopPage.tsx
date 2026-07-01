@@ -18,6 +18,10 @@ import {
   encodeListProductsRequestBytes,
   encodeShopMegaAccountBindingRequestBytes,
 } from "../../realtime/shopLobbyWire";
+import {
+  getSocureDiSessionToken,
+  setSocureBindingNavigationContext,
+} from "../../lib/socure/socureDevice";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { mapListProductToShopPack } from "./mapListProductToShopPack";
 import { publicImageUrl } from "../../lib/publicImageUrl";
@@ -172,6 +176,11 @@ export function ShopPage() {
     });
   }, [checkoutStep, paymentUrl, subscribePaymentFinish, closeCheckout, show]);
 
+  useEffect(() => {
+    if (checkoutStep !== "protect") return;
+    void setSocureBindingNavigationContext();
+  }, [checkoutStep]);
+
   const notifyPaymentBlocked = useCallback(() => {
     show(PAYMENT_UNAVAILABLE_MSG, { variant: "info" });
   }, [show]);
@@ -288,6 +297,13 @@ export function ShopPage() {
       setBindingBusy(true);
       setBindingError(null);
       try {
+        const socureDiSessionToken = await getSocureDiSessionToken();
+        if (!socureDiSessionToken) {
+          setBindingError(
+            "Device verification unavailable. Please refresh and try again.",
+          );
+          return;
+        }
         const data = encodeShopMegaAccountBindingRequestBytes({
           userID: uid,
           countryCode: payload.countryCode,
@@ -297,6 +313,7 @@ export function ShopPage() {
           firstName: payload.firstName,
           lastName: payload.lastName,
           birthday: payload.birthday,
+          socureDiSessionToken,
         });
         const r = await req({
           type: GATEWAY_API_MEGA_ACCOUNT_BINDING,

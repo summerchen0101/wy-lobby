@@ -1,8 +1,12 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../auth/useAuth'
 import { LobbyComplianceFooter } from '../../components/LobbyComplianceFooter'
+import { useAuthModals } from '../auth/authModalsContext'
+import { AmoePostalCodeModal } from './AmoePostalCodeModal'
 import { LegalBlockRenderer } from './LegalText'
 import { LegalScrollToTop } from './LegalScrollToTop'
+import type { LegalActionLinkId } from './legalContentTypes'
 import {
   SWEEPS_POLICY_EFFECTIVE,
   SWEEPS_POLICY_INTRO,
@@ -12,6 +16,10 @@ import {
 import './PrivacyPolicyPage.css'
 
 export function SweepsPolicyPage() {
+  const { user } = useAuth()
+  const { openLoginDirect } = useAuthModals()
+  const [amoeModalOpen, setAmoeModalOpen] = useState(false)
+
   useEffect(() => {
     const previousTitle = document.title
     document.title = 'Sweeps Policy | LukLok'
@@ -19,6 +27,19 @@ export function SweepsPolicyPage() {
       document.title = previousTitle
     }
   }, [])
+
+  const handleActionLink = useCallback(
+    (action: LegalActionLinkId) => {
+      if (action === 'openAmoePostalCode') {
+        if (!user) {
+          openLoginDirect()
+          return
+        }
+        setAmoeModalOpen(true)
+      }
+    },
+    [user, openLoginDirect],
+  )
 
   return (
     <div className="legal-page">
@@ -33,8 +54,9 @@ export function SweepsPolicyPage() {
       <article className="legal-page__body page-container">
         {SWEEPS_POLICY_INTRO.map((block) => (
           <LegalBlockRenderer
-            key={block.type === 'paragraph' ? block.text : block.type}
+            key={block.type === 'paragraph' ? ('text' in block ? block.text : 'segments') : block.type}
             block={block}
+            onActionLink={handleActionLink}
           />
         ))}
 
@@ -45,6 +67,7 @@ export function SweepsPolicyPage() {
               <LegalBlockRenderer
                 key={`${section.id}-${block.type}-${index}`}
                 block={block}
+                onActionLink={handleActionLink}
               />
             ))}
           </section>
@@ -53,6 +76,7 @@ export function SweepsPolicyPage() {
 
       <LobbyComplianceFooter variant="guest" />
       <LegalScrollToTop />
+      <AmoePostalCodeModal open={amoeModalOpen} onClose={() => setAmoeModalOpen(false)} />
     </div>
   )
 }

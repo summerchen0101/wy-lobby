@@ -171,7 +171,21 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '6. Mail-In Request Code: In order for a Request Card to be processed and deemed valid, it must contain a unique Mail-In Request Code. To obtain a Mail-In Request Code, the Player must be logged into their LukLok Casino Player Account. Once logged in, the Player must open the settings menu and select "My Account." On the "My Account" screen, the Player must select "Get Mail-In Request Code." A unique code will then be generated within a reasonable amount of time. The Player must write this code on the outer envelope (as described above) in the exact format as displayed on the screen. The purpose of the Mail-In Request Code is to assist Veloraxy Interactive, Inc.with the efficient, effective, and timely processing of a Player\'s Request Card. A POSTAL REQUEST CARD MAY ONLY BE USED ONCE and may only be used by the Player whose LukLok Casino Player Account was used to generate the Mail-In Request Code. Any person suspected by Veloraxy Interactive, Inc.of having either directly or indirectly provided a Mail-In Request Code to another Player may, in Veloraxy Interactive, Inc.\'s sole discretion, be disqualified from the Sweepstakes and may risk suspension or termination of their LukLok Casino Player Account. MAIL-IN REQUEST CODES ARE VALID FOR 60 DAYS AFTER THEY ARE GENERATED.',
+        segments: [
+          {
+            type: 'text',
+            text: '6. Mail-In Request Code: In order for a Request Card to be processed and deemed valid, it must contain a unique Mail-In Request Code. To obtain a Mail-In Request Code, the Player must be logged into their LukLok Casino Player Account. Once logged in and click the following link: ',
+          },
+          {
+            type: 'actionLink',
+            text: 'GENERATE MAIL-IN REQUEST CODES HERE',
+            action: 'openAmoePostalCode',
+          },
+          {
+            type: 'text',
+            text: '. A unique code will then be generated within a reasonable amount of time. The Player must write this code on the outer envelope (as described above) in the exact format as displayed on the screen. The purpose of the Mail-In Request Code is to assist Veloraxy Interactive, Inc.with the efficient, effective, and timely processing of a Player\'s Request Card. A POSTAL REQUEST CARD MAY ONLY BE USED ONCE and may only be used by the Player whose LukLok Casino Player Account was used to generate the Mail-In Request Code. Any person suspected by Veloraxy Interactive, Inc.of having either directly or indirectly provided a Mail-In Request Code to another Player may, in Veloraxy Interactive, Inc.\'s sole discretion, be disqualified from the Sweepstakes and may risk suspension or termination of their LukLok Casino Player Account. MAIL-IN REQUEST CODES ARE VALID FOR 60 DAYS AFTER THEY ARE GENERATED.',
+          },
+        ],
       },
       {
         type: 'paragraph',

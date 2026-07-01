@@ -40,6 +40,7 @@ import {
   consumeGameShellLobbyReturn,
 } from "../../lib/gameShellLobbyReturn";
 import { GATEWAY_API_GET_THIRD_PARTY_GAME_INFO } from "../../realtime/gatewayApi";
+import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
   decodeGetThirdPartyGameInfoResponseBytes,
   encodeGetThirdPartyGameInfoRequest,
@@ -739,7 +740,7 @@ export function LandingPage() {
           debugLabel: "GetThirdPartyGameInfo",
         });
         if (
-          String(r.code) === "200" &&
+          isGatewaySuccessCode(String(r.code)) &&
           r.data instanceof Uint8Array &&
           r.data.byteLength > 0
         ) {

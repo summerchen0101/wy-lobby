@@ -9,6 +9,7 @@ import {
   GATEWAY_API_CLAIM_REFERRAL_REWARD,
   GATEWAY_API_GET_REFERRAL_INFO,
 } from '../../realtime/gatewayApi'
+import { isGatewaySuccessCode } from '../../realtime/gatewayWire'
 import { useGatewayLobby } from '../../realtime/useGatewayLobby'
 import {
   decodeClaimReferralRewardRespBytes,
@@ -78,7 +79,7 @@ export function InviteFriendsModal({ open, onClose }: Props) {
           data: new Uint8Array(0),
           debugLabel: 'GET_REFERRAL_INFO',
         })
-        if (String(r.code) !== '200' || !(r.data instanceof Uint8Array)) {
+        if (!isGatewaySuccessCode(String(r.code ?? '')) || !(r.data instanceof Uint8Array)) {
           const errMsg = (r as { errMessage?: string }).errMessage?.trim()
           if (!options?.quiet) {
             show(errMsg || 'Could not load referral info', { variant: 'error' })
@@ -230,7 +231,7 @@ export function InviteFriendsModal({ open, onClose }: Props) {
         data: new Uint8Array(0),
         debugLabel: 'CLAIM_REFERRAL_REWARD',
       })
-      if (String(r.code) !== '200' || !(r.data instanceof Uint8Array)) {
+      if (!isGatewaySuccessCode(String(r.code ?? '')) || !(r.data instanceof Uint8Array)) {
         const errMsg = (r as { errMessage?: string }).errMessage?.trim()
         show(errMsg || 'Could not claim rewards', { variant: 'error' })
         return

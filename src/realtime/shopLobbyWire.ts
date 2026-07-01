@@ -60,6 +60,7 @@ export type MegaAccountBindingRequestFields = {
   backImageContentType?: string;
   frontImageBase64?: string;
   backImageBase64?: string;
+  socureDiSessionToken: string;
 };
 
 /** Shop checkout: simplified binding — address/KYC fields omitted. */
@@ -72,6 +73,7 @@ export type ShopMegaAccountBindingFields = {
   firstName: string;
   lastName: string;
   birthday: string;
+  socureDiSessionToken: string;
 };
 
 export function encodeShopMegaAccountBindingRequestBytes(
@@ -116,6 +118,7 @@ export function encodeMegaAccountBindingRequestBytes(
     backImageContentType: fields.backImageContentType ?? "",
     frontImageBase64: fields.frontImageBase64 ?? "",
     backImageBase64: fields.backImageBase64 ?? "",
+    socureDiSessionToken: fields.socureDiSessionToken,
   };
   const err = MegaAccountBindingRequestType.verify(msg);
   if (err) throw new Error(`MegaAccountBindingRequest: ${err}`);
@@ -169,7 +172,9 @@ export function decodeMegaAccountBindingRequestForDevLog(
     state?: string;
     zip?: string;
     language?: string;
+    socureDiSessionToken?: string;
   };
+  const token = String(o.socureDiSessionToken ?? "");
   return {
     userID: String(o.userID ?? ""),
     countryCode: String(o.countryCode ?? ""),
@@ -185,6 +190,9 @@ export function decodeMegaAccountBindingRequestForDevLog(
     state: String(o.state ?? ""),
     zip: String(o.zip ?? ""),
     language: String(o.language ?? ""),
+    socureDiSessionToken: token
+      ? `${token.slice(0, 8)}…`
+      : "",
   };
 }
 

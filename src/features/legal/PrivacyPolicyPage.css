@@ -92,6 +92,16 @@
   opacity: 0.9;
 }
 
+.legal-page__action-link {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  text-align: inherit;
+}
+
 .legal-page__table-wrap {
   margin: 0 0 var(--space-4);
   overflow-x: auto;
