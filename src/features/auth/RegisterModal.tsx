@@ -7,6 +7,7 @@ import { ApiError, ClientVersionError } from '../../lib/api/client'
 import { useAuthModals } from './authModalsContext'
 import type { SignUpRequest } from '../../lib/api/types'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
+import { AuthSocialButtons } from './AuthSocialButtons'
 import './AuthModals.css'
 
 type Props = {
@@ -73,14 +74,13 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   const passwordId = `${formId}-password`
   const password2Id = `${formId}-password2`
   const referralId = `${formId}-referral`
-  const termsId = `${formId}-terms`
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
-  const [_referral, setReferral] = useState('')
+  const [referral, setReferral] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [oauthError, setOauthError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -94,9 +94,9 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   }, [open, onClose])
 
   useEffect(() => {
-    if (open) {
-      setError(null)
-    }
+    if (!open) return
+    setError(null)
+    setOauthError(null)
   }, [open])
 
   useEffect(() => {
@@ -111,10 +111,6 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!termsAccepted) {
-      setError('Please accept the terms to continue')
-      return
-    }
     if (password !== passwordConfirm) {
       setError('Passwords do not match')
       return
@@ -123,7 +119,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
       email,
       password,
       rePassword: passwordConfirm,
-      referrer: _referral,
+      referrer: referral,
     })
     setSubmitting(true)
     try {
@@ -177,11 +173,22 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             ×
           </button>
           <h2 id="register-modal-title" className="app-modal__title">
-            Member account registration
+            CREATE ACCOUNT
           </h2>
         </div>
         <hr className="app-modal__rule" />
         <div className="app-modal__body">
+          <AuthSocialButtons
+            mode="signup"
+            searchParams={searchParams}
+            onError={setOauthError}
+          />
+          {oauthError ? <p className="auth-modal__error">{oauthError}</p> : null}
+
+          <div className="auth-modal__divider" aria-hidden>
+            OR
+          </div>
+
           <form onSubmit={onSubmit} noValidate>
             <fieldset disabled={submitting} className="auth-form-fieldset-reset">
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={emailId}>
@@ -267,7 +274,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             </label>
             <AuthClearableInputWrap
               variant="modal"
-              value={_referral}
+              value={referral}
               onClear={() => setReferral('')}
               clearAriaLabel="Clear referral code"
             >
@@ -276,41 +283,10 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 className="auth-modal__input auth-modal__input--register"
                 autoComplete="off"
                 placeholder="Referral Code"
-                value={_referral}
+                value={referral}
                 onChange={(e) => setReferral(e.target.value)}
               />
             </AuthClearableInputWrap>
-
-            <div className="auth-modal__legal">
-              <input
-                id={termsId}
-                className="auth-modal__checkbox"
-                type="checkbox"
-                checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-              />
-              <label className="auth-modal__legal-text" htmlFor={termsId}>
-                By creating an account, you agree to our{' '}
-                <a
-                  className="auth-modal__link"
-                  href="/terms"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Terms of Service
-                </a>{' '}
-                and{' '}
-                <a
-                  className="auth-modal__link"
-                  href="/privacy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Privacy Policy
-                </a>
-                . You confirm that you are 21+ and a resident of a non-excluded territory.
-              </label>
-            </div>
 
             {error ? <p className="auth-modal__error">{error}</p> : null}
             <button type="submit" className="auth-modal__submit" disabled={submitting}>

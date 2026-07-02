@@ -3,21 +3,14 @@ import {
   useCallback,
   useEffect,
   useId,
-  useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import AppleLogin from "react-apple-login";
-import { IoChevronBack } from "react-icons/io5";
-import { FaApple } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import { useAuth } from "../../auth/useAuth";
-import { fetchAppleOAuthState, fetchOAuthLink } from "../../lib/api/oauth";
 import { ApiError, ClientVersionError } from "../../lib/api/client";
-import { appleOAuthClientId, getApiBase } from "../../lib/env";
-import { buildOAuthBackUrl } from "../../lib/oauth/backUrl";
 import { AuthClearableInputWrap } from "./AuthClearableInputWrap";
+import { AuthSocialButtons } from "./AuthSocialButtons";
 import "./AuthModals.css";
 
 type Props = {
@@ -78,16 +71,6 @@ export function LoginModal({
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [appleState, setAppleState] = useState("");
-  const [appleLoading, setAppleLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const appleTriggerRef = useRef<HTMLDivElement>(null);
-
-  const apiBase = getApiBase();
-  const appleRedirectUri = apiBase
-    ? `${apiBase}/api/v1/apple/auth`
-    : "/api/v1/apple/auth";
-
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -101,7 +84,6 @@ export function LoginModal({
     if (!open) return;
     setFormError(null);
     setOauthError(null);
-    setAppleState("");
   }, [open]);
 
   const finishLogin = useCallback(() => {
@@ -113,51 +95,6 @@ export function LoginModal({
       navigate("/", { replace: true });
     }
   }, [onClose, navigate, searchParams]);
-
-  const handleGoogleLogin = useCallback(async () => {
-    setOauthError(null);
-    setGoogleLoading(true);
-    try {
-      const backUrl = buildOAuthBackUrl(searchParams);
-      const url = await fetchOAuthLink("google", backUrl);
-      window.location.assign(url);
-    } catch (err) {
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : "Google sign-in failed";
-      setOauthError(msg);
-      setGoogleLoading(false);
-    }
-  }, [searchParams]);
-
-  const handleAppleLogin = useCallback(async () => {
-    setOauthError(null);
-    setAppleLoading(true);
-    try {
-      const backUrl = buildOAuthBackUrl(searchParams);
-      const state = await fetchAppleOAuthState(backUrl);
-      setAppleState(state);
-      requestAnimationFrame(() => {
-        const el = appleTriggerRef.current?.querySelector(
-          "#appleid-signin",
-        ) as HTMLElement | null;
-        el?.click();
-      });
-    } catch (err) {
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : "Apple sign-in failed";
-      setOauthError(msg);
-    } finally {
-      setAppleLoading(false);
-    }
-  }, [searchParams]);
 
   async function onSignIn(e: FormEvent) {
     e.preventDefault();
@@ -197,67 +134,32 @@ export function LoginModal({
         aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="app-modal__head-row">
+        <div className="app-modal__header">
           <button
             type="button"
-            className="app-modal__head-btn"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <IoChevronBack aria-hidden />
-          </button>
-          <h2 id={titleId} className="app-modal__title--abs-center">
-            Login
-          </h2>
-          <button
-            type="button"
-            className="app-modal__head-btn auth-modal__head-btn--close"
+            className="app-modal__close"
             onClick={onClose}
             aria-label="Close"
           >
             ×
           </button>
-        </header>
+          <h2 id={titleId} className="app-modal__title">
+            LOG IN
+          </h2>
+        </div>
         <hr className="app-modal__rule" />
         <div className="app-modal__body">
-          <div className="auth-modal__social-row">
-            <button
-              type="button"
-              className="auth-modal__social-btn auth-modal__social-btn--apple"
-              aria-label="Log in with Apple"
-              disabled={appleLoading}
-              onClick={() => void handleAppleLogin()}
-            >
-              <FaApple aria-hidden size={22} />
-            </button>
-            <button
-              type="button"
-              className="auth-modal__social-btn auth-modal__social-btn--google"
-              aria-label="Log in with Google"
-              disabled={googleLoading}
-              onClick={() => void handleGoogleLogin()}
-            >
-              <FcGoogle aria-hidden size={22} />
-            </button>
-          </div>
-          <div ref={appleTriggerRef} hidden aria-hidden>
-            {appleState ? (
-              <AppleLogin
-                clientId={appleOAuthClientId()}
-                redirectURI={appleRedirectUri}
-                scope="email name"
-                state={appleState}
-                usePopup={false}
-                responseMode="form_post"
-              />
-            ) : null}
-          </div>
+          <AuthSocialButtons
+            mode="signin"
+            searchParams={searchParams}
+            onError={setOauthError}
+          />
           {oauthError ? (
             <p className="auth-modal__error">{oauthError}</p>
           ) : null}
 
           <div className="auth-modal__divider" aria-hidden>
-            or
+            OR
           </div>
 
           <form onSubmit={onSignIn} noValidate>
@@ -328,12 +230,13 @@ export function LoginModal({
                 />
               </AuthClearableInputWrap>
               <p className="auth-modal__forgot-password">
+                Forgot your password?{" "}
                 <button
                   type="button"
                   className="auth-modal__footer-link"
                   onClick={onForgotPassword}
                 >
-                  Forgot password?
+                  CLICK HERE
                 </button>
               </p>
               {formError ? (
