@@ -109,7 +109,7 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '1. Signup bonus: At its sole discretion, Veloraxy Interactive, Inc.may issue a set amount of free SCs to users who sign up and log into the platform for the first time. To create a LukLok Casino User Account, Players may visit https://LukLokCasino.com/ and follow the required steps. User Accounts are free to create. Only one (1) User Account is permitted per Player.',
+        text: '1. Signup bonus: At its sole discretion, Veloraxy Interactive, Inc. may issue a set amount of free SCs to users who sign up and log into the platform for the first time. To create a LukLok Casino User Account, Players may visit https://LukLokCasino.com/ and follow the required steps. User Accounts are free to create. Only one (1) User Account is permitted per Player.',
       },
       {
         type: 'paragraph',
@@ -183,13 +183,13 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
           },
           {
             type: 'text',
-            text: '. A unique code will then be generated within a reasonable amount of time. The Player must write this code on the outer envelope (as described above) in the exact format as displayed on the screen. The purpose of the Mail-In Request Code is to assist Veloraxy Interactive, Inc.with the efficient, effective, and timely processing of a Player\'s Request Card. A POSTAL REQUEST CARD MAY ONLY BE USED ONCE and may only be used by the Player whose LukLok Casino Player Account was used to generate the Mail-In Request Code. Any person suspected by Veloraxy Interactive, Inc.of having either directly or indirectly provided a Mail-In Request Code to another Player may, in Veloraxy Interactive, Inc.\'s sole discretion, be disqualified from the Sweepstakes and may risk suspension or termination of their LukLok Casino Player Account. MAIL-IN REQUEST CODES ARE VALID FOR 60 DAYS AFTER THEY ARE GENERATED.',
+            text: '. A unique code will then be generated within a reasonable amount of time. The Player must write this code on the outer envelope (as described above) in the exact format as displayed on the screen. The purpose of the Mail-In Request Code is to assist Veloraxy Interactive, Inc. with the efficient, effective, and timely processing of a Player\'s Request Card. A POSTAL REQUEST CARD MAY ONLY BE USED ONCE and may only be used by the Player whose LukLok Casino Player Account was used to generate the Mail-In Request Code. Any person suspected by Veloraxy Interactive, Inc. of having either directly or indirectly provided a Mail-In Request Code to another Player may, in Veloraxy Interactive, Inc.\'s sole discretion, be disqualified from the Sweepstakes and may risk suspension or termination of their LukLok Casino Player Account. MAIL-IN REQUEST CODES ARE VALID FOR 60 DAYS AFTER THEY ARE GENERATED.',
           },
         ],
       },
       {
         type: 'paragraph',
-        text: '7. There is a limit of one request per outer envelope. For each Request Card a Player submits in accordance with the above requirements, the Player will receive two (2) SC. The SC will be added to the Participant\'s LukLok Casino Player Account within a reasonable amount of time after being received by Veloraxy Interactive, Inc.in the mail.',
+        text: '7. There is a limit of one request per outer envelope. For each Request Card a Player submits in accordance with the above requirements, the Player will receive two (2) SC. The SC will be added to the Participant\'s LukLok Casino Player Account within a reasonable amount of time after being received by Veloraxy Interactive, Inc. in the mail.',
       },
       {
         type: 'paragraph',
@@ -197,7 +197,7 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '9. The request must be made only by the Player. The name written on the Request Card must match the name associated with the LukLok Casino Player Account in question. If the name provided to Veloraxy Interactive, Inc.upon registration of the LukLok Casino Player Account differs from the name on the Request Card, the Request Card will be deemed invalid, and the Player must submit a request to change the name associated with their LukLok Casino Player Account.',
+        text: '9. The request must be made only by the Player. The name written on the Request Card must match the name associated with the LukLok Casino Player Account in question. If the name provided to Veloraxy Interactive, Inc. upon registration of the LukLok Casino Player Account differs from the name on the Request Card, the Request Card will be deemed invalid, and the Player must submit a request to change the name associated with their LukLok Casino Player Account.',
       },
       {
         type: 'paragraph',
@@ -209,11 +209,11 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '12. Veloraxy Interactive, Inc.is not responsible for lost, late, incomplete, invalid, unintelligible, or misdirected SC requests or allocations.',
+        text: '12. Veloraxy Interactive, Inc. is not responsible for lost, late, incomplete, invalid, unintelligible, or misdirected SC requests or allocations.',
       },
       {
         type: 'paragraph',
-        text: '13. Veloraxy Interactive, Inc.reserves the right to add other methods or to alter the above methods of obtaining SC from time to time. Veloraxy Interactive, Inc.will allow for a Grace Period for those Request Cards already in the mail but not received by Veloraxy Interactive, Inc. before any update to these Official Sweepstakes Rules. If it is determined that the Player has tampered with the initial date written on the Request Card or with the postage date, the Request Card will be disqualified. All Request Cards received during the Grace Period will be reviewed in conformance with the Sweepstakes Rules that had been in effect at the time the Mail-In Request Code was issued. Request Cards received after the Grace Period expires will be reviewed in accordance with the updated Sweepstakes Rules.',
+        text: '13. Veloraxy Interactive, Inc. reserves the right to add other methods or to alter the above methods of obtaining SC from time to time. Veloraxy Interactive, Inc. will allow for a Grace Period for those Request Cards already in the mail but not received by Veloraxy Interactive, Inc. before any update to these Official Sweepstakes Rules. If it is determined that the Player has tampered with the initial date written on the Request Card or with the postage date, the Request Card will be disqualified. All Request Cards received during the Grace Period will be reviewed in conformance with the Sweepstakes Rules that had been in effect at the time the Mail-In Request Code was issued. Request Cards received after the Grace Period expires will be reviewed in accordance with the updated Sweepstakes Rules.',
       },
       {
         type: 'paragraph',
@@ -223,10 +223,10 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
         type: 'list',
         items: [
           'Information regarding the status of pending Request Cards will not be available until the review, approval, and crediting of Request Cards is complete;',
-          'Veloraxy Interactive, Inc.will be unable to provide updates on the status of Request Cards until the review period is complete;',
+          'Veloraxy Interactive, Inc. will be unable to provide updates on the status of Request Cards until the review period is complete;',
           'All qualifying and approved Request Cards will be credited to the LukLok Casino Player Accounts that meet the AMOE Request Card requirements described in these Sweepstakes Rules;',
-          'Veloraxy Interactive, Inc.is only able to comment and advise on approved and credited Request Cards, and is unable to provide information on non-qualifying and disqualified Request Cards;',
-          'Veloraxy Interactive, Inc.will only be able to advise on questions related to Request Card format if the Player provides a picture or copy of their Request Card. No template Request Card will be provided;',
+          'Veloraxy Interactive, Inc. is only able to comment and advise on approved and credited Request Cards, and is unable to provide information on non-qualifying and disqualified Request Cards;',
+          'Veloraxy Interactive, Inc. will only be able to advise on questions related to Request Card format if the Player provides a picture or copy of their Request Card. No template Request Card will be provided;',
           'Disqualified Request Cards will not be reconsidered; all decisions related to Request Card approval are final, and no reconsiderations will be allowed;',
           'Any missing Request Cards, or Request Cards that do not reach Veloraxy Interactive, Inc., will not qualify for approval;',
         ],
@@ -299,7 +299,7 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '8. Veloraxy Interactive, Inc.reserves the right to change the prize win rates and odds of any game, including in standard gameplay for Gold Coins and Sweeps Mode.',
+        text: '8. Veloraxy Interactive, Inc. reserves the right to change the prize win rates and odds of any game, including in standard gameplay for Gold Coins and Sweeps Mode.',
       },
       {
         type: 'paragraph',
@@ -313,7 +313,7 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: '1. Potential Sweepstakes winners are subject to verification by Veloraxy Interactive, Inc.(in any manner they chose), and the decisions of Veloraxy Interactive, Inc.shall be final and binding in all matters related to the Sweepstakes. A Player is not a winner of any prize, even if the online screen indicates they are, unless and until the Player\'s eligibility has been verified and the Player has fully complied with these Sweepstakes Rules and been notified that verification is complete. Veloraxy Interactive, Inc.will not accept screenshots or other purported evidence of winning in lieu of its validation process.',
+        text: '1. Potential Sweepstakes winners are subject to verification by Veloraxy Interactive, Inc. (in any manner they chose), and the decisions of Veloraxy Interactive, Inc. shall be final and binding in all matters related to the Sweepstakes. A Player is not a winner of any prize, even if the online screen indicates they are, unless and until the Player\'s eligibility has been verified and the Player has fully complied with these Sweepstakes Rules and been notified that verification is complete. Veloraxy Interactive, Inc. will not accept screenshots or other purported evidence of winning in lieu of its validation process.',
       },
       {
         type: 'paragraph',
@@ -321,7 +321,7 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '3. A potential prize winner may be required to sign and return to Veloraxy Interactive, Inc.an affidavit/declaration of eligibility, and a liability/publicity release (except where prohibited) in order to claim their prize (if applicable). A potential winner may also be required to complete an extended verification, which may include supplying Veloraxy Interactive, Inc.a copy of their government-issued identification and additional required verification to confirm eligibility.',
+        text: '3. A potential prize winner may be required to sign and return to Veloraxy Interactive, Inc. an affidavit/declaration of eligibility, and a liability/publicity release (except where prohibited) in order to claim their prize (if applicable). A potential winner may also be required to complete an extended verification, which may include supplying Veloraxy Interactive, Inc. a copy of their government-issued identification and additional required verification to confirm eligibility.',
       },
       {
         type: 'paragraph',
@@ -329,7 +329,7 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '5. In the event a potential winner of a Sweepstakes prize is disqualified for any reason, Veloraxy Interactive, Inc.may, in its sole discretion, put the prize back into the Sweepstakes.',
+        text: '5. In the event a potential winner of a Sweepstakes prize is disqualified for any reason, Veloraxy Interactive, Inc. may, in its sole discretion, put the prize back into the Sweepstakes.',
       },
       {
         type: 'paragraph',
@@ -358,15 +358,15 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '3. For security reasons and for the prevention of money laundering, Veloraxy Interactive, Inc.will only authorize the redemption of prizes to a bank or bank account held in the Player\'s name. If you provide account details relating to a bank account held jointly between you and another person, you acknowledge and accept that any prizes will be paid into that joint account, and you may be required to supply additional documentation relating to the person who jointly holds the bank account with you so that we may identify and verify the joint account holder.',
+        text: '3. For security reasons and for the prevention of money laundering, Veloraxy Interactive, Inc. will only authorize the redemption of prizes to a bank or bank account held in the Player\'s name. If you provide account details relating to a bank account held jointly between you and another person, you acknowledge and accept that any prizes will be paid into that joint account, and you may be required to supply additional documentation relating to the person who jointly holds the bank account with you so that we may identify and verify the joint account holder.',
       },
       {
         type: 'paragraph',
-        text: '4. Veloraxy Interactive, Inc.is not responsible for any taxes or fees associated with a winning prize. Players are responsible for all applicable taxes and fees associated with prize receipt and/or redemption. A Player\'s total annual prize redemptions will be made available upon request.',
+        text: '4. Veloraxy Interactive, Inc. is not responsible for any taxes or fees associated with a winning prize. Players are responsible for all applicable taxes and fees associated with prize receipt and/or redemption. A Player\'s total annual prize redemptions will be made available upon request.',
       },
       {
         type: 'paragraph',
-        text: '5. Veloraxy Interactive, Inc.can only process one prize Redemption Request once every forty-eight (48) hours. Veloraxy Interactive, Inc.will process Redemption Requests as soon as practicable (review periods may be a minimum of 72 hours). Reviews are conducted Monday–Friday during business hours (8am–5pm EST). Any Redemption Request received on a Saturday, Sunday, or holiday will be reviewed on a business day within a reasonable amount of time. Redemption Requests will be processed in the order in which they are approved, not in the order they are received. Redemption methods vary in processing times and may take up to ten (10) business days to process and reflect in a Player\'s LukLok Casino Player Account, depending on the Redemption method selected by the Player.',
+        text: '5. Veloraxy Interactive, Inc. can only process one prize Redemption Request once every forty-eight (48) hours. Veloraxy Interactive, Inc. will process Redemption Requests as soon as practicable (review periods may be a minimum of 72 hours). Reviews are conducted Monday–Friday during business hours (8am–5pm EST). Any Redemption Request received on a Saturday, Sunday, or holiday will be reviewed on a business day within a reasonable amount of time. Redemption Requests will be processed in the order in which they are approved, not in the order they are received. Redemption methods vary in processing times and may take up to ten (10) business days to process and reflect in a Player\'s LukLok Casino Player Account, depending on the Redemption method selected by the Player.',
       },
       {
         type: 'paragraph',
@@ -374,7 +374,7 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '7. Veloraxy Interactive, Inc.is not responsible for any foreign exchange transaction fees, charges, or related costs that may be incurred as a result of, or in relation to, a prize redemption, including but not limited to any losses or additional costs arising from foreign exchange fluctuations.',
+        text: '7. Veloraxy Interactive, Inc. is not responsible for any foreign exchange transaction fees, charges, or related costs that may be incurred as a result of, or in relation to, a prize redemption, including but not limited to any losses or additional costs arising from foreign exchange fluctuations.',
       },
       {
         type: 'paragraph',
@@ -431,11 +431,11 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '2. Release and hold harmless Veloraxy Interactive, Inc.and its parent, subsidiary, and affiliated companies, the prize suppliers, and any other organizations responsible for sponsoring, fulfilling, administering, advertising, or promoting the Sweepstakes, and all of their respective past and present officers, directors, employees, agents, and representatives (collectively, the "Released Parties") from and against any and all claims, expenses, and liability, including but not limited to negligence and damages of any kind to persons and property, including but not limited to invasion of privacy (under appropriation, intrusion, public disclosure of private facts, false light in the public eye, or other legal theory), defamation, slander, libel, violation of publicity, infringement of trademark, copyright, or other intellectual property rights, property damage, or death or personal injury arising out of or relating to a Player\'s entry, creation of an entry or submission of an entry, participation in the Sweepstakes, acceptance or use or misuse of prizes (including travel or activity related thereto) and/or broadcast, exploitation, or use of entry; and',
+        text: '2. Release and hold harmless Veloraxy Interactive, Inc. and its parent, subsidiary, and affiliated companies, the prize suppliers, and any other organizations responsible for sponsoring, fulfilling, administering, advertising, or promoting the Sweepstakes, and all of their respective past and present officers, directors, employees, agents, and representatives (collectively, the "Released Parties") from and against any and all claims, expenses, and liability, including but not limited to negligence and damages of any kind to persons and property, including but not limited to invasion of privacy (under appropriation, intrusion, public disclosure of private facts, false light in the public eye, or other legal theory), defamation, slander, libel, violation of publicity, infringement of trademark, copyright, or other intellectual property rights, property damage, or death or personal injury arising out of or relating to a Player\'s entry, creation of an entry or submission of an entry, participation in the Sweepstakes, acceptance or use or misuse of prizes (including travel or activity related thereto) and/or broadcast, exploitation, or use of entry; and',
       },
       {
         type: 'paragraph',
-        text: '3. Indemnify, defend, and hold harmless Veloraxy Interactive, Inc.from and against any and all claims, expenses, and liabilities (including reasonable attorneys\'/legal fees) arising out of or relating to a Player\'s participation in the Sweepstakes and/or Player\'s acceptance, use, or misuse of prizes.',
+        text: '3. Indemnify, defend, and hold harmless Veloraxy Interactive, Inc. from and against any and all claims, expenses, and liabilities (including reasonable attorneys\'/legal fees) arising out of or relating to a Player\'s participation in the Sweepstakes and/or Player\'s acceptance, use, or misuse of prizes.',
       },
     ],
   },
@@ -488,11 +488,11 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: '1. Veloraxy Interactive, Inc.reserves the right to cancel, suspend, and/or modify any games or rules in Sweeps Mode or these Sweepstakes Rules, or any part thereof, with immediate effect due to circumstances outside its reasonable control, and only where such circumstances make it unavoidable, if any fraud, technical failures, or any other factor beyond Veloraxy Interactive, Inc.\'s reasonable control impairs the integrity or proper functioning of the Sweepstakes, as determined by LukLok Casino.',
+        text: '1. Veloraxy Interactive, Inc. reserves the right to cancel, suspend, and/or modify any games or rules in Sweeps Mode or these Sweepstakes Rules, or any part thereof, with immediate effect due to circumstances outside its reasonable control, and only where such circumstances make it unavoidable, if any fraud, technical failures, or any other factor beyond Veloraxy Interactive, Inc.\'s reasonable control impairs the integrity or proper functioning of the Sweepstakes, as determined by LukLok Casino.',
       },
       {
         type: 'paragraph',
-        text: '2. Veloraxy Interactive, Inc.reserves the right, in its sole discretion, to disqualify any individual it finds to be tampering with the entry process or the operation of the Sweepstakes, or to be acting in violation of these Sweepstakes Rules or the Terms and Conditions. Veloraxy Interactive, Inc. will exercise this right in good faith and with consideration of the overall integrity of the platform. This right of disqualification shall include the right to deem any SCs in the offending Player\'s account to be forfeited and void.',
+        text: '2. Veloraxy Interactive, Inc. reserves the right, in its sole discretion, to disqualify any individual it finds to be tampering with the entry process or the operation of the Sweepstakes, or to be acting in violation of these Sweepstakes Rules or the Terms and Conditions. Veloraxy Interactive, Inc. will exercise this right in good faith and with consideration of the overall integrity of the platform. This right of disqualification shall include the right to deem any SCs in the offending Player\'s account to be forfeited and void.',
       },
       {
         type: 'paragraph',
@@ -500,7 +500,7 @@ export const SWEEPS_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: 'paragraph',
-        text: '4. In all other cases, Veloraxy Interactive, Inc.reserves the right to cancel, suspend, and/or modify the Sweepstakes. Any notice regarding cancellation, suspension, and/or modification will be sent to the email address associated with your LukLok Casino User Account.',
+        text: '4. In all other cases, Veloraxy Interactive, Inc. reserves the right to cancel, suspend, and/or modify the Sweepstakes. Any notice regarding cancellation, suspension, and/or modification will be sent to the email address associated with your LukLok Casino User Account.',
       },
       {
         type: 'paragraph',
