@@ -8,6 +8,8 @@ import type { SignUpRequest } from '../../lib/api/types'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
 import './AuthPages.css'
 
+const PASSWORD_MAX_LENGTH = 12
+
 function buildRequest(params: { email: string; password: string; rePassword: string }): SignUpRequest {
   const em = params.email.trim()
   return {
@@ -41,6 +43,10 @@ export function RegisterPage() {
   async function onSubmitFirst(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    if (password.length > PASSWORD_MAX_LENGTH) {
+      setError(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`)
+      return
+    }
     if (password !== password2) {
       setError('Passwords do not match')
       return
@@ -188,6 +194,7 @@ export function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
+                  maxLength={PASSWORD_MAX_LENGTH}
                 />
               </AuthClearableInputWrap>
             </div>
@@ -211,6 +218,7 @@ export function RegisterPage() {
                   onChange={(e) => setPassword2(e.target.value)}
                   required
                   minLength={6}
+                  maxLength={PASSWORD_MAX_LENGTH}
                 />
               </AuthClearableInputWrap>
             </div>

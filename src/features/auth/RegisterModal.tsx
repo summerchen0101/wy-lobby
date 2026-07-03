@@ -10,6 +10,8 @@ import { AuthClearableInputWrap } from './AuthClearableInputWrap'
 import { AuthSocialButtons } from './AuthSocialButtons'
 import './AuthModals.css'
 
+const PASSWORD_MAX_LENGTH = 12
+
 type Props = {
   open: boolean
   onClose: () => void
@@ -111,6 +113,10 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    if (password.length > PASSWORD_MAX_LENGTH) {
+      setError(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`)
+      return
+    }
     if (password !== passwordConfirm) {
       setError('Passwords do not match')
       return
@@ -243,6 +249,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                maxLength={PASSWORD_MAX_LENGTH}
               />
             </AuthClearableInputWrap>
 
@@ -266,6 +273,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 onChange={(e) => setPasswordConfirm(e.target.value)}
                 required
                 minLength={6}
+                maxLength={PASSWORD_MAX_LENGTH}
               />
             </AuthClearableInputWrap>
 
