@@ -4,8 +4,17 @@ export const LOBBY_SOUND_PREF_STORAGE_KEY = "luklok_profile_sound_on";
 /** Dispatched on same tab when the user toggles sound in Profile */
 export const LOBBY_SOUND_PREF_EVENT = "luklok-lobby-sound-pref";
 
-/** Dispatched when lobby BGM should pause for overlays (e.g. newbie tutorial video). */
+/** Dispatched when lobby BGM should pause for overlays (e.g. game shell). */
 export const LOBBY_BGM_SUPPRESS_EVENT = "luklok-lobby-bgm-suppress";
+
+/** Dispatched when lobby BGM duck level changes (e.g. newbie tutorial clip 7). */
+export const LOBBY_BGM_DUCK_EVENT = "luklok-lobby-bgm-duck";
+
+export const LOBBY_BGM_DUCK_VOLUME = 0.25;
+export const LOBBY_BGM_NORMAL_VOLUME = 1;
+
+/** Clip index for 7.mp4 (0-based) — duck lobby BGM during this clip. */
+export const TUTORIAL_BGM_DUCK_CLIP_INDEX = 6;
 
 let lobbyBgmSuppressed = false;
 
@@ -25,10 +34,45 @@ export const LOBBY_SFX_MENU_SRC = "/voices/US_MenuBtn.mp3";
 
 export const LOBBY_BGM_VARIANTS = ["/voices/lobbybpm106_loop.mp3"] as const;
 
-export const LOBBY_WELCOME_VOICE_VARIANTS = [
+export const LOBBY_WELCOME_VOICE_FEMALE = [
   "/voices/Us_LobbyVoice_F1.mp3",
   "/voices/Us_LobbyVoice_F3.mp3",
 ] as const;
+
+export const LOBBY_WELCOME_VOICE_MALE = [
+  "/voices/Us_LobbyVoice_M1.mp3",
+  "/voices/Us_LobbyVoice_M3.mp3",
+] as const;
+
+/** @deprecated use pickAlternatingWelcomeVoiceSrc */
+export const LOBBY_WELCOME_VOICE_VARIANTS = LOBBY_WELCOME_VOICE_FEMALE;
+
+const LOBBY_WELCOME_VOICE_LAST_GENDER_KEY =
+  "luklok_lobby_welcome_voice_last_gender";
+
+export function pickAlternatingWelcomeVoiceSrc(): string {
+  let last: string | null = null;
+  if (typeof window !== "undefined") {
+    try {
+      last = window.localStorage.getItem(LOBBY_WELCOME_VOICE_LAST_GENDER_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+  const useMale = last !== "M";
+  const gender = useMale ? "M" : "F";
+  const pool =
+    gender === "M" ? LOBBY_WELCOME_VOICE_MALE : LOBBY_WELCOME_VOICE_FEMALE;
+  const src = pool[Math.floor(Math.random() * pool.length)]!;
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(LOBBY_WELCOME_VOICE_LAST_GENDER_KEY, gender);
+    } catch {
+      /* ignore */
+    }
+  }
+  return src;
+}
 
 export function pickLobbyBgmSrc(): string {
   const i = Math.floor(Math.random() * LOBBY_BGM_VARIANTS.length);
@@ -36,13 +80,57 @@ export function pickLobbyBgmSrc(): string {
 }
 
 export function pickLobbyWelcomeVoiceSrc(): string {
-  const i = Math.floor(Math.random() * LOBBY_WELCOME_VOICE_VARIANTS.length);
-  return LOBBY_WELCOME_VOICE_VARIANTS[i]!;
+  return pickAlternatingWelcomeVoiceSrc();
 }
 
 export function assignLobbyBgm(audio: HTMLAudioElement): void {
   audio.src = pickLobbyBgmSrc();
   audio.load();
+  applyLobbyBgmVolume(audio);
+}
+
+let lobbyBgmDuckLevel = LOBBY_BGM_NORMAL_VOLUME;
+
+export function getLobbyBgmDuckLevel(): number {
+  return lobbyBgmDuckLevel;
+}
+
+export function setLobbyBgmDuckLevel(level: number): void {
+  const next = Math.max(0, Math.min(1, level));
+  if (lobbyBgmDuckLevel === next) return;
+  lobbyBgmDuckLevel = next;
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(LOBBY_BGM_DUCK_EVENT));
+}
+
+export function applyLobbyBgmVolume(audio: HTMLAudioElement): void {
+  audio.volume = lobbyBgmDuckLevel;
+}
+
+export function getTutorialBgmDuckLevelForClip(clipIndex: number): number {
+  return clipIndex === TUTORIAL_BGM_DUCK_CLIP_INDEX
+    ? LOBBY_BGM_DUCK_VOLUME
+    : LOBBY_BGM_NORMAL_VOLUME;
+}
+
+async function waitForMediaCanPlay(media: HTMLMediaElement): Promise<void> {
+  if (media.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return;
+  await new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      media.removeEventListener("canplay", onCanPlay);
+      media.removeEventListener("error", onError);
+    };
+    const onCanPlay = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error("[lobby-sound] media load failed"));
+    };
+    media.addEventListener("canplay", onCanPlay, { once: true });
+    media.addEventListener("error", onError, { once: true });
+  });
 }
 
 /** 等 canplay 再 play；供大廳 BGM 避免 load 未完成就 play 失敗後無聲。 */
@@ -61,24 +149,8 @@ export async function resumeLobbyBgm(audio: HTMLAudioElement): Promise<void> {
   if (audio.ended) return;
 
   try {
-    if (audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
-      await new Promise<void>((resolve, reject) => {
-        const cleanup = () => {
-          audio.removeEventListener("canplay", onCanPlay);
-          audio.removeEventListener("error", onError);
-        };
-        const onCanPlay = () => {
-          cleanup();
-          resolve();
-        };
-        const onError = () => {
-          cleanup();
-          reject(new Error("[lobby-sound] BGM load failed"));
-        };
-        audio.addEventListener("canplay", onCanPlay, { once: true });
-        audio.addEventListener("error", onError, { once: true });
-      });
-    }
+    await waitForMediaCanPlay(audio);
+    applyLobbyBgmVolume(audio);
     await audio.play();
   } catch {
     /* autoplay policy / decode */
@@ -86,6 +158,7 @@ export async function resumeLobbyBgm(audio: HTMLAudioElement): Promise<void> {
 }
 
 let welcomeVoice: HTMLAudioElement | null = null;
+let welcomeVoicePendingRetry = false;
 
 function getWelcomeVoiceAudio(): HTMLAudioElement {
   if (!welcomeVoice) {
@@ -96,19 +169,67 @@ function getWelcomeVoiceAudio(): HTMLAudioElement {
   return welcomeVoice;
 }
 
-export function playLobbyWelcomeVoice(): void {
+export function isLobbyWelcomeVoicePendingRetry(): boolean {
+  return welcomeVoicePendingRetry;
+}
+
+export function stopLobbyWelcomeVoice(): void {
+  welcomeVoicePendingRetry = false;
+  if (!welcomeVoice) return;
+  welcomeVoice.pause();
+  welcomeVoice.currentTime = 0;
+}
+
+function waitForAudioEnded(audio: HTMLAudioElement): Promise<void> {
+  if (audio.ended) return Promise.resolve();
+  return new Promise((resolve) => {
+    audio.addEventListener("ended", () => resolve(), { once: true });
+  });
+}
+
+/** 播完歡迎語才 resolve；autoplay 失敗則 reject 並設 pending retry。 */
+export async function playLobbyWelcomeVoice(): Promise<void> {
   if (!isLobbySoundEnabled()) return;
+  const a = getWelcomeVoiceAudio();
+  a.src = pickAlternatingWelcomeVoiceSrc();
+  a.currentTime = 0;
+  a.load();
   try {
-    const a = getWelcomeVoiceAudio();
-    a.src = pickLobbyWelcomeVoiceSrc();
-    a.currentTime = 0;
-    a.load();
-    void a.play().catch(() => {
-      /* autoplay / decode */
-    });
+    await waitForMediaCanPlay(a);
+    await a.play();
+    welcomeVoicePendingRetry = false;
+    await waitForAudioEnded(a);
   } catch {
-    /* ignore */
+    welcomeVoicePendingRetry = true;
+    throw new Error("[lobby-sound] welcome voice play failed");
   }
+}
+
+/** autoplay 被擋時，等手勢重試播完或逾時。 */
+export function waitForPendingWelcomeVoiceEnd(
+  timeoutMs = 60_000,
+): Promise<void> {
+  if (!welcomeVoicePendingRetry) return Promise.resolve();
+  if (typeof window === "undefined") return Promise.resolve();
+  const audio = getWelcomeVoiceAudio();
+  return new Promise((resolve) => {
+    const finish = () => {
+      cleanup();
+      resolve();
+    };
+    const timer = window.setTimeout(finish, timeoutMs);
+    const onEnded = () => finish();
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      audio.removeEventListener("ended", onEnded);
+    };
+    audio.addEventListener("ended", onEnded);
+  });
+}
+
+export function retryPendingLobbyWelcomeVoice(): void {
+  if (!welcomeVoicePendingRetry) return;
+  void playLobbyWelcomeVoice();
 }
 
 export function isLobbySoundEnabled(): boolean {

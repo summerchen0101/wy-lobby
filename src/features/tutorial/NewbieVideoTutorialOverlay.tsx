@@ -1,6 +1,11 @@
 import "./NewbieVideoTutorialOverlay.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  getTutorialBgmDuckLevelForClip,
+  LOBBY_BGM_NORMAL_VOLUME,
+  setLobbyBgmDuckLevel,
+} from "../../lib/lobbySound";
 import { NEWBIE_VIDEO_TUTORIAL_SOURCES } from "./newbieVideoTutorialSources";
 
 type Props = {
@@ -17,18 +22,62 @@ function releaseVideos(videos: readonly (HTMLVideoElement | null)[]) {
   }
 }
 
+async function waitForVideoCanPlay(video: HTMLVideoElement): Promise<void> {
+  if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return;
+  await new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      video.removeEventListener("canplay", onCanPlay);
+      video.removeEventListener("error", onError);
+    };
+    const onCanPlay = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error("[newbie-tutorial] video load failed"));
+    };
+    video.addEventListener("canplay", onCanPlay, { once: true });
+    video.addEventListener("error", onError, { once: true });
+  });
+}
+
+async function waitForFirstVideoFrame(video: HTMLVideoElement): Promise<void> {
+  if (typeof video.requestVideoFrameCallback === "function") {
+    await new Promise<void>((resolve) => {
+      video.requestVideoFrameCallback(() => resolve());
+    });
+    return;
+  }
+  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return;
+  await new Promise<void>((resolve) => {
+    video.addEventListener("loadeddata", () => resolve(), { once: true });
+  });
+}
+
 export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const resumePlayOnTapRef = useRef(false);
   const [index, setIndex] = useState(0);
+  const [activeVideoReady, setActiveVideoReady] = useState(false);
 
   const lastClip = index >= NEWBIE_VIDEO_TUTORIAL_SOURCES.length - 1;
 
   useEffect(() => {
     if (!open) return;
     setIndex(0);
+    setActiveVideoReady(false);
     resumePlayOnTapRef.current = false;
   }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      setLobbyBgmDuckLevel(LOBBY_BGM_NORMAL_VOLUME);
+      return;
+    }
+    setLobbyBgmDuckLevel(getTutorialBgmDuckLevelForClip(index));
+    return () => setLobbyBgmDuckLevel(LOBBY_BGM_NORMAL_VOLUME);
+  }, [open, index]);
 
   const pauseAllExcept = useCallback((activeIndex: number) => {
     videoRefs.current.forEach((video, i) => {
@@ -40,8 +89,12 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
   const tryPlayActive = useCallback(async () => {
     const video = videoRefs.current[index];
     if (!video) return true;
+    setActiveVideoReady(false);
     try {
+      await waitForVideoCanPlay(video);
       await video.play();
+      await waitForFirstVideoFrame(video);
+      setActiveVideoReady(true);
       resumePlayOnTapRef.current = false;
       return true;
     } catch {
@@ -95,6 +148,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
       <div className="newbie-video-tutorial__stack">
         {NEWBIE_VIDEO_TUTORIAL_SOURCES.map((src, i) => {
           const active = i === index;
+          const visible = active && activeVideoReady;
           return (
             <video
               key={src}
@@ -102,16 +156,16 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
                 videoRefs.current[i] = el;
               }}
               className={
-                active
+                visible
                   ? "newbie-video-tutorial__video"
                   : "newbie-video-tutorial__video newbie-video-tutorial__video--hidden"
               }
               src={src}
               playsInline
-              preload="auto"
+              preload={i === index || i === index + 1 ? "auto" : "none"}
               draggable={false}
               controlsList="nodownload nofullscreen noremoteplayback"
-              aria-hidden={!active}
+              aria-hidden={!visible}
             />
           );
         })}

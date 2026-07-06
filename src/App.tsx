@@ -7,6 +7,7 @@ import { AlertProvider } from "./components/alert/AlertProvider";
 import { LoadingOverlayProvider } from "./components/loading/LoadingOverlayProvider";
 import { FullScreenLoadingOverlay } from "./components/loading/FullScreenLoadingOverlay";
 import { LobbyBgmOrchestrator } from "./components/LobbyBgmOrchestrator";
+import { LobbyLoginWelcomeOrchestrator } from "./components/LobbyLoginWelcomeOrchestrator";
 import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
@@ -99,6 +100,7 @@ export default function App() {
                     <SocureDeviceInit />
                     <GameShellProvider>
                       <LobbyBgmOrchestrator />
+                      <LobbyLoginWelcomeOrchestrator />
                       <ZendeskLoader />
                       <PwaInstallBanner />
                       <IosInstallGuide />

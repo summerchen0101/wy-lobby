@@ -1,7 +1,7 @@
 .newbie-video-tutorial {
   position: fixed;
   inset: 0;
-  z-index: calc(var(--modal-z-index) + 120);
+  z-index: calc(var(--loading-overlay-z-index) + 100);
   margin: 0;
   padding: 0;
   box-sizing: border-box;

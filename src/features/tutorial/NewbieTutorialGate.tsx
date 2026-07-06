@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../auth/useAuth";
+import { useGeo } from "../geo/geoContext";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
-import { setLobbyBgmSuppressed } from "../../lib/lobbySound";
+import {
+  isWelcomeVoiceGateOpen,
+  LOBBY_WELCOME_VOICE_GATE_EVENT,
+} from "../../lib/lobbyWelcomeVoiceGate";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { NewbieVideoTutorialOverlay } from "./NewbieVideoTutorialOverlay";
 import { submitNoviceTeachingGeneralDone } from "./submitNoviceTeachingGeneralDone";
@@ -12,21 +16,40 @@ import {
 
 export function NewbieTutorialGate() {
   const { user, ready } = useAuth();
-  const { requestRef, gatewayRequestReady } = useGatewayLobby();
+  const { status: geoStatus } = useGeo();
+  const { requestRef, gatewayRequestReady, needsLobbyHydrationOverlay } =
+    useGatewayLobby();
   const [open, setOpen] = useState(false);
+  const [welcomeVoiceGateOpen, setWelcomeVoiceGateOpen] = useState(
+    isWelcomeVoiceGateOpen,
+  );
+
+  useEffect(() => {
+    const sync = () => setWelcomeVoiceGateOpen(isWelcomeVoiceGateOpen());
+    window.addEventListener(LOBBY_WELCOME_VOICE_GATE_EVENT, sync);
+    return () =>
+      window.removeEventListener(LOBBY_WELCOME_VOICE_GATE_EVENT, sync);
+  }, []);
 
   useEffect(() => {
     if (!ready || !user || isNewbieTutorialMarkedDone()) {
       setOpen(false);
       return;
     }
+    if (geoStatus === "checking" || needsLobbyHydrationOverlay) {
+      return;
+    }
+    if (!welcomeVoiceGateOpen) {
+      return;
+    }
     setOpen(true);
-  }, [ready, user]);
-
-  useEffect(() => {
-    setLobbyBgmSuppressed(open);
-    return () => setLobbyBgmSuppressed(false);
-  }, [open]);
+  }, [
+    ready,
+    user,
+    geoStatus,
+    needsLobbyHydrationOverlay,
+    welcomeVoiceGateOpen,
+  ]);
 
   const handleTutorialComplete = useCallback(async () => {
     const wsOk = isWsLobbyGamesEnabled();
