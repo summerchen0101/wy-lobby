@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { buildAppMetaPayload, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
 import { useAuth } from '../../auth/useAuth'
+import { resolvePostLoginRedirect } from '../../auth/loginEntry'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
 import { useAuthModals } from './authModalsContext'
 import type { SignUpRequest } from '../../lib/api/types'
@@ -133,12 +134,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
       if (result.auth) {
         ingestAuthResponse(result.auth)
         onClose()
-        const redir = searchParams.get('redirect')
-        if (redir && redir.startsWith('/') && !redir.startsWith('//')) {
-          nav(redir, { replace: true })
-        } else {
-          nav('/', { replace: true })
-        }
+        nav(resolvePostLoginRedirect(searchParams.get('redirect')), { replace: true })
         return
       }
       if (result.needSMSAnswer) {

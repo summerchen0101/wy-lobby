@@ -16,7 +16,7 @@ import { useGameShell } from "./useGameShell";
 /**
  * 全域大廳 BGM（不綁定特定路由）：
  * 1. 初次載入 SPA 開始循環 BGM
- * 2. 歡迎語由 LobbyLoginWelcomeOrchestrator 在登入成功後播放（男女交替）
+ * 2. 歡迎語由 LobbyLoginWelcomeOrchestrator 在登入成功後播放（F1/F3 或 M1/M3 隨機擇一，男女交替）
  * BGM 循環直到靜音／遊戲殼開啟／overlay suppress／分頁隱藏（暫停）；
  * 新手教學期間 BGM 持續播放，clip 7 透過 duck level 降低音量。
  */

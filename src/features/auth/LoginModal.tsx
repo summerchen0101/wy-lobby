@@ -8,6 +8,7 @@ import {
 import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
+import { resolvePostLoginRedirect } from "../../auth/loginEntry";
 import { ApiError, ClientVersionError } from "../../lib/api/client";
 import { AuthClearableInputWrap } from "./AuthClearableInputWrap";
 import { AuthSocialButtons } from "./AuthSocialButtons";
@@ -88,12 +89,9 @@ export function LoginModal({
 
   const finishLogin = useCallback(() => {
     onClose();
-    const redirect = searchParams.get("redirect");
-    if (redirect?.startsWith("/") && !redirect.startsWith("//")) {
-      navigate(redirect, { replace: true });
-    } else {
-      navigate("/", { replace: true });
-    }
+    navigate(resolvePostLoginRedirect(searchParams.get("redirect")), {
+      replace: true,
+    });
   }, [onClose, navigate, searchParams]);
 
   async function onSignIn(e: FormEvent) {

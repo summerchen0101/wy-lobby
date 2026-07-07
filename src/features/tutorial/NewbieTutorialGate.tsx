@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { useAuth } from "../../auth/useAuth";
 import { useGeo } from "../geo/geoContext";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
@@ -20,18 +20,16 @@ export function NewbieTutorialGate() {
   const { requestRef, gatewayRequestReady, needsLobbyHydrationOverlay } =
     useGatewayLobby();
   const [open, setOpen] = useState(false);
-  const [welcomeVoiceGateOpen, setWelcomeVoiceGateOpen] = useState(
-    isWelcomeVoiceGateOpen,
-  );
+  const [welcomeVoiceGateVersion, setWelcomeVoiceGateVersion] = useState(0);
 
   useEffect(() => {
-    const sync = () => setWelcomeVoiceGateOpen(isWelcomeVoiceGateOpen());
+    const sync = () => setWelcomeVoiceGateVersion((v) => v + 1);
     window.addEventListener(LOBBY_WELCOME_VOICE_GATE_EVENT, sync);
     return () =>
       window.removeEventListener(LOBBY_WELCOME_VOICE_GATE_EVENT, sync);
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!ready || !user || isNewbieTutorialMarkedDone()) {
       setOpen(false);
       return;
@@ -39,7 +37,8 @@ export function NewbieTutorialGate() {
     if (geoStatus === "checking" || needsLobbyHydrationOverlay) {
       return;
     }
-    if (!welcomeVoiceGateOpen) {
+    if (!isWelcomeVoiceGateOpen()) {
+      setOpen(false);
       return;
     }
     setOpen(true);
@@ -48,29 +47,28 @@ export function NewbieTutorialGate() {
     user,
     geoStatus,
     needsLobbyHydrationOverlay,
-    welcomeVoiceGateOpen,
+    welcomeVoiceGateVersion,
   ]);
 
-  const handleTutorialComplete = useCallback(async () => {
+  const handleTutorialComplete = useCallback(() => {
+    markNewbieTutorialDone();
+    setOpen(false);
+
     const wsOk = isWsLobbyGamesEnabled();
     const request = requestRef.current;
     const userId = user?.id?.trim() ?? "";
 
     if (wsOk && gatewayRequestReady && request && userId && userId !== "0") {
-      try {
-        const ok = await submitNoviceTeachingGeneralDone(request, userId);
+      void submitNoviceTeachingGeneralDone(request, userId).then((ok) => {
         if (!ok) {
           console.warn(
             "[newbie-tutorial] UPDATE_NOVICE_TEACHING did not return a 2xx code",
           );
         }
-      } catch (err) {
+      }).catch((err) => {
         console.warn("[newbie-tutorial] UPDATE_NOVICE_TEACHING failed", err);
-      }
+      });
     }
-
-    markNewbieTutorialDone();
-    setOpen(false);
   }, [gatewayRequestReady, requestRef, user?.id]);
 
   return (

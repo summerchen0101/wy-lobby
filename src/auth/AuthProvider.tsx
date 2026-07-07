@@ -34,6 +34,7 @@ import { AUTH_LOGIN_ENTRY_PATH } from "./loginEntry";
 import { shouldRefreshStoredSessionOnStartup } from "./sessionStartup";
 import { setOnSessionRefreshFailedHandler } from "./sessionRefreshNotify";
 import { readPersistedUser, writePersistedUser } from "./userPersist";
+import { markFreshLoginWelcomeVoicePending } from "../lib/lobbyWelcomeVoiceGate";
 
 function getInitialToken(): string | null {
   return getStoredAccessToken();
@@ -139,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.user) {
         writePersistedUser(res.user);
         setUser(res.user);
+        markFreshLoginWelcomeVoicePending();
       } else {
         writePersistedUser(null);
         setUser(null);

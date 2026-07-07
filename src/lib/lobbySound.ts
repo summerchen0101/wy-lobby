@@ -10,6 +10,9 @@ export const LOBBY_BGM_SUPPRESS_EVENT = "luklok-lobby-bgm-suppress";
 /** Dispatched when lobby BGM duck level changes (e.g. newbie tutorial clip 7). */
 export const LOBBY_BGM_DUCK_EVENT = "luklok-lobby-bgm-duck";
 
+/** Dispatched when lobby hero banner video should mute (e.g. newbie tutorial). */
+export const LOBBY_BANNER_MUTE_EVENT = "luklok-lobby-banner-mute";
+
 export const LOBBY_BGM_DUCK_VOLUME = 0.25;
 export const LOBBY_BGM_NORMAL_VOLUME = 1;
 
@@ -27,6 +30,19 @@ export function setLobbyBgmSuppressed(suppressed: boolean): void {
   lobbyBgmSuppressed = suppressed;
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(LOBBY_BGM_SUPPRESS_EVENT));
+}
+
+let lobbyBannerMuted = false;
+
+export function isLobbyBannerMuted(): boolean {
+  return lobbyBannerMuted;
+}
+
+export function setLobbyBannerMuted(muted: boolean): void {
+  if (lobbyBannerMuted === muted) return;
+  lobbyBannerMuted = muted;
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(LOBBY_BANNER_MUTE_EVENT));
 }
 
 export const LOBBY_SFX_BTN_SRC = "/voices/Btn.mp3";
@@ -187,7 +203,7 @@ function waitForAudioEnded(audio: HTMLAudioElement): Promise<void> {
   });
 }
 
-/** 播完歡迎語才 resolve；autoplay 失敗則 reject 並設 pending retry。 */
+/** 播完歡迎語（F1/F3 或 M1/M3 隨機擇一，男女交替）才 resolve；autoplay 失敗則 reject 並設 pending retry。 */
 export async function playLobbyWelcomeVoice(): Promise<void> {
   if (!isLobbySoundEnabled()) return;
   const a = getWelcomeVoiceAudio();

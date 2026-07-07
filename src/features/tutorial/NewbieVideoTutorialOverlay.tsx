@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import {
   getTutorialBgmDuckLevelForClip,
   LOBBY_BGM_NORMAL_VOLUME,
+  setLobbyBannerMuted,
   setLobbyBgmDuckLevel,
 } from "../../lib/lobbySound";
 import { NEWBIE_VIDEO_TUTORIAL_SOURCES } from "./newbieVideoTutorialSources";
@@ -64,7 +65,9 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
   const lastClip = index >= NEWBIE_VIDEO_TUTORIAL_SOURCES.length - 1;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      releaseVideos(videoRefs.current);
+    }
     setIndex(0);
     setActiveVideoReady(false);
     resumePlayOnTapRef.current = false;
@@ -72,11 +75,16 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
 
   useEffect(() => {
     if (!open) {
+      setLobbyBannerMuted(false);
       setLobbyBgmDuckLevel(LOBBY_BGM_NORMAL_VOLUME);
       return;
     }
+    setLobbyBannerMuted(true);
     setLobbyBgmDuckLevel(getTutorialBgmDuckLevelForClip(index));
-    return () => setLobbyBgmDuckLevel(LOBBY_BGM_NORMAL_VOLUME);
+    return () => {
+      setLobbyBannerMuted(false);
+      setLobbyBgmDuckLevel(LOBBY_BGM_NORMAL_VOLUME);
+    };
   }, [open, index]);
 
   const pauseAllExcept = useCallback((activeIndex: number) => {
@@ -109,14 +117,9 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     void tryPlayActive();
   }, [open, index, pauseAllExcept, tryPlayActive]);
 
-  const releaseAllVideos = useCallback(() => {
-    releaseVideos(videoRefs.current);
-  }, []);
-
   const finish = useCallback(() => {
-    releaseAllVideos();
     onComplete();
-  }, [onComplete, releaseAllVideos]);
+  }, [onComplete]);
 
   const advance = useCallback(() => {
     if (lastClip) {

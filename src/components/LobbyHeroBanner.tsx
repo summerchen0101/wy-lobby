@@ -1,4 +1,10 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  isLobbyBannerMuted,
+  isLobbySoundEnabled,
+  LOBBY_BANNER_MUTE_EVENT,
+  LOBBY_SOUND_PREF_EVENT,
+} from "../lib/lobbySound";
 import "./LobbyHeroBanner.css";
 
 type Props = {
@@ -7,15 +13,45 @@ type Props = {
   children?: ReactNode;
 };
 
+function syncBannerVideoSound(video: HTMLVideoElement): void {
+  if (!isLobbySoundEnabled() || isLobbyBannerMuted()) {
+    video.muted = true;
+    return;
+  }
+  video.muted = false;
+  void video.play().catch(() => {
+    video.muted = true;
+  });
+}
+
 export function LobbyHeroBanner({ videoSrc, posterSrc, children }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [bannerMuteVersion, setBannerMuteVersion] = useState(0);
+
+  const tryUnmuteAfterUserActivation = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !isLobbySoundEnabled() || isLobbyBannerMuted()) return;
+    syncBannerVideoSound(video);
+  }, []);
+
+  useEffect(() => {
+    const sync = () => setBannerMuteVersion((v) => v + 1);
+    window.addEventListener(LOBBY_BANNER_MUTE_EVENT, sync);
+    return () => window.removeEventListener(LOBBY_BANNER_MUTE_EVENT, sync);
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const playWhenReady = () => {
-      void video.play().catch(() => {});
+      syncBannerVideoSound(video);
+      void video.play().catch(() => {
+        if (!video.muted) {
+          video.muted = true;
+          void video.play().catch(() => {});
+        }
+      });
     };
 
     video.addEventListener("canplay", playWhenReady);
@@ -29,7 +65,22 @@ export function LobbyHeroBanner({ videoSrc, posterSrc, children }: Props) {
       video.removeEventListener("canplay", playWhenReady);
       video.pause();
     };
-  }, [videoSrc]);
+  }, [videoSrc, bannerMuteVersion]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onSoundPref = () => syncBannerVideoSound(video);
+    const unlock = () => tryUnmuteAfterUserActivation();
+
+    window.addEventListener(LOBBY_SOUND_PREF_EVENT, onSoundPref);
+    document.addEventListener("pointerdown", unlock, { capture: true });
+    return () => {
+      window.removeEventListener(LOBBY_SOUND_PREF_EVENT, onSoundPref);
+      document.removeEventListener("pointerdown", unlock, { capture: true });
+    };
+  }, [tryUnmuteAfterUserActivation, bannerMuteVersion]);
 
   return (
     <div className="lobby-hero-banner__art-wrap">

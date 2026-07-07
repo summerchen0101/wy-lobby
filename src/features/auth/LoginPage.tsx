@@ -1,6 +1,7 @@
 import { type FormEvent, useMemo, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
+import { resolvePostLoginRedirect } from '../../auth/loginEntry'
 import { MarketingTopBar } from '../../components/MarketingTopBar'
 import { ApiError } from '../../lib/api/client'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
@@ -10,7 +11,7 @@ export function LoginPage() {
   const { login, user, ready } = useAuth()
   const [search] = useSearchParams()
   const navigate = useNavigate()
-  const redirectTo = search.get('redirect') || '/'
+  const redirectTo = resolvePostLoginRedirect(search.get('redirect'))
   const forgotPasswordHref = useMemo(() => {
     const rd = search.get('redirect')
     if (!rd) return '/forgot-password'

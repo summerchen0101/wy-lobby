@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useAuth } from "../auth/useAuth";
 import type { User } from "../lib/api/types";
 import {
@@ -10,7 +10,8 @@ import { useGeo } from "../features/geo/geoContext";
 import { useGatewayLobby } from "../realtime/useGatewayLobby";
 
 /**
- * 訪客登入成功（null → user）後播歡迎語（男女交替），播完才開啟新手教學 gate。
+ * 訪客登入成功（null → user）後播歡迎語（F1/F3 或 M1/M3 隨機擇一，男女交替），
+ * 播完才開啟新手教學 gate（教學 video 1–19）。
  * 還原既有 session 不播歡迎語、不擋教學。
  */
 export function LobbyLoginWelcomeOrchestrator() {
@@ -21,7 +22,7 @@ export function LobbyLoginWelcomeOrchestrator() {
   const freshLoginPendingRef = useRef(false);
   const playingRef = useRef(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!ready) return;
     if (prevUserRef.current === undefined) {
       prevUserRef.current = user;

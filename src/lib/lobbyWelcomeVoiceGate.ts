@@ -13,3 +13,8 @@ export function setWelcomeVoiceGateOpen(open: boolean): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(LOBBY_WELCOME_VOICE_GATE_EVENT));
 }
+
+/** 使用者主動登入／註冊／OAuth 成功時同步關 gate，避免教學 overlay 搶跑。 */
+export function markFreshLoginWelcomeVoicePending(): void {
+  setWelcomeVoiceGateOpen(false);
+}
