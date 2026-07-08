@@ -5,6 +5,10 @@ import { MarketingTopBar } from '../../components/MarketingTopBar'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
 import { buildAppMetaPayload, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
 import type { SignUpRequest } from '../../lib/api/types'
+import {
+  kickstartLobbyWelcomeVoiceFromUserGesture,
+  stopLobbyWelcomeVoice,
+} from '../../lib/lobbySound'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
 import './AuthPages.css'
 
@@ -51,6 +55,7 @@ export function RegisterPage() {
       setError('Passwords do not match')
       return
     }
+    kickstartLobbyWelcomeVoiceFromUserGesture()
     setSubmitting(true)
     const body = buildRequest({ email, password, rePassword: password2 })
     try {
@@ -61,10 +66,12 @@ export function RegisterPage() {
         return
       }
       if (result.needSMSAnswer) {
+        stopLobbyWelcomeVoice()
         setPending(body)
         return
       }
     } catch (err) {
+      stopLobbyWelcomeVoice()
       if (err instanceof ClientVersionError) {
         window.open(err.updateUrl, '_blank', 'noopener,noreferrer')
         setError('A new version is required. A download page was opened in a new tab.')

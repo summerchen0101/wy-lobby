@@ -16,7 +16,7 @@ export const LOBBY_BANNER_MUTE_EVENT = "luklok-lobby-banner-mute";
 export const LOBBY_BGM_DUCK_VOLUME = 0.25;
 export const LOBBY_BGM_NORMAL_VOLUME = 1;
 
-/** Clip index for 7.mp4 (0-based) — duck lobby BGM during this clip. */
+/** Clip index 6 → deploy 7.mp4 (source 4_click.mp4) — duck lobby BGM during this clip. */
 export const TUTORIAL_BGM_DUCK_CLIP_INDEX = 6;
 
 let lobbyBgmSuppressed = false;
@@ -203,9 +203,54 @@ function waitForAudioEnded(audio: HTMLAudioElement): Promise<void> {
   });
 }
 
+/**
+ * 在登入／註冊按鈕的 user gesture 內同步呼叫 play()，避免 API 回來後 autoplay 被擋。
+ * 須在 await login/register/signUp 之前呼叫。
+ */
+export function kickstartLobbyWelcomeVoiceFromUserGesture(): void {
+  if (!isLobbySoundEnabled()) return;
+  const a = getWelcomeVoiceAudio();
+  a.src = pickAlternatingWelcomeVoiceSrc();
+  a.currentTime = 0;
+  a.load();
+  welcomeVoicePendingRetry = false;
+  void a.play().catch(() => {
+    welcomeVoicePendingRetry = true;
+  });
+}
+
+export function isLobbyWelcomeVoiceStarted(): boolean {
+  const a = welcomeVoice;
+  if (!a?.src) return false;
+  if (welcomeVoicePendingRetry) return false;
+  return !a.ended;
+}
+
+/** 等已在播放（或 kickstart）的歡迎語播完。 */
+export async function waitForLobbyWelcomeVoiceEnd(): Promise<void> {
+  if (!isLobbySoundEnabled()) return;
+  const a = getWelcomeVoiceAudio();
+  if (!a.src || a.ended) return;
+  try {
+    if (a.paused) {
+      await waitForMediaCanPlay(a);
+      await a.play();
+      welcomeVoicePendingRetry = false;
+    }
+    await waitForAudioEnded(a);
+  } catch {
+    welcomeVoicePendingRetry = true;
+    throw new Error("[lobby-sound] welcome voice play failed");
+  }
+}
+
 /** 播完歡迎語（F1/F3 或 M1/M3 隨機擇一，男女交替）才 resolve；autoplay 失敗則 reject 並設 pending retry。 */
 export async function playLobbyWelcomeVoice(): Promise<void> {
   if (!isLobbySoundEnabled()) return;
+  if (isLobbyWelcomeVoiceStarted()) {
+    await waitForLobbyWelcomeVoiceEnd();
+    return;
+  }
   const a = getWelcomeVoiceAudio();
   a.src = pickAlternatingWelcomeVoiceSrc();
   a.currentTime = 0;

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useAuth } from "../auth/useAuth";
 import {
   isLobbyBannerMuted,
   isLobbySoundEnabled,
@@ -24,13 +25,38 @@ function syncBannerVideoSound(video: HTMLVideoElement): void {
   });
 }
 
+/** Muted autoplay first (refresh-safe), then try unmute when prefs allow. */
+function playBannerVideo(video: HTMLVideoElement): void {
+  const wantSound =
+    isLobbySoundEnabled() && !isLobbyBannerMuted();
+  video.muted = true;
+  void video
+    .play()
+    .then(() => {
+      if (!wantSound) return;
+      video.muted = false;
+      void video.play().catch(() => {
+        video.muted = true;
+      });
+    })
+    .catch(() => {
+      void video.play().catch(() => {});
+    });
+}
+
 export function LobbyHeroBanner({ videoSrc, posterSrc, children }: Props) {
+  const { ready: authReady } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [bannerMuteVersion, setBannerMuteVersion] = useState(0);
 
   const tryUnmuteAfterUserActivation = useCallback(() => {
     const video = videoRef.current;
-    if (!video || !isLobbySoundEnabled() || isLobbyBannerMuted()) return;
+    if (!video) return;
+    if (video.paused) {
+      playBannerVideo(video);
+      return;
+    }
+    if (!isLobbySoundEnabled() || isLobbyBannerMuted()) return;
     syncBannerVideoSound(video);
   }, []);
 
@@ -45,13 +71,7 @@ export function LobbyHeroBanner({ videoSrc, posterSrc, children }: Props) {
     if (!video) return;
 
     const playWhenReady = () => {
-      syncBannerVideoSound(video);
-      void video.play().catch(() => {
-        if (!video.muted) {
-          video.muted = true;
-          void video.play().catch(() => {});
-        }
-      });
+      playBannerVideo(video);
     };
 
     video.addEventListener("canplay", playWhenReady);
@@ -66,6 +86,14 @@ export function LobbyHeroBanner({ videoSrc, posterSrc, children }: Props) {
       video.pause();
     };
   }, [videoSrc, bannerMuteVersion]);
+
+  /** Auth bootstrap 完成後重試（startup refresh 期間 ready=false，初次 autoplay 常失敗）。 */
+  useEffect(() => {
+    if (!authReady) return;
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) playBannerVideo(video);
+  }, [authReady, videoSrc, bannerMuteVersion]);
 
   useEffect(() => {
     const video = videoRef.current;

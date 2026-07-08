@@ -4,6 +4,10 @@ import { createPortal } from 'react-dom'
 import { buildAppMetaPayload, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
 import { useAuth } from '../../auth/useAuth'
 import { resolvePostLoginRedirect } from '../../auth/loginEntry'
+import {
+  kickstartLobbyWelcomeVoiceFromUserGesture,
+  stopLobbyWelcomeVoice,
+} from '../../lib/lobbySound'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
 import { useAuthModals } from './authModalsContext'
 import type { SignUpRequest } from '../../lib/api/types'
@@ -128,6 +132,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
       rePassword: passwordConfirm,
       referrer: referral,
     })
+    kickstartLobbyWelcomeVoiceFromUserGesture()
     setSubmitting(true)
     try {
       const result = await signUp(body)
@@ -138,6 +143,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
         return
       }
       if (result.needSMSAnswer) {
+        stopLobbyWelcomeVoice()
         openPhoneVerify({
           body,
           displayEmail: maskEmailForDisplay(email),
@@ -146,6 +152,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
         return
       }
     } catch (err) {
+      stopLobbyWelcomeVoice()
       if (err instanceof ClientVersionError) {
         window.open(err.updateUrl, '_blank', 'noopener,noreferrer')
         setError('A new version is required. A download page was opened in a new tab.')

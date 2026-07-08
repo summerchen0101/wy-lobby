@@ -6,12 +6,15 @@
   padding: 0;
   box-sizing: border-box;
   background: #000;
-  cursor: pointer;
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+.newbie-video-tutorial--awaiting-tap {
+  cursor: pointer;
 }
 
 .newbie-video-tutorial__stack {

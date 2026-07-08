@@ -34,6 +34,10 @@ import { AUTH_LOGIN_ENTRY_PATH } from "./loginEntry";
 import { shouldRefreshStoredSessionOnStartup } from "./sessionStartup";
 import { setOnSessionRefreshFailedHandler } from "./sessionRefreshNotify";
 import { readPersistedUser, writePersistedUser } from "./userPersist";
+import {
+  kickstartLobbyWelcomeVoiceFromUserGesture,
+  stopLobbyWelcomeVoice,
+} from "../lib/lobbySound";
 import { markFreshLoginWelcomeVoicePending } from "../lib/lobbyWelcomeVoiceGate";
 
 function getInitialToken(): string | null {
@@ -245,9 +249,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (account: string, password: string) => {
-      const res = await apiLogin({ account, password });
-      const user = res.user ?? syntheticUserFromAccount(account);
-      setSessionFromAuth({ ...res, user });
+      kickstartLobbyWelcomeVoiceFromUserGesture();
+      try {
+        const res = await apiLogin({ account, password });
+        const user = res.user ?? syntheticUserFromAccount(account);
+        setSessionFromAuth({ ...res, user });
+      } catch (err) {
+        stopLobbyWelcomeVoice();
+        throw err;
+      }
     },
     [setSessionFromAuth],
   );
@@ -258,9 +268,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (body: RegisterBody) => {
-      const res = await completeSignUp(body);
-      const user = res.user ?? syntheticUserFromAccount(body.email);
-      setSessionFromAuth({ ...res, user });
+      kickstartLobbyWelcomeVoiceFromUserGesture();
+      try {
+        const res = await completeSignUp(body);
+        const user = res.user ?? syntheticUserFromAccount(body.email);
+        setSessionFromAuth({ ...res, user });
+      } catch (err) {
+        stopLobbyWelcomeVoice();
+        throw err;
+      }
     },
     [setSessionFromAuth],
   );

@@ -1,13 +1,15 @@
 import "./NewbieVideoTutorialOverlay.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   getTutorialBgmDuckLevelForClip,
+  isLobbySoundEnabled,
   LOBBY_BGM_NORMAL_VOLUME,
+  LOBBY_SOUND_PREF_EVENT,
   setLobbyBannerMuted,
   setLobbyBgmDuckLevel,
 } from "../../lib/lobbySound";
-import { NEWBIE_VIDEO_TUTORIAL_SOURCES } from "./newbieVideoTutorialSources";
+import { NEWBIE_VIDEO_TUTORIAL_CLIPS } from "./newbieVideoTutorialSources";
 
 type Props = {
   open: boolean;
@@ -56,13 +58,70 @@ async function waitForFirstVideoFrame(video: HTMLVideoElement): Promise<void> {
   });
 }
 
+function hasTutorialSoundActivation(soundUnlocked: boolean): boolean {
+  if (soundUnlocked) return true;
+  if (typeof navigator === "undefined") return false;
+  return navigator.userActivation?.isActive === true;
+}
+
+/** Muted autoplay when needed (refresh-safe), then unmute when sound is allowed. */
+async function playTutorialVideo(
+  video: HTMLVideoElement,
+  soundUnlocked: boolean,
+): Promise<{ ok: true; soundUnlocked: boolean } | { ok: false }> {
+  const wantSound = isLobbySoundEnabled();
+  await waitForVideoCanPlay(video);
+
+  const tryUnmuted = async (): Promise<boolean> => {
+    if (!wantSound) {
+      video.muted = true;
+      return false;
+    }
+    video.muted = false;
+    if (!video.paused) return true;
+    try {
+      await video.play();
+      return true;
+    } catch {
+      video.muted = true;
+      return false;
+    }
+  };
+
+  if (wantSound && hasTutorialSoundActivation(soundUnlocked)) {
+    if (await tryUnmuted()) {
+      await waitForFirstVideoFrame(video);
+      return { ok: true, soundUnlocked: true };
+    }
+  }
+
+  video.muted = true;
+  try {
+    await video.play();
+    await waitForFirstVideoFrame(video);
+  } catch {
+    return { ok: false };
+  }
+
+  if (wantSound && hasTutorialSoundActivation(soundUnlocked)) {
+    const unmuted = await tryUnmuted();
+    return { ok: true, soundUnlocked: unmuted || soundUnlocked };
+  }
+
+  return { ok: true, soundUnlocked };
+}
+
 export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const resumePlayOnTapRef = useRef(false);
+  const soundUnlockedRef = useRef(false);
   const [index, setIndex] = useState(0);
   const [activeVideoReady, setActiveVideoReady] = useState(false);
+  const [awaitingClick, setAwaitingClick] = useState(false);
+  const [needsTapToResume, setNeedsTapToResume] = useState(false);
 
-  const lastClip = index >= NEWBIE_VIDEO_TUTORIAL_SOURCES.length - 1;
+  const activeClip = NEWBIE_VIDEO_TUTORIAL_CLIPS[index];
+  const lastClip = index >= NEWBIE_VIDEO_TUTORIAL_CLIPS.length - 1;
 
   useEffect(() => {
     if (!open) {
@@ -70,8 +129,15 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     }
     setIndex(0);
     setActiveVideoReady(false);
+    setAwaitingClick(false);
+    setNeedsTapToResume(false);
     resumePlayOnTapRef.current = false;
+    soundUnlockedRef.current = false;
   }, [open]);
+
+  useEffect(() => {
+    setAwaitingClick(false);
+  }, [index]);
 
   useEffect(() => {
     if (!open) {
@@ -94,28 +160,41 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     });
   }, []);
 
-  const tryPlayActive = useCallback(async () => {
+  const tryPlayActive = useCallback(async (fromUserGesture = false) => {
     const video = videoRefs.current[index];
-    if (!video) return true;
+    if (!video) return false;
+    if (fromUserGesture) soundUnlockedRef.current = true;
     setActiveVideoReady(false);
-    try {
-      await waitForVideoCanPlay(video);
-      await video.play();
-      await waitForFirstVideoFrame(video);
-      setActiveVideoReady(true);
-      resumePlayOnTapRef.current = false;
-      return true;
-    } catch {
+    setAwaitingClick(false);
+    const result = await playTutorialVideo(video, soundUnlockedRef.current);
+    if (!result.ok) {
       resumePlayOnTapRef.current = true;
+      setNeedsTapToResume(true);
       return false;
     }
+    soundUnlockedRef.current = result.soundUnlocked;
+    setActiveVideoReady(true);
+    resumePlayOnTapRef.current = false;
+    setNeedsTapToResume(false);
+    return true;
   }, [index]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     pauseAllExcept(index);
     void tryPlayActive();
   }, [open, index, pauseAllExcept, tryPlayActive]);
+
+  useEffect(() => {
+    if (!open) return;
+    const syncSound = () => {
+      const video = videoRefs.current[index];
+      if (!video) return;
+      video.muted = !isLobbySoundEnabled() || !soundUnlockedRef.current;
+    };
+    window.addEventListener(LOBBY_SOUND_PREF_EVENT, syncSound);
+    return () => window.removeEventListener(LOBBY_SOUND_PREF_EVENT, syncSound);
+  }, [open, index]);
 
   const finish = useCallback(() => {
     onComplete();
@@ -129,32 +208,50 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     setIndex((i) => i + 1);
   }, [lastClip, finish]);
 
-  const onTap = useCallback(() => {
-    if (resumePlayOnTapRef.current) {
-      resumePlayOnTapRef.current = false;
-      void tryPlayActive();
+  const onActiveVideoEnded = useCallback(() => {
+    if (!activeClip) return;
+    if (activeClip.requiresClickAfterEnd) {
+      setAwaitingClick(true);
       return;
     }
     advance();
-  }, [tryPlayActive, advance]);
+  }, [activeClip, advance]);
+
+  const onTap = useCallback(() => {
+    if (resumePlayOnTapRef.current) {
+      resumePlayOnTapRef.current = false;
+      setNeedsTapToResume(false);
+      void tryPlayActive(true);
+      return;
+    }
+    if (!awaitingClick) return;
+    soundUnlockedRef.current = true;
+    setAwaitingClick(false);
+    advance();
+  }, [tryPlayActive, advance, awaitingClick]);
 
   if (!open) return null;
 
   return createPortal(
     <div
-      className="newbie-video-tutorial"
+      className={
+        awaitingClick || needsTapToResume
+          ? "newbie-video-tutorial newbie-video-tutorial--awaiting-tap"
+          : "newbie-video-tutorial"
+      }
       role="dialog"
       aria-modal="true"
       aria-label="New player tutorial"
       onClick={onTap}
       onContextMenu={(e) => e.preventDefault()}>
       <div className="newbie-video-tutorial__stack">
-        {NEWBIE_VIDEO_TUTORIAL_SOURCES.map((src, i) => {
+        {NEWBIE_VIDEO_TUTORIAL_CLIPS.map((clip, i) => {
           const active = i === index;
-          const visible = active && activeVideoReady;
+          const visible =
+            active && (activeVideoReady || needsTapToResume);
           return (
             <video
-              key={src}
+              key={clip.src}
               ref={(el) => {
                 videoRefs.current[i] = el;
               }}
@@ -163,12 +260,13 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
                   ? "newbie-video-tutorial__video"
                   : "newbie-video-tutorial__video newbie-video-tutorial__video--hidden"
               }
-              src={src}
+              src={clip.src}
               playsInline
               preload={i === index || i === index + 1 ? "auto" : "none"}
               draggable={false}
               controlsList="nodownload nofullscreen noremoteplayback"
               aria-hidden={!visible}
+              onEnded={active ? onActiveVideoEnded : undefined}
             />
           );
         })}
