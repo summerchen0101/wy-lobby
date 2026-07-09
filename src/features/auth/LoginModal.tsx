@@ -9,7 +9,9 @@ import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { resolvePostLoginRedirect } from "../../auth/loginEntry";
-import { ApiError, ClientVersionError } from "../../lib/api/client";
+import { ApiError } from "../../lib/api/client";
+import { ClientVersionError } from "../../lib/api/clientVersionError";
+import { presentClientVersionError } from "../../lib/clientVersionUi";
 import { AuthClearableInputWrap } from "./AuthClearableInputWrap";
 import { AuthSocialButtons } from "./AuthSocialButtons";
 import "./AuthModals.css";
@@ -103,10 +105,7 @@ export function LoginModal({
       finishLogin();
     } catch (err) {
       if (err instanceof ClientVersionError) {
-        window.open(err.updateUrl, "_blank", "noopener,noreferrer");
-        setFormError(
-          "A new version is required. A download page was opened in a new tab.",
-        );
+        setFormError(presentClientVersionError(err));
         return;
       }
       const msg =

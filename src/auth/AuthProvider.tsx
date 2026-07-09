@@ -23,12 +23,9 @@ import type { AuthResponse, RegisterBody, User } from "../lib/api/types";
 import { minimalSessionUser, resolveUserAfterAuth } from "./applyAuthResponse";
 import { AuthContext } from "./auth-context";
 import { refreshSession } from "./refreshSession";
-import {
-  clearStoredSession,
-  getStoredAccessToken,
-  getStoredRefreshToken,
-  persistAuthResponse,
-} from "./sessionPersist";
+import { clearStoredSession, getStoredAccessToken, getStoredRefreshToken, persistAuthResponse } from "./sessionPersist";
+import { setClientVersionRequiredHandler } from "../lib/clientVersionNotify";
+import { ClientVersionError } from "../lib/api/clientVersionError";
 import { useProactiveTokenRefresh } from "./useProactiveTokenRefresh";
 import { AUTH_LOGIN_ENTRY_PATH } from "./loginEntry";
 import { shouldRefreshStoredSessionOnStartup } from "./sessionStartup";
@@ -109,6 +106,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOnSessionRefreshFailedHandler(invalidateSessionToLogin);
     return () => setOnSessionRefreshFailedHandler(null);
   }, [invalidateSessionToLogin]);
+
+  const handleClientVersionRequired = useCallback(
+    (_err: ClientVersionError) => {
+      clearStoredSession();
+      setToken(null);
+      setUser(null);
+      setReady(true);
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    setClientVersionRequiredHandler(handleClientVersionRequired);
+    return () => setClientVersionRequiredHandler(null);
+  }, [handleClientVersionRequired]);
 
   useProactiveTokenRefresh({
     token,
@@ -256,10 +268,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSessionFromAuth({ ...res, user });
       } catch (err) {
         stopLobbyWelcomeVoice();
+        if (err instanceof ClientVersionError) {
+          handleClientVersionRequired(err);
+        }
         throw err;
       }
     },
-    [setSessionFromAuth],
+    [setSessionFromAuth, handleClientVersionRequired],
   );
 
   const signUp = useCallback(async (body: RegisterBody) => {
@@ -275,10 +290,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSessionFromAuth({ ...res, user });
       } catch (err) {
         stopLobbyWelcomeVoice();
+        if (err instanceof ClientVersionError) {
+          handleClientVersionRequired(err);
+        }
         throw err;
       }
     },
-    [setSessionFromAuth],
+    [setSessionFromAuth, handleClientVersionRequired],
   );
 
   const ingestAuthResponse = useCallback(

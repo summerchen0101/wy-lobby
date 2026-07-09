@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { MarketingTopBar } from '../../components/MarketingTopBar'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
-import { buildAppMetaPayload, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
+import { buildAppMetaForAuthRequest, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
 import type { SignUpRequest } from '../../lib/api/types'
 import {
   kickstartLobbyWelcomeVoiceFromUserGesture,
@@ -21,7 +21,7 @@ function buildRequest(params: { email: string; password: string; rePassword: str
     password: params.password,
     rePassword: params.rePassword,
     answer: '',
-    app_meta: buildAppMetaPayload(),
+    app_meta: buildAppMetaForAuthRequest(),
     email: em,
     deviceID: getOrCreateWebDeviceId(),
   }

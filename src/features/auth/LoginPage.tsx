@@ -4,6 +4,8 @@ import { useAuth } from '../../auth/useAuth'
 import { resolvePostLoginRedirect } from '../../auth/loginEntry'
 import { MarketingTopBar } from '../../components/MarketingTopBar'
 import { ApiError } from '../../lib/api/client'
+import { ClientVersionError } from '../../lib/api/clientVersionError'
+import { presentClientVersionError } from '../../lib/clientVersionUi'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
 import './AuthPages.css'
 
@@ -38,6 +40,10 @@ export function LoginPage() {
       await login(account.trim(), password)
       navigate(redirectTo, { replace: true })
     } catch (err) {
+      if (err instanceof ClientVersionError) {
+        setError(presentClientVersionError(err))
+        return
+      }
       const msg =
         err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Sign-in failed'
       setError(msg)

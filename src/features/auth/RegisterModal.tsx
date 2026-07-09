@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { buildAppMetaPayload, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
+import { buildAppMetaForAuthRequest, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
 import { useAuth } from '../../auth/useAuth'
 import { resolvePostLoginRedirect } from '../../auth/loginEntry'
 import {
@@ -64,7 +64,7 @@ function buildSignUpRequest(params: {
     password: params.password,
     rePassword: params.rePassword,
     answer: '',
-    app_meta: buildAppMetaPayload(),
+    app_meta: buildAppMetaForAuthRequest(),
     email: em,
     deviceID: getOrCreateWebDeviceId(),
     referrerCode: params.referrer.trim() || undefined,
