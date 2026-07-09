@@ -284,9 +284,16 @@ export function InviteFriendsModal({ open, onClose }: Props) {
             panelClassName="invite-friends-modal__info-popover-wrap"
             content={
               <p className="invite-friends-modal__qualified invite-friends-modal__qualified--popover">
-                *Friends qualify by signing up with your referral link, purchasing Crown Coin packages
-                worth $14.90 int total and not with an exisition account with STI group. Promotion Terms
-                Apply.
+                *Friends qualify by signing up with your referral link, purchasing Luklok Casino packages
+                worth $14.99 in total and not with an existing account with STI group.{' '}
+                <a
+                  className="invite-friends-modal__terms-link"
+                  href="/invite-terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Promotion Terms Apply.
+                </a>
               </p>
             }
           >
