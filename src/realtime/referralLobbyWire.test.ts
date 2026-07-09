@@ -30,7 +30,7 @@ describe("formatClaimedReferralRewardsMessage", () => {
     const msg = formatClaimedReferralRewardsMessage([
       { walletType: "SC", amount: "200000" },
     ]);
-    expect(msg).toBe("You received 20.0000 SC.");
+    expect(msg).toBe("You received 20.00 SC.");
   });
 
   it("formats GC and SC together", () => {

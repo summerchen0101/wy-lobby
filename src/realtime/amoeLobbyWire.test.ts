@@ -108,7 +108,7 @@ describe("formatAmoe push toasts", () => {
         sweepstakeCode: "9991234564",
       }),
     ).toBe(
-      "Your AMOE entry (code: 9991234564) was approved. 2.0000 SC has been credited.",
+      "Your AMOE entry (code: 9991234564) was approved. 2.00 SC has been credited.",
     );
   });
 
