@@ -2,6 +2,8 @@ import {
   GATEWAY_API_BUY_PRODUCT,
   GATEWAY_API_CLAIM_REFERRAL_REWARD,
   GATEWAY_API_CREATE_WITHDRAW_ORDER,
+  GATEWAY_API_AMOE_CREDITED_PUSH,
+  GATEWAY_API_AMOE_INVALID_PUSH,
   GATEWAY_API_GENERATE_AMOE_CODE,
   GATEWAY_API_GET_REFERRAL_INFO,
   GATEWAY_API_GET_THIRD_PARTY_GAME_INFO,
@@ -44,7 +46,11 @@ import {
   decodeClaimReferralRewardRespBytes,
   decodeGetReferralInfoRespBytes,
 } from "./referralLobbyWire";
-import { decodeGenerateAmoeCodeResponseBytes } from "./amoeLobbyWire";
+import {
+  decodeAmoeCreditedPushBytes,
+  decodeAmoeInvalidPushBytes,
+  decodeGenerateAmoeCodeResponseBytes,
+} from "./amoeLobbyWire";
 import {
   decodeCreateWithdrawOrderResponseBytes,
   decodeListWithdrawOrdersResponseBytes,
@@ -339,6 +345,30 @@ export function decodeGatewayResponseDataForDevLog(
       } catch (e) {
         return fallbackHex(raw, e);
       }
+    }
+    if (type === GATEWAY_API_AMOE_CREDITED_PUSH) {
+      const p = decodeAmoeCreditedPushBytes(raw);
+      if (p) {
+        return {
+          kind: "AMOE_CREDITED_PUSH",
+          entryId: p.entryId,
+          scAmountWire: p.scAmountWire,
+          sweepstakeCode: p.sweepstakeCode,
+        };
+      }
+      return fallbackHex(raw, new Error("AmoeCreditedPush decode failed"));
+    }
+    if (type === GATEWAY_API_AMOE_INVALID_PUSH) {
+      const p = decodeAmoeInvalidPushBytes(raw);
+      if (p) {
+        return {
+          kind: "AMOE_INVALID_PUSH",
+          entryId: p.entryId,
+          sweepstakeCode: p.sweepstakeCode,
+          exceptionCodes: p.exceptionCodes,
+        };
+      }
+      return fallbackHex(raw, new Error("AmoeInvalidPush decode failed"));
     }
   } catch (e) {
     return fallbackHex(raw, e);

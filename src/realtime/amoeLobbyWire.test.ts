@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyGenerateAmoeError,
+  decodeAmoeCreditedPushBytes,
+  decodeAmoeInvalidPushBytes,
   decodeGenerateAmoeCodeResponseBytes,
+  encodeAmoeCreditedPushForTest,
+  encodeAmoeInvalidPushForTest,
   encodeGenerateAmoeCodeResponseForTest,
+  formatAmoeCreditedPushToast,
+  formatAmoeInvalidPushToast,
   formatSweepstakeCodeDigits,
 } from "./amoeLobbyWire";
 
@@ -58,5 +64,63 @@ describe("classifyGenerateAmoeError", () => {
     expect(classifyGenerateAmoeError("401001")).toBe("unauthorized");
     expect(classifyGenerateAmoeError("500001")).toBe("server");
     expect(classifyGenerateAmoeError("999999")).toBe("unknown");
+  });
+});
+
+describe("decodeAmoeCreditedPushBytes", () => {
+  it("decodes sc amount wire and sweepstake code", () => {
+    const raw = encodeAmoeCreditedPushForTest(42, "20000", "9991234564");
+    const got = decodeAmoeCreditedPushBytes(raw);
+    expect(got).toEqual({
+      entryId: "42",
+      scAmountWire: "20000",
+      sweepstakeCode: "9991234564",
+    });
+  });
+
+  it("returns null for empty payload", () => {
+    expect(decodeAmoeCreditedPushBytes(new Uint8Array(0))).toBeNull();
+  });
+});
+
+describe("decodeAmoeInvalidPushBytes", () => {
+  it("decodes invalid push with exception codes", () => {
+    const raw = encodeAmoeInvalidPushForTest(
+      7,
+      "1234567890",
+      "INVALID_HANDWRITING,MISSING_CODE",
+    );
+    const got = decodeAmoeInvalidPushBytes(raw);
+    expect(got).toEqual({
+      entryId: "7",
+      sweepstakeCode: "1234567890",
+      exceptionCodes: "INVALID_HANDWRITING,MISSING_CODE",
+    });
+  });
+});
+
+describe("formatAmoe push toasts", () => {
+  it("formats credited push with scaled SC display", () => {
+    expect(
+      formatAmoeCreditedPushToast({
+        entryId: "1",
+        scAmountWire: "20000",
+        sweepstakeCode: "9991234564",
+      }),
+    ).toBe(
+      "Your AMOE entry (code: 9991234564) was approved. 2.0000 SC has been credited.",
+    );
+  });
+
+  it("formats invalid push", () => {
+    expect(
+      formatAmoeInvalidPushToast({
+        entryId: "1",
+        sweepstakeCode: "9991234564",
+        exceptionCodes: "INVALID_HANDWRITING",
+      }),
+    ).toBe(
+      "Your AMOE entry (code: 9991234564) was not approved. Please review the Sweepstakes Rules and try again with a new Mail-In Request Code.",
+    );
   });
 });
