@@ -164,6 +164,7 @@ message PlayerInfo {
   uint64 vipCurrentLevelBetExpRequired = 42;
   WalletType walletType = 85;
   int64 minTxWdraw = 97;
+  string frontImage = 98;
 }
 
 // 對齊 proto/backpack/backpack.proto GoodState（頭像列表用）
@@ -474,6 +475,7 @@ message MegaAccountBindingRequest {
 message MegaAccountBindingResponse {
   YesNo needSMSAnswer = 1;
   string phoneNum = 2;
+  string docvTransactionToken = 3;
 }
 
 // --- Withdraw / redeem — 對齊 proto/megaman/payment.proto；Gateway ApiType ListWithdrawOrders=621, CreateWithdrawOrder=623, WithdrawSuccessPush=1048 ---

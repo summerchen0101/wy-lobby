@@ -273,6 +273,7 @@ export type BuyProductWireResult = {
 export type MegaAccountBindingWireResult = {
   phoneNum: string;
   needSMSAnswer: boolean;
+  docvTransactionToken: string;
 };
 
 function yesNoWireToBool(v: unknown): boolean {
@@ -290,10 +291,11 @@ export function decodeMegaAccountBindingResponseBytes(
     longs: String,
     defaults: true,
     enums: String,
-  }) as { phoneNum?: string; needSMSAnswer?: string | number };
+  }) as { phoneNum?: string; needSMSAnswer?: string | number; docvTransactionToken?: string };
   return {
     phoneNum: String(o.phoneNum ?? ""),
     needSMSAnswer: yesNoWireToBool(o.needSMSAnswer),
+    docvTransactionToken: String(o.docvTransactionToken ?? "").trim(),
   };
 }
 

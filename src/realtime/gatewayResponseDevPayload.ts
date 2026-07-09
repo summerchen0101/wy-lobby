@@ -202,12 +202,15 @@ export function decodeGatewayResponseDataForDevLog(
     }
     if (type === GATEWAY_API_MEGA_ACCOUNT_BINDING) {
       try {
-        const { phoneNum, needSMSAnswer } =
+        const { phoneNum, needSMSAnswer, docvTransactionToken } =
           decodeMegaAccountBindingResponseBytes(raw);
         return {
           kind: "MEGA_ACCOUNT_BINDING",
           phoneNum,
           needSMSAnswer,
+          docvTransactionToken: docvTransactionToken
+            ? `${docvTransactionToken.slice(0, 8)}…`
+            : "",
         };
       } catch (e) {
         return fallbackHex(raw, e);

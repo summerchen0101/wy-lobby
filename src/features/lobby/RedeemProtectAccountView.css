@@ -81,6 +81,18 @@
   pointer-events: none;
 }
 
+.redeem-protect__docv-root {
+  min-height: 12rem;
+  width: 100%;
+}
+
+.redeem-protect__docv-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.85);
+}
+
 @media (max-width: 360px) {
   .redeem-protect__row3-names {
     grid-template-columns: 1fr;
