@@ -269,7 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         stopLobbyWelcomeVoice();
         if (err instanceof ClientVersionError) {
-          handleClientVersionRequired(err);
+          handleClientVersionRequired();
         }
         throw err;
       }
@@ -291,7 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         stopLobbyWelcomeVoice();
         if (err instanceof ClientVersionError) {
-          handleClientVersionRequired(err);
+          handleClientVersionRequired();
         }
         throw err;
       }
