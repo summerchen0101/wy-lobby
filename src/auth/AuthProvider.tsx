@@ -108,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [invalidateSessionToLogin]);
 
   const handleClientVersionRequired = useCallback(
-    (_err: ClientVersionError) => {
+    () => {
       clearStoredSession();
       setToken(null);
       setUser(null);

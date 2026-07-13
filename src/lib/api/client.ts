@@ -2,10 +2,7 @@ import { getOrCreateWebDeviceId } from '../appMeta'
 import { getApiBase } from '../env'
 import type { ApiErrorBody } from './types'
 import { parseAuthJson } from './authJsonParse'
-import {
-  ClientVersionError,
-  throwIfClientVersionError,
-} from './clientVersionError'
+import { throwIfClientVersionError } from './clientVersionError'
 
 export { ClientVersionError } from './clientVersionError'
 
