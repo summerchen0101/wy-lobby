@@ -75,7 +75,7 @@ export function PwaInstallBanner() {
     >
       <div className="pwa-install__card">
         <p id="pwa-install-title" className="pwa-install__text">
-          安裝「LukLok」到主畫面，體驗更好喔！
+          Install “LukLok Casino” on your Home Screen for a better experience!
         </p>
         <div className="pwa-install__actions">
           <button
@@ -83,14 +83,14 @@ export function PwaInstallBanner() {
             className="pwa-install__btn pwa-install__btn--primary"
             onClick={onInstall}
           >
-            立即安裝
+            Install Now
           </button>
           <button
             type="button"
             className="pwa-install__btn pwa-install__btn--secondary"
             onClick={dismiss}
           >
-            下次再說
+            Maybe Later
           </button>
         </div>
       </div>
