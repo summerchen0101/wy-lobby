@@ -1,7 +1,7 @@
 import type { LegalBlock, LegalSection } from './legalContentTypes'
 
 export const INVITE_FRIENDS_TERMS_TITLE = 'LUKLOK CASINO INVITE FRIENDS TERMS OF USE'
-export const INVITE_FRIENDS_TERMS_EFFECTIVE = 'Last Revised: [EFFECTIVE DATE]'
+export const INVITE_FRIENDS_TERMS_EFFECTIVE = 'Last Revised: July 16, 2026'
 
 export const INVITE_FRIENDS_TERMS_INTRO: LegalBlock[] = [
   {

@@ -7,7 +7,7 @@ export type {
 } from './legalContentTypes'
 
 export const PRIVACY_POLICY_TITLE = 'LUKLOK CASINO PRIVACY POLICY'
-export const PRIVACY_POLICY_LAST_REVISED = 'Last Revised: [EFFECTIVE DATE]'
+export const PRIVACY_POLICY_LAST_REVISED = 'Last Revised: July 16, 2026'
 
 export const PRIVACY_POLICY_INTRO: LegalBlock[] = [
   {
@@ -344,7 +344,7 @@ export const PRIVACY_POLICY_SECTIONS: LegalSection[] = [
     title: '6. COOKIES AND OTHER TRACKING TECHNOLOGIES',
     blocks: [
       { type: 'subheading', text: 'Cookies Policy' },
-      { type: 'paragraph', text: 'Effective as of: [EFFECTIVE DATE]' },
+      { type: 'paragraph', text: 'Effective as of: July 16, 2026' },
       {
         type: 'paragraph',
         text: 'Our Services use cookies, which are small text files that are placed on your computer or device by a web server when you access our Services. We may place and access cookies and similar technologies on your computer or device, which are known as "first party cookies." Cookies may also be placed and accessed by third parties, which are known as "third party cookies" and are described below.',

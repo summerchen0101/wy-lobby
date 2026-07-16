@@ -1,7 +1,7 @@
 import type { LegalBlock, LegalSection } from './legalContentTypes'
 
 export const SWEEPS_POLICY_TITLE = 'LUKLOK CASINO SWEEPS POLICY'
-export const SWEEPS_POLICY_EFFECTIVE = 'Effective as of [EFFECTIVE DATE]'
+export const SWEEPS_POLICY_EFFECTIVE = 'Effective as of July 16, 2026'
 
 export const SWEEPS_POLICY_INTRO: LegalBlock[] = [
   {
