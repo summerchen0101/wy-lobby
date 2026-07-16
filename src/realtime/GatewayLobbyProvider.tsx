@@ -16,6 +16,8 @@ import {
 } from "../lib/env";
 import {
   GATEWAY_API_GET_JACKPOT_INFO,
+  GATEWAY_API_AMOE_CREDITED_PUSH,
+  GATEWAY_API_AMOE_INVALID_PUSH,
   GATEWAY_API_JACKPOT_INFO_PUSH,
   GATEWAY_API_LOBBY_GET,
   GATEWAY_API_SEND_MESSAGE_PUSH,
@@ -56,6 +58,12 @@ import {
 } from "./userKickWire";
 import { decodeWithdrawSuccessPushBytes } from "./withdrawLobbyWire";
 import type { WithdrawSuccessPushListener } from "./gatewayLobbyContext";
+import {
+  decodeAmoeCreditedPushBytes,
+  decodeAmoeInvalidPushBytes,
+  formatAmoeCreditedPushToast,
+  formatAmoeInvalidPushToast,
+} from "./amoeLobbyWire";
 import type { ActiveWallet } from "../wallet/walletContext";
 import { wireUInt64Field } from "./wireUint64";
 import { LobbyHydrationGate } from "./LobbyHydrationGate";
@@ -760,6 +768,27 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             console.warn("[gateway-ws] withdraw success push listener", e);
           }
         }
+        return;
+      }
+      if (t === GATEWAY_API_AMOE_CREDITED_PUSH) {
+        if (!(raw instanceof Uint8Array) || raw.byteLength === 0) return;
+        const push = decodeAmoeCreditedPushBytes(raw);
+        if (!push) return;
+        getAlertApi()?.show(formatAmoeCreditedPushToast(push), {
+          variant: "success",
+          durationMs: 5000,
+        });
+        void refreshLobbyGet();
+        return;
+      }
+      if (t === GATEWAY_API_AMOE_INVALID_PUSH) {
+        if (!(raw instanceof Uint8Array) || raw.byteLength === 0) return;
+        const push = decodeAmoeInvalidPushBytes(raw);
+        if (!push) return;
+        getAlertApi()?.show(formatAmoeInvalidPushToast(push), {
+          variant: "error",
+          durationMs: 6000,
+        });
         return;
       }
       if (t === GATEWAY_API_SEND_MESSAGE_PUSH) {

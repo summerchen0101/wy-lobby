@@ -105,6 +105,8 @@ interface ImportMetaEnv {
   readonly VITE_RADAR_PUBLISHABLE_KEY?: string;
   /** Socure Digital Intelligence Web SDK key；未設則帳號綁定無法取得 di session token */
   readonly VITE_SOCURE_SDK_KEY?: string;
+  /** Socure DocV Web SDK key；未設則提現 DocV 驗證無法啟動 */
+  readonly VITE_SOCURE_DOCV_SDK_KEY?: string;
 }
 
 interface ImportMeta {

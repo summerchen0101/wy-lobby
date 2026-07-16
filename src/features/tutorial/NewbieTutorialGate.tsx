@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { useAuth } from "../../auth/useAuth";
+import { useGeo } from "../geo/geoContext";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
-import { setLobbyBgmSuppressed } from "../../lib/lobbySound";
+import {
+  isWelcomeVoiceGateOpen,
+  LOBBY_WELCOME_VOICE_GATE_EVENT,
+} from "../../lib/lobbyWelcomeVoiceGate";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { NewbieVideoTutorialOverlay } from "./NewbieVideoTutorialOverlay";
 import { submitNoviceTeachingGeneralDone } from "./submitNoviceTeachingGeneralDone";
@@ -12,42 +16,59 @@ import {
 
 export function NewbieTutorialGate() {
   const { user, ready } = useAuth();
-  const { requestRef, gatewayRequestReady } = useGatewayLobby();
+  const { status: geoStatus } = useGeo();
+  const { requestRef, gatewayRequestReady, needsLobbyHydrationOverlay } =
+    useGatewayLobby();
   const [open, setOpen] = useState(false);
+  const [welcomeVoiceGateVersion, setWelcomeVoiceGateVersion] = useState(0);
 
   useEffect(() => {
+    const sync = () => setWelcomeVoiceGateVersion((v) => v + 1);
+    window.addEventListener(LOBBY_WELCOME_VOICE_GATE_EVENT, sync);
+    return () =>
+      window.removeEventListener(LOBBY_WELCOME_VOICE_GATE_EVENT, sync);
+  }, []);
+
+  useLayoutEffect(() => {
     if (!ready || !user || isNewbieTutorialMarkedDone()) {
       setOpen(false);
       return;
     }
+    if (geoStatus === "checking" || needsLobbyHydrationOverlay) {
+      return;
+    }
+    if (!isWelcomeVoiceGateOpen()) {
+      setOpen(false);
+      return;
+    }
     setOpen(true);
-  }, [ready, user]);
+  }, [
+    ready,
+    user,
+    geoStatus,
+    needsLobbyHydrationOverlay,
+    welcomeVoiceGateVersion,
+  ]);
 
-  useEffect(() => {
-    setLobbyBgmSuppressed(open);
-    return () => setLobbyBgmSuppressed(false);
-  }, [open]);
+  const handleTutorialComplete = useCallback(() => {
+    markNewbieTutorialDone();
+    setOpen(false);
 
-  const handleTutorialComplete = useCallback(async () => {
     const wsOk = isWsLobbyGamesEnabled();
     const request = requestRef.current;
     const userId = user?.id?.trim() ?? "";
 
     if (wsOk && gatewayRequestReady && request && userId && userId !== "0") {
-      try {
-        const ok = await submitNoviceTeachingGeneralDone(request, userId);
+      void submitNoviceTeachingGeneralDone(request, userId).then((ok) => {
         if (!ok) {
           console.warn(
             "[newbie-tutorial] UPDATE_NOVICE_TEACHING did not return a 2xx code",
           );
         }
-      } catch (err) {
+      }).catch((err) => {
         console.warn("[newbie-tutorial] UPDATE_NOVICE_TEACHING failed", err);
-      }
+      });
     }
-
-    markNewbieTutorialDone();
-    setOpen(false);
   }, [gatewayRequestReady, requestRef, user?.id]);
 
   return (

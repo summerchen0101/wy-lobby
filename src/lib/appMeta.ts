@@ -56,6 +56,14 @@ export type AppMetaPayload = {
 /**
  * 登入／註冊共用的 `app_meta` 物件（扁平欄位，無額外包一層），後端若要求 JSON 字串可在外層 `JSON.stringify`。
  */
+const WEB_APK_CHANNEL = "web";
+
+function resolveApkChannel(): string {
+  const raw = import.meta.env.VITE_APP_META_APK;
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  return trimmed || WEB_APK_CHANNEL;
+}
+
 export function buildAppMetaPayload(): AppMetaPayload {
   const version =
     (import.meta.env.VITE_APP_VERSION ?? "0000").toString() || "0000";
@@ -70,12 +78,21 @@ export function buildAppMetaPayload(): AppMetaPayload {
     device = parts.join(" ").trim() || "web";
   }
   return {
-    apk: "web",
+    apk: resolveApkChannel(),
     version,
     device,
     device_type: detectDeviceType(),
     resolution: resolutionBucket(),
   };
+}
+
+/** 登入／註冊／refresh 請求 body 的 `app_meta` 欄位（物件；`apk` 不可為空）。 */
+export function buildAppMetaForAuthRequest(): AppMetaPayload {
+  const meta = buildAppMetaPayload();
+  if (!meta.apk.trim()) {
+    return { ...meta, apk: WEB_APK_CHANNEL };
+  }
+  return meta;
 }
 
 export const LOGIN_V1_TYPE = 1;

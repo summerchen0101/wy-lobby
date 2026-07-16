@@ -43,7 +43,7 @@ describe("fundsHistoryLobbyWire", () => {
     expect(tradeEventToLabel("PAYMENT_BUY_GOLD")).toBe("PaymentBuyGold Reward");
   });
 
-  it("formats timestamp as MM/DD/YYYY", () => {
-    expect(formatFundsHistoryDate("1781491946824")).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+  it("formats timestamp as MM/DD/YYYY in America/New_York", () => {
+    expect(formatFundsHistoryDate("1781491946824")).toBe("06/14/2026");
   });
 });

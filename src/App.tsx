@@ -5,8 +5,10 @@ import { OAuthReturnHandler } from "./auth/OAuthReturnHandler";
 import { RequireAuth } from "./auth/RequireAuth";
 import { AlertProvider } from "./components/alert/AlertProvider";
 import { LoadingOverlayProvider } from "./components/loading/LoadingOverlayProvider";
+import { ForceUpdateGate } from "./components/ForceUpdateGate";
 import { FullScreenLoadingOverlay } from "./components/loading/FullScreenLoadingOverlay";
 import { LobbyBgmOrchestrator } from "./components/LobbyBgmOrchestrator";
+import { LobbyLoginWelcomeOrchestrator } from "./components/LobbyLoginWelcomeOrchestrator";
 import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
@@ -83,12 +85,18 @@ const SweepsPolicyPage = lazy(() =>
     default: m.SweepsPolicyPage,
   })),
 );
+const InviteFriendsTermsPage = lazy(() =>
+  import("./features/legal/InviteFriendsTermsPage").then((m) => ({
+    default: m.InviteFriendsTermsPage,
+  })),
+);
 
 export default function App() {
   return (
     <BrowserRouter>
       <LocaleHtmlSync />
       <AuthProvider>
+        <ForceUpdateGate />
         <LoadingOverlayProvider>
           <WalletProvider>
             <AlertProvider>
@@ -99,6 +107,7 @@ export default function App() {
                     <SocureDeviceInit />
                     <GameShellProvider>
                       <LobbyBgmOrchestrator />
+                      <LobbyLoginWelcomeOrchestrator />
                       <ZendeskLoader />
                       <PwaInstallBanner />
                       <IosInstallGuide />
@@ -125,6 +134,7 @@ export default function App() {
                           <Route path="/privacy" element={<PrivacyPolicyPage />} />
                           <Route path="/terms" element={<TermsOfServicePage />} />
                           <Route path="/sweeps" element={<SweepsPolicyPage />} />
+                          <Route path="/invite-terms" element={<InviteFriendsTermsPage />} />
                           <Route
                             path="/payment/callback"
                             element={

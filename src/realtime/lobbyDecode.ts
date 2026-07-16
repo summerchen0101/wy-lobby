@@ -439,11 +439,12 @@ export function lobbyDecodedPlayerToUserPatch(
 export type RedeemPlayerBindingState = {
   hasCellPhone: boolean;
   hasAddress: boolean;
+  hasFrontImage: boolean;
   /** 後端 minTxWdraw 原始單位；未提供時 undefined */
   minTxWdrawRaw: number | undefined;
 };
 
-/** 提現前綁定閘道：依 LOBBY_GET playerInfo.cellPhone / address。 */
+/** 提現前綁定閘道：依 LOBBY_GET playerInfo.cellPhone / address / frontImage。 */
 export function redeemPlayerBindingFromLobby(
   lobbyGet: LobbyGetDecoded | null | undefined,
 ): RedeemPlayerBindingState {
@@ -462,6 +463,14 @@ export function redeemPlayerBindingFromLobby(
     typeof addressRaw === "string" && addressRaw.trim()
       ? addressRaw.trim()
       : "";
+  const frontImageRaw =
+    p && typeof p === "object"
+      ? (p as { frontImage?: unknown }).frontImage
+      : undefined;
+  const frontImage =
+    typeof frontImageRaw === "string" && frontImageRaw.trim()
+      ? frontImageRaw.trim()
+      : "";
   const minTxWdrawRaw = numFromWire(
     p && typeof p === "object"
       ? (p as { minTxWdraw?: unknown }).minTxWdraw
@@ -470,6 +479,7 @@ export function redeemPlayerBindingFromLobby(
   return {
     hasCellPhone: cellPhone.length > 0,
     hasAddress: address.length > 0,
+    hasFrontImage: frontImage.length > 0,
     minTxWdrawRaw:
       minTxWdrawRaw !== undefined ? Math.floor(minTxWdrawRaw) : undefined,
   };

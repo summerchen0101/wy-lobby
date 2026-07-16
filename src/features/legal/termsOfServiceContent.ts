@@ -1,7 +1,7 @@
 import type { LegalBlock, LegalSection } from './legalContentTypes'
 
 export const TERMS_OF_SERVICE_TITLE = 'LUKLOK CASINO TERMS OF SERVICE'
-export const TERMS_OF_SERVICE_EFFECTIVE = 'Effective as of [EFFECTIVE DATE]'
+export const TERMS_OF_SERVICE_EFFECTIVE = 'Effective as of July 16, 2026'
 
 export const TERMS_OF_SERVICE_INTRO: LegalBlock[] = [
   {

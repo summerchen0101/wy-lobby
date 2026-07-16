@@ -1,8 +1,11 @@
 import { type FormEvent, useMemo, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
+import { resolvePostLoginRedirect } from '../../auth/loginEntry'
 import { MarketingTopBar } from '../../components/MarketingTopBar'
 import { ApiError } from '../../lib/api/client'
+import { ClientVersionError } from '../../lib/api/clientVersionError'
+import { presentClientVersionError } from '../../lib/clientVersionUi'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
 import './AuthPages.css'
 
@@ -10,7 +13,7 @@ export function LoginPage() {
   const { login, user, ready } = useAuth()
   const [search] = useSearchParams()
   const navigate = useNavigate()
-  const redirectTo = search.get('redirect') || '/'
+  const redirectTo = resolvePostLoginRedirect(search.get('redirect'))
   const forgotPasswordHref = useMemo(() => {
     const rd = search.get('redirect')
     if (!rd) return '/forgot-password'
@@ -37,6 +40,10 @@ export function LoginPage() {
       await login(account.trim(), password)
       navigate(redirectTo, { replace: true })
     } catch (err) {
+      if (err instanceof ClientVersionError) {
+        setError(presentClientVersionError(err))
+        return
+      }
       const msg =
         err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Sign-in failed'
       setError(msg)

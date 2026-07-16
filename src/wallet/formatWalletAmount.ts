@@ -11,16 +11,16 @@ export function formatWalletPillAmount(n: number | undefined): string {
 }
 
 /**
- * Sweeps Coins 畫面值：向零截斷至小數第四位；畫面上固定顯示四位小數（依目前語系千分位）。
+ * Sweeps Coins 畫面值：向零截斷至小數第二位；畫面上固定顯示兩位小數（依目前語系千分位）。
  * Header SC 與 {@link formatScFromRaw} 共用。
  */
 export function formatWalletScAmountForDisplay(n: number | undefined): string {
   if (n === undefined) return "—";
   if (!Number.isFinite(n)) return "—";
-  const truncatedTowardZero = Math.trunc(n * 10000) / 10000;
+  const truncatedTowardZero = Math.trunc(n * 100) / 100;
   return new Intl.NumberFormat(getActiveLocale(), {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(truncatedTowardZero);
 }
 
@@ -38,19 +38,19 @@ export function scRawToDisplay(raw: number): number {
   return raw / SC_POINT_SCALE;
 }
 
-/** 後端原始值 → 顯示字串（向零捨去至小數四位，與 header SC 一致）。 */
+/** 後端原始值 → 顯示字串（向零捨去至小數二位，與 header SC 一致）。 */
 export function formatScFromRaw(raw: number | undefined): string {
   if (raw === undefined) return "—";
   return formatWalletScAmountForDisplay(scRawToDisplay(raw));
 }
 
-/** 對齊 {@link formatScFromRaw}：後端 raw 已為 SC×10000；整數部千分位、小數部固定四位（非負數 raw）。 */
+/** 對齊 {@link formatScFromRaw}：後端 raw 已為 SC×10000；整數部千分位、小數部固定二位（非負數 raw）。 */
 function formatScTruncTenThousandthsBigInt(rawTenThousandths: bigint): string {
   if (rawTenThousandths < 0n) return "—";
   const intPart = rawTenThousandths / 10000n;
-  const frac = Number(rawTenThousandths % 10000n);
+  const frac = Number((rawTenThousandths % 10000n) / 100n);
   const intFmt = intPart.toLocaleString(getActiveLocale());
-  const fracFmt = String(frac).padStart(4, "0");
+  const fracFmt = String(frac).padStart(2, "0");
   return `${intFmt}.${fracFmt}`;
 }
 

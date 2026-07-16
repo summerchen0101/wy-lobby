@@ -1,24 +1,38 @@
 import {
-  type ChangeEvent,
   type FormEvent,
   useCallback,
   useEffect,
   useId,
+  useRef,
   useState,
 } from "react";
 import { IoChevronBack } from "react-icons/io5";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
-import { GATEWAY_API_MEGA_ACCOUNT_BINDING } from "../../realtime/gatewayApi";
+import {
+  GATEWAY_API_LOBBY_GET,
+  GATEWAY_API_MEGA_ACCOUNT_BINDING,
+} from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
+import {
+  decodeLobbyGetResponseBytes,
+  redeemPlayerBindingFromLobby,
+} from "../../realtime/lobbyDecode";
 import {
   decodeMegaAccountBindingResponseBytes,
   encodeMegaAccountBindingRequestBytes,
+  type MegaAccountBindingWireResult,
 } from "../../realtime/shopLobbyWire";
 import {
   getSocureDiSessionToken,
   setSocureBindingNavigationContext,
 } from "../../lib/socure/socureDevice";
+import {
+  isSocureDocvEnabled,
+  launchSocureDocv,
+  resetSocureDocv,
+  SOCURE_DOCV_CONTAINER_SELECTOR,
+} from "../../lib/socure/socureDocv";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { splitPhoneForBindingForm } from "../shop/splitPhoneForBindingForm";
 import "../shop/ShopCheckout.css";
@@ -34,7 +48,7 @@ const ADDRESS_COUNTRIES = ["US"] as const;
 
 export type RedeemBindingMode = "full" | "addressOnly";
 
-type Step = "profile" | "kyc" | "sms";
+type Step = "profile" | "kyc" | "sms" | "docv";
 
 export type RedeemBindingPrefill = {
   email?: string;
@@ -65,38 +79,6 @@ function combineAddress(line1: string, line2: string): string {
   return `${a}, ${b}`;
 }
 
-async function fileToJpegBase64(file: File): Promise<string> {
-  const maxBytes = 900_000;
-  if (file.size <= maxBytes && file.type.startsWith("image/")) {
-    const buf = await file.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
-    return btoa(binary);
-  }
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("Could not read image"));
-      el.src = url;
-    });
-    const canvas = document.createElement("canvas");
-    const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
-    canvas.width = Math.max(1, Math.round(img.width * scale));
-    canvas.height = Math.max(1, Math.round(img.height * scale));
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas unavailable");
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-    const comma = dataUrl.indexOf(",");
-    return comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
 export function RedeemProtectAccountView({
   open,
   mode,
@@ -108,11 +90,14 @@ export function RedeemProtectAccountView({
   const { user, mergeUser } = useAuth();
   const { requestRef, gatewayRequestReady, refreshLobbyGet } = useGatewayLobby();
   const idPrefix = useId();
+  const docvLaunchedRef = useRef(false);
 
   const [step, setStep] = useState<Step>("profile");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [smsAnswer, setSmsAnswer] = useState("");
+  const [docvTransactionToken, setDocvTransactionToken] = useState("");
+  const [docvLaunching, setDocvLaunching] = useState(false);
 
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -132,10 +117,6 @@ export function RedeemProtectAccountView({
 
   const [documentType, setDocumentType] = useState("1");
   const [documentNumber, setDocumentNumber] = useState("");
-  const [frontImageBase64, setFrontImageBase64] = useState("");
-  const [backImageBase64, setBackImageBase64] = useState("");
-  const [frontPreviewUrl, setFrontPreviewUrl] = useState("");
-  const [backPreviewUrl, setBackPreviewUrl] = useState("");
 
   const dobYears = Array.from({ length: 2007 - 1920 + 1 }, (_, i) => 2007 - i);
   const dobDays = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -148,6 +129,9 @@ export function RedeemProtectAccountView({
     setBusy(false);
     setError(null);
     setSmsAnswer("");
+    setDocvTransactionToken("");
+    setDocvLaunching(false);
+    docvLaunchedRef.current = false;
     setFirstName("");
     setMiddleName("");
     setLastName("");
@@ -165,16 +149,6 @@ export function RedeemProtectAccountView({
     setZip("");
     setDocumentType("1");
     setDocumentNumber("");
-    setFrontImageBase64("");
-    setBackImageBase64("");
-    setFrontPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return "";
-    });
-    setBackPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return "";
-    });
 
     const rawPhone = bindingPrefill?.phone?.trim();
     if (rawPhone) {
@@ -192,11 +166,146 @@ export function RedeemProtectAccountView({
   }, [open]);
 
   useEffect(() => {
+    if (open) return;
+    resetSocureDocv();
+    docvLaunchedRef.current = false;
+  }, [open]);
+
+  const fetchBindingState = useCallback(async () => {
+    const req = requestRef.current;
+    if (!req || !gatewayRequestReady) {
+      return redeemPlayerBindingFromLobby(null);
+    }
+    try {
+      const r = await req({
+        type: GATEWAY_API_LOBBY_GET,
+        data: new Uint8Array(0),
+        debugLabel: "LOBBY_GET_REDEEM_DOCV",
+      });
+      const code = String(r.code ?? "");
+      if (!isGatewaySuccessCode(code)) {
+        return redeemPlayerBindingFromLobby(null);
+      }
+      const raw = r.data;
+      if (!(raw instanceof Uint8Array) || raw.byteLength === 0) {
+        return redeemPlayerBindingFromLobby(null);
+      }
+      const decoded = decodeLobbyGetResponseBytes(raw);
+      return redeemPlayerBindingFromLobby(decoded);
+    } catch {
+      return redeemPlayerBindingFromLobby(null);
+    }
+  }, [requestRef, gatewayRequestReady]);
+
+  const finalizeDocvVerification = useCallback(async () => {
+    setBusy(true);
+    try {
+      await refreshLobbyGet();
+      const binding = await fetchBindingState();
+      if (binding.hasFrontImage) {
+        onBound();
+        show("Verification complete. You can continue your redemption.", {
+          variant: "success",
+        });
+        return;
+      }
+      show("Verification in progress. Please try again later.", {
+        variant: "info",
+      });
+      onClose();
+    } finally {
+      setBusy(false);
+      setDocvLaunching(false);
+    }
+  }, [refreshLobbyGet, fetchBindingState, onBound, show, onClose]);
+
+  const beginDocvFlow = useCallback(
+    (token: string, fullAddress: string, boundPhone: string) => {
+      if (boundPhone) mergeUser({ phone: boundPhone });
+      mergeUser({ address: fullAddress });
+      docvLaunchedRef.current = false;
+      setDocvTransactionToken(token);
+      setStep("docv");
+      setBusy(false);
+    },
+    [mergeUser],
+  );
+
+  const handleBindingDecoded = useCallback(
+    (
+      decoded: MegaAccountBindingWireResult,
+      answer: string,
+      fullAddress: string,
+    ) => {
+      if (decoded.needSMSAnswer) {
+        setStep("sms");
+        if (answer.trim()) {
+          setError("Invalid or expired verification code.");
+        }
+        setBusy(false);
+        return;
+      }
+      const token = decoded.docvTransactionToken;
+      if (!token) {
+        setError(
+          "Verification failed. Please check your details and try again.",
+        );
+        setBusy(false);
+        return;
+      }
+      if (!isSocureDocvEnabled()) {
+        setError(
+          "Document verification is unavailable. Please refresh and try again.",
+        );
+        setBusy(false);
+        return;
+      }
+      beginDocvFlow(token, fullAddress, decoded.phoneNum.trim());
+    },
+    [beginDocvFlow],
+  );
+
+  useEffect(() => {
+    if (!open || step !== "docv" || !docvTransactionToken.trim()) return;
+    if (docvLaunchedRef.current) return;
+    docvLaunchedRef.current = true;
+
+    let cancelled = false;
+    setDocvLaunching(true);
+    setError(null);
+
+    void launchSocureDocv(docvTransactionToken, {
+      onProgress: () => {},
+      onSuccess: () => {
+        if (cancelled) return;
+        void finalizeDocvVerification();
+      },
+      onError: () => {
+        if (cancelled) return;
+        setDocvLaunching(false);
+        setBusy(false);
+        setError("Document verification failed. Please try again.");
+      },
+    }).then((result) => {
+      if (cancelled) return;
+      if (result.result === "error") {
+        setDocvLaunching(false);
+        setError(
+          result.errorMessage || "Failed to start document verification.",
+        );
+      }
+    });
+
     return () => {
-      if (frontPreviewUrl) URL.revokeObjectURL(frontPreviewUrl);
-      if (backPreviewUrl) URL.revokeObjectURL(backPreviewUrl);
+      cancelled = true;
+      resetSocureDocv();
     };
-  }, [frontPreviewUrl, backPreviewUrl]);
+  }, [
+    open,
+    step,
+    docvTransactionToken,
+    finalizeDocvVerification,
+  ]);
 
   const validateAddress = useCallback((): boolean => {
     if (!address1.trim() || !city.trim() || !state.trim() || !zip.trim()) {
@@ -244,31 +353,6 @@ export function RedeemProtectAccountView({
     validateAddress,
   ]);
 
-  const onImagePick = useCallback(
-    async (side: "front" | "back", e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      e.target.value = "";
-      if (!file) return;
-      setError(null);
-      try {
-        const b64 = await fileToJpegBase64(file);
-        const preview = URL.createObjectURL(file);
-        if (side === "front") {
-          if (frontPreviewUrl) URL.revokeObjectURL(frontPreviewUrl);
-          setFrontImageBase64(b64);
-          setFrontPreviewUrl(preview);
-        } else {
-          if (backPreviewUrl) URL.revokeObjectURL(backPreviewUrl);
-          setBackImageBase64(b64);
-          setBackPreviewUrl(preview);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Image upload failed");
-      }
-    },
-    [frontPreviewUrl, backPreviewUrl],
-  );
-
   const submitBinding = useCallback(
     async (answer: string) => {
       const req = requestRef.current;
@@ -281,8 +365,8 @@ export function RedeemProtectAccountView({
         setError("Missing user id");
         return;
       }
-      if (!documentNumber.trim() || !frontImageBase64 || !backImageBase64) {
-        setError("Provide document number and both ID photos.");
+      if (!documentNumber.trim()) {
+        setError("Provide your document number.");
         return;
       }
 
@@ -300,7 +384,10 @@ export function RedeemProtectAccountView({
       try {
         const socureDiSessionToken = await getSocureDiSessionToken();
         if (!socureDiSessionToken) {
-          setError("Device verification unavailable. Please refresh and try again.");
+          setError(
+            "Device verification unavailable. Please refresh and try again.",
+          );
+          setBusy(false);
           return;
         }
         const data = encodeMegaAccountBindingRequestBytes({
@@ -322,10 +409,6 @@ export function RedeemProtectAccountView({
           language: "en",
           documentType: Number(documentType) || 1,
           documentNumber: documentNumber.trim(),
-          frontImageContentType: "image/jpeg",
-          backImageContentType: "image/jpeg",
-          frontImageBase64,
-          backImageBase64,
           socureDiSessionToken,
         });
         const r = await req({
@@ -336,6 +419,7 @@ export function RedeemProtectAccountView({
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
           setError(r.errMessage?.trim() || `Binding failed (${code})`);
+          setBusy(false);
           return;
         }
         const raw = r.data;
@@ -343,24 +427,9 @@ export function RedeemProtectAccountView({
           raw instanceof Uint8Array && raw.byteLength > 0
             ? decodeMegaAccountBindingResponseBytes(raw)
             : decodeMegaAccountBindingResponseBytes(new Uint8Array(0));
-        if (decoded.needSMSAnswer) {
-          setStep("sms");
-          if (answer.trim()) {
-            setError("Invalid or expired verification code.");
-          }
-          return;
-        }
-        const boundPhone = decoded.phoneNum.trim();
-        if (boundPhone) mergeUser({ phone: boundPhone });
-        mergeUser({ address: fullAddress });
-        await refreshLobbyGet();
-        onBound();
-        show("Verification complete. You can continue your redemption.", {
-          variant: "success",
-        });
+        handleBindingDecoded(decoded, answer, fullAddress);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Binding failed");
-      } finally {
         setBusy(false);
       }
     },
@@ -386,12 +455,7 @@ export function RedeemProtectAccountView({
       zip,
       documentType,
       documentNumber,
-      frontImageBase64,
-      backImageBase64,
-      mergeUser,
-      refreshLobbyGet,
-      onBound,
-      show,
+      handleBindingDecoded,
     ],
   );
 
@@ -416,6 +480,15 @@ export function RedeemProtectAccountView({
   };
 
   const handleHeaderBack = () => {
+    if (step === "docv") {
+      resetSocureDocv();
+      docvLaunchedRef.current = false;
+      setDocvTransactionToken("");
+      setDocvLaunching(false);
+      setStep("kyc");
+      setError(null);
+      return;
+    }
     if (step === "sms") {
       setStep("kyc");
       setError(null);
@@ -739,54 +812,6 @@ export function RedeemProtectAccountView({
               onChange={(e) => setDocumentNumber(e.target.value)}
             />
           </div>
-          <div className="redeem-protect__upload-list">
-            <label
-              className={
-                "redeem-protect__upload-box" +
-                (frontPreviewUrl ? " redeem-protect__upload-box--filled" : "")
-              }
-              htmlFor={`${idPrefix}-front`}>
-              {frontPreviewUrl ? (
-                <img
-                  className="redeem-protect__upload-preview"
-                  src={frontPreviewUrl}
-                  alt="Front of ID"
-                />
-              ) : (
-                <span className="redeem-protect__upload-label">FrontImage</span>
-              )}
-              <input
-                id={`${idPrefix}-front`}
-                className="redeem-protect__upload-input"
-                type="file"
-                accept="image/*"
-                onChange={(e) => void onImagePick("front", e)}
-              />
-            </label>
-            <label
-              className={
-                "redeem-protect__upload-box" +
-                (backPreviewUrl ? " redeem-protect__upload-box--filled" : "")
-              }
-              htmlFor={`${idPrefix}-back`}>
-              {backPreviewUrl ? (
-                <img
-                  className="redeem-protect__upload-preview"
-                  src={backPreviewUrl}
-                  alt="Back of ID"
-                />
-              ) : (
-                <span className="redeem-protect__upload-label">BackImage</span>
-              )}
-              <input
-                id={`${idPrefix}-back`}
-                className="redeem-protect__upload-input"
-                type="file"
-                accept="image/*"
-                onChange={(e) => void onImagePick("back", e)}
-              />
-            </label>
-          </div>
         </div>
         {error ? (
           <p className="shop-checkout__pay-error" role="alert">
@@ -794,8 +819,8 @@ export function RedeemProtectAccountView({
           </p>
         ) : null}
         <p className="shop-checkout__footer-hint">
-          Please confirm your details. These details should match your official
-          ID document.
+          You will verify your ID with our secure document capture flow on the
+          next step.
         </p>
         <button
           type="submit"
@@ -849,6 +874,31 @@ export function RedeemProtectAccountView({
     </form>
   );
 
+  const renderDocvStep = () => (
+    <div className="shop-checkout__card-form shop-checkout__protect-form">
+      <p className="shop-checkout__protect-lead">
+        Verify your identity with a photo of your ID.
+      </p>
+      <p className="redeem-protect__docv-hint">
+        Follow the prompts below. On mobile you may continue in a new browser
+        tab to capture your document.
+      </p>
+      <div
+        id={SOCURE_DOCV_CONTAINER_SELECTOR.slice(1)}
+        className="redeem-protect__docv-root"
+        aria-busy={docvLaunching || busy}
+      />
+      {error ? (
+        <p className="shop-checkout__pay-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {docvLaunching || busy ? (
+        <p className="shop-checkout__footer-hint">Starting verification…</p>
+      ) : null}
+    </div>
+  );
+
   return (
     <>
       <header className="app-modal__head-row shop-checkout__head--protect">
@@ -856,9 +906,7 @@ export function RedeemProtectAccountView({
           type="button"
           className="app-modal__head-btn"
           onClick={handleHeaderBack}
-          aria-label={
-            step === "profile" ? "Close" : "Back"
-          }>
+          aria-label={step === "profile" ? "Close" : "Back"}>
           <BackIcon />
         </button>
         <h2
@@ -866,7 +914,7 @@ export function RedeemProtectAccountView({
           id="redeem-protect-dialog-title">
           PROTECT YOUR ACCOUNT
         </h2>
-        {step === "sms" ? (
+        {step === "sms" || step === "docv" ? (
           <span className="app-modal__head-spacer" aria-hidden />
         ) : (
           <button
@@ -884,7 +932,9 @@ export function RedeemProtectAccountView({
           ? renderProfileForm()
           : step === "kyc"
             ? renderKycForm()
-            : renderSmsForm()}
+            : step === "sms"
+              ? renderSmsForm()
+              : renderDocvStep()}
       </div>
     </>
   );

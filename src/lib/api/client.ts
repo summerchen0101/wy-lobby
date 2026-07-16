@@ -2,6 +2,9 @@ import { getOrCreateWebDeviceId } from '../appMeta'
 import { getApiBase } from '../env'
 import type { ApiErrorBody } from './types'
 import { parseAuthJson } from './authJsonParse'
+import { throwIfClientVersionError } from './clientVersionError'
+
+export { ClientVersionError } from './clientVersionError'
 
 export class ApiError extends Error {
   status: number
@@ -12,16 +15,6 @@ export class ApiError extends Error {
     this.name = 'ApiError'
     this.status = status
     this.code = code
-  }
-}
-
-/** 後端以業務代碼 600 要求更新客戶端（常見於 HTTP 200 的 JSON body） */
-export class ClientVersionError extends Error {
-  readonly updateUrl: string
-  constructor(updateUrl: string) {
-    super('A new version of the app is required')
-    this.name = 'ClientVersionError'
-    this.updateUrl = updateUrl
   }
 }
 
@@ -134,6 +127,8 @@ export async function apiRequest<T>(
       }
     }
   }
+
+  throwIfClientVersionError(data)
 
   if (!res.ok) {
     const err = data as ApiErrorBody | null

@@ -1,4 +1,5 @@
-import { ApiError, ClientVersionError } from "./client";
+import { ApiError } from "./client";
+import { throwIfClientVersionError } from "./clientVersionError";
 import type {
   AuthResponse,
   LobbyWalletType,
@@ -148,18 +149,6 @@ export function normalizeUserPayload(raw: unknown): User {
     u.vipCurrentLevelBetExpRequired = Math.floor(vipBetReq);
 
   return u;
-}
-
-export function throwIfClientVersionError(raw: unknown): void {
-  if (!raw || typeof raw !== "object") return;
-  const o = raw as Record<string, unknown>;
-  const code = o.Code ?? o.code;
-  if (code === 600 || code === "600") {
-    const u = o.Update ?? o.update ?? o.updateUrl ?? o.url;
-    const update =
-      typeof u === "string" && u ? u : optStr(o, "updateUrl", "url");
-    if (update) throw new ClientVersionError(update);
-  }
 }
 
 export function normalizeAuthResponse(raw: unknown): AuthResponse {

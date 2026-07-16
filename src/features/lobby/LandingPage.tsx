@@ -467,6 +467,7 @@ export function LandingPage() {
     closeForgotPassword,
     closePhoneVerify,
     onTermsAccepted,
+    hasAcceptedTerms,
   } = useAuthModals();
 
   const tpId = trustpilotBusinessUnitId();
@@ -837,22 +838,31 @@ export function LandingPage() {
   useEffect(() => {
     const auth = searchParams.get("auth");
     if (auth === "login") {
-      openTermsThen("login");
+      openLoginDirect();
       const next = new URLSearchParams(searchParams);
       next.delete("auth");
+      if (!next.get("redirect")?.trim()) next.delete("redirect");
       setSearchParams(next, { replace: true });
     } else if (auth === "register") {
       openTermsThen("register");
       const next = new URLSearchParams(searchParams);
       next.delete("auth");
+      if (!next.get("redirect")?.trim()) next.delete("redirect");
       setSearchParams(next, { replace: true });
     } else if (auth === "forgot") {
       openForgotPasswordDirect();
       const next = new URLSearchParams(searchParams);
       next.delete("auth");
+      if (!next.get("redirect")?.trim()) next.delete("redirect");
       setSearchParams(next, { replace: true });
     }
-  }, [searchParams, setSearchParams, openForgotPasswordDirect, openTermsThen]);
+  }, [
+    searchParams,
+    setSearchParams,
+    openForgotPasswordDirect,
+    openLoginDirect,
+    openTermsThen,
+  ]);
 
   useEffect(() => {
     if (!token) return;
@@ -1045,7 +1055,7 @@ export function LandingPage() {
           <LandingHeader
             overHero
             onJoinUs={() => openTermsThen("register")}
-            onLogin={() => openTermsThen("login")}
+            onLogin={() => openLoginDirect()}
           />
           <div className="guest-landing__hero-art-wrap">
             <img
@@ -1066,7 +1076,7 @@ export function LandingPage() {
             <button
               type="button"
               className="guest-landing__claim-banner"
-              onClick={() => openTermsThen("login")}>
+              onClick={() => openLoginDirect()}>
               CLAIM WELCOME BONUS
             </button>
           </div>
@@ -1391,7 +1401,8 @@ export function LandingPage() {
         onForgotPassword={openForgotPasswordDirect}
         onSwitchRegister={() => {
           closeLogin();
-          openRegisterDirect();
+          if (hasAcceptedTerms()) openRegisterDirect();
+          else openTermsThen("register");
         }}
       />
       <ForgotPasswordModal

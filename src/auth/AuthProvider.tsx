@@ -23,17 +23,19 @@ import type { AuthResponse, RegisterBody, User } from "../lib/api/types";
 import { minimalSessionUser, resolveUserAfterAuth } from "./applyAuthResponse";
 import { AuthContext } from "./auth-context";
 import { refreshSession } from "./refreshSession";
-import {
-  clearStoredSession,
-  getStoredAccessToken,
-  getStoredRefreshToken,
-  persistAuthResponse,
-} from "./sessionPersist";
+import { clearStoredSession, getStoredAccessToken, getStoredRefreshToken, persistAuthResponse } from "./sessionPersist";
+import { setClientVersionRequiredHandler } from "../lib/clientVersionNotify";
+import { ClientVersionError } from "../lib/api/clientVersionError";
 import { useProactiveTokenRefresh } from "./useProactiveTokenRefresh";
 import { AUTH_LOGIN_ENTRY_PATH } from "./loginEntry";
 import { shouldRefreshStoredSessionOnStartup } from "./sessionStartup";
 import { setOnSessionRefreshFailedHandler } from "./sessionRefreshNotify";
 import { readPersistedUser, writePersistedUser } from "./userPersist";
+import {
+  kickstartLobbyWelcomeVoiceFromUserGesture,
+  stopLobbyWelcomeVoice,
+} from "../lib/lobbySound";
+import { markFreshLoginWelcomeVoicePending } from "../lib/lobbyWelcomeVoiceGate";
 
 function getInitialToken(): string | null {
   return getStoredAccessToken();
@@ -105,6 +107,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setOnSessionRefreshFailedHandler(null);
   }, [invalidateSessionToLogin]);
 
+  const handleClientVersionRequired = useCallback(
+    () => {
+      clearStoredSession();
+      setToken(null);
+      setUser(null);
+      setReady(true);
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    setClientVersionRequiredHandler(handleClientVersionRequired);
+    return () => setClientVersionRequiredHandler(null);
+  }, [handleClientVersionRequired]);
+
   useProactiveTokenRefresh({
     token,
     onRefreshed: applyAuthResponse,
@@ -139,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.user) {
         writePersistedUser(res.user);
         setUser(res.user);
+        markFreshLoginWelcomeVoicePending();
       } else {
         writePersistedUser(null);
         setUser(null);
@@ -243,11 +261,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (account: string, password: string) => {
-      const res = await apiLogin({ account, password });
-      const user = res.user ?? syntheticUserFromAccount(account);
-      setSessionFromAuth({ ...res, user });
+      kickstartLobbyWelcomeVoiceFromUserGesture();
+      try {
+        const res = await apiLogin({ account, password });
+        const user = res.user ?? syntheticUserFromAccount(account);
+        setSessionFromAuth({ ...res, user });
+      } catch (err) {
+        stopLobbyWelcomeVoice();
+        if (err instanceof ClientVersionError) {
+          handleClientVersionRequired();
+        }
+        throw err;
+      }
     },
-    [setSessionFromAuth],
+    [setSessionFromAuth, handleClientVersionRequired],
   );
 
   const signUp = useCallback(async (body: RegisterBody) => {
@@ -256,11 +283,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (body: RegisterBody) => {
-      const res = await completeSignUp(body);
-      const user = res.user ?? syntheticUserFromAccount(body.email);
-      setSessionFromAuth({ ...res, user });
+      kickstartLobbyWelcomeVoiceFromUserGesture();
+      try {
+        const res = await completeSignUp(body);
+        const user = res.user ?? syntheticUserFromAccount(body.email);
+        setSessionFromAuth({ ...res, user });
+      } catch (err) {
+        stopLobbyWelcomeVoice();
+        if (err instanceof ClientVersionError) {
+          handleClientVersionRequired();
+        }
+        throw err;
+      }
     },
-    [setSessionFromAuth],
+    [setSessionFromAuth, handleClientVersionRequired],
   );
 
   const ingestAuthResponse = useCallback(

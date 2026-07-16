@@ -1,17 +1,20 @@
 .newbie-video-tutorial {
   position: fixed;
   inset: 0;
-  z-index: calc(var(--modal-z-index) + 120);
+  z-index: calc(var(--loading-overlay-z-index) + 100);
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   background: #000;
-  cursor: pointer;
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+.newbie-video-tutorial--awaiting-tap {
+  cursor: pointer;
 }
 
 .newbie-video-tutorial__stack {

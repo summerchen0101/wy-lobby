@@ -1,13 +1,21 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { buildAppMetaPayload, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
+import { buildAppMetaForAuthRequest, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
 import { useAuth } from '../../auth/useAuth'
+import { resolvePostLoginRedirect } from '../../auth/loginEntry'
+import {
+  kickstartLobbyWelcomeVoiceFromUserGesture,
+  stopLobbyWelcomeVoice,
+} from '../../lib/lobbySound'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
 import { useAuthModals } from './authModalsContext'
 import type { SignUpRequest } from '../../lib/api/types'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
+import { AuthSocialButtons } from './AuthSocialButtons'
 import './AuthModals.css'
+
+const PASSWORD_MAX_LENGTH = 12
 
 type Props = {
   open: boolean
@@ -56,7 +64,7 @@ function buildSignUpRequest(params: {
     password: params.password,
     rePassword: params.rePassword,
     answer: '',
-    app_meta: buildAppMetaPayload(),
+    app_meta: buildAppMetaForAuthRequest(),
     email: em,
     deviceID: getOrCreateWebDeviceId(),
     referrerCode: params.referrer.trim() || undefined,
@@ -73,14 +81,13 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   const passwordId = `${formId}-password`
   const password2Id = `${formId}-password2`
   const referralId = `${formId}-referral`
-  const termsId = `${formId}-terms`
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
-  const [_referral, setReferral] = useState('')
+  const [referral, setReferral] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [oauthError, setOauthError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -94,9 +101,9 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   }, [open, onClose])
 
   useEffect(() => {
-    if (open) {
-      setError(null)
-    }
+    if (!open) return
+    setError(null)
+    setOauthError(null)
   }, [open])
 
   useEffect(() => {
@@ -111,8 +118,8 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!termsAccepted) {
-      setError('Please accept the terms to continue')
+    if (password.length > PASSWORD_MAX_LENGTH) {
+      setError(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`)
       return
     }
     if (password !== passwordConfirm) {
@@ -123,23 +130,20 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
       email,
       password,
       rePassword: passwordConfirm,
-      referrer: _referral,
+      referrer: referral,
     })
+    kickstartLobbyWelcomeVoiceFromUserGesture()
     setSubmitting(true)
     try {
       const result = await signUp(body)
       if (result.auth) {
         ingestAuthResponse(result.auth)
         onClose()
-        const redir = searchParams.get('redirect')
-        if (redir && redir.startsWith('/') && !redir.startsWith('//')) {
-          nav(redir, { replace: true })
-        } else {
-          nav('/', { replace: true })
-        }
+        nav(resolvePostLoginRedirect(searchParams.get('redirect')), { replace: true })
         return
       }
       if (result.needSMSAnswer) {
+        stopLobbyWelcomeVoice()
         openPhoneVerify({
           body,
           displayEmail: maskEmailForDisplay(email),
@@ -148,6 +152,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
         return
       }
     } catch (err) {
+      stopLobbyWelcomeVoice()
       if (err instanceof ClientVersionError) {
         window.open(err.updateUrl, '_blank', 'noopener,noreferrer')
         setError('A new version is required. A download page was opened in a new tab.')
@@ -177,11 +182,22 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             ×
           </button>
           <h2 id="register-modal-title" className="app-modal__title">
-            Member account registration
+            CREATE ACCOUNT
           </h2>
         </div>
         <hr className="app-modal__rule" />
         <div className="app-modal__body">
+          <AuthSocialButtons
+            mode="signup"
+            searchParams={searchParams}
+            onError={setOauthError}
+          />
+          {oauthError ? <p className="auth-modal__error">{oauthError}</p> : null}
+
+          <div className="auth-modal__divider" aria-hidden>
+            OR
+          </div>
+
           <form onSubmit={onSubmit} noValidate>
             <fieldset disabled={submitting} className="auth-form-fieldset-reset">
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={emailId}>
@@ -236,6 +252,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                maxLength={PASSWORD_MAX_LENGTH}
               />
             </AuthClearableInputWrap>
 
@@ -259,6 +276,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 onChange={(e) => setPasswordConfirm(e.target.value)}
                 required
                 minLength={6}
+                maxLength={PASSWORD_MAX_LENGTH}
               />
             </AuthClearableInputWrap>
 
@@ -267,7 +285,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             </label>
             <AuthClearableInputWrap
               variant="modal"
-              value={_referral}
+              value={referral}
               onClear={() => setReferral('')}
               clearAriaLabel="Clear referral code"
             >
@@ -276,41 +294,10 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 className="auth-modal__input auth-modal__input--register"
                 autoComplete="off"
                 placeholder="Referral Code"
-                value={_referral}
+                value={referral}
                 onChange={(e) => setReferral(e.target.value)}
               />
             </AuthClearableInputWrap>
-
-            <div className="auth-modal__legal">
-              <input
-                id={termsId}
-                className="auth-modal__checkbox"
-                type="checkbox"
-                checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-              />
-              <label className="auth-modal__legal-text" htmlFor={termsId}>
-                By creating an account, you agree to our{' '}
-                <a
-                  className="auth-modal__link"
-                  href="/terms"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Terms of Service
-                </a>{' '}
-                and{' '}
-                <a
-                  className="auth-modal__link"
-                  href="/privacy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Privacy Policy
-                </a>
-                . You confirm that you are 21+ and a resident of a non-excluded territory.
-              </label>
-            </div>
 
             {error ? <p className="auth-modal__error">{error}</p> : null}
             <button type="submit" className="auth-modal__submit" disabled={submitting}>

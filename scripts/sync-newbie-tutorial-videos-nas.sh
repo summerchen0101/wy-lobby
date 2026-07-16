@@ -2,6 +2,8 @@
 # Sync newbie tutorial clips to NAS us-game-lobby CDN path.
 # Required env: NAS_USER, NAS_HOST, NAS_CDN_VIDEOS_PATH (remote dir ending in /videos)
 #
+# Play order and click-vs-auto-advance rules: see newbieVideoTutorialSources.ts manifest.
+#
 # Example:
 #   NAS_USER=deploy NAS_HOST=nas01.example.com \
 #   NAS_CDN_VIDEOS_PATH=/volume1/web/us-game-lobby/videos \

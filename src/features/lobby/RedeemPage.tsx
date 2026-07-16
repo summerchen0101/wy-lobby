@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { InfoPopover } from "../../components/InfoPopover";
+import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import { CURRENCY_ICON_SC } from "../../lib/currencyIcons";
 import {
@@ -75,6 +76,7 @@ function ScInlineIcon() {
 export const MIN_REDEEM_SC = MIN_REDEEM_SC_DISPLAY;
 
 export function RedeemPage() {
+  const { show } = useAlert();
   const { user } = useAuth();
   const {
     requestRef,
@@ -393,6 +395,13 @@ export function RedeemPage() {
               if (!binding.hasAddress) {
                 setBindingMode("addressOnly");
                 setBindingModalOpen(true);
+                return;
+              }
+              if (!binding.hasFrontImage) {
+                void refreshLobbyGet();
+                show("Verification in progress. Please try again later.", {
+                  variant: "info",
+                });
                 return;
               }
               setMethodModalOpen(true);

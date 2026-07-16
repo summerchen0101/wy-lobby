@@ -174,7 +174,7 @@ export function AmoePostalCodeModal({ open, onClose }: Props) {
       >
         <div className="app-modal__header">
           <h2 id={titleId} className="app-modal__title amoe-postal-modal__title">
-            Postal Request Code
+            Mail-In Request Code
           </h2>
           <button
             type="button"
@@ -198,13 +198,14 @@ export function AmoePostalCodeModal({ open, onClose }: Props) {
           </div>
 
           <p className="amoe-postal-modal__copy">
-            Each Postal Request Code is a unique, one-time-use code assigned to you. Each
-            Request Card must include a distinct Postal Request Code. For more details, refer
-            to Section 3(c) of the{' '}
+            Each Mail-In Request Code is a unique, one-time-use code generated for your LukLok
+            Casino Player Account. Each Request Card must include a distinct Mail-In Request
+            Code. For more details, please refer to the Alternative Mode of Entry and Mail-In
+            Request Code sections of the{' '}
             <Link className="amoe-postal-modal__rules-link" to="/sweeps#how-to-enter">
-              Sweepstake Rules
+              Sweepstakes Rules
             </Link>
-            . If you need another Postal Request Code, please wait 24 hours before requesting
+            . If you need another Mail-In Request Code, please wait 24 hours before requesting
             again.
           </p>
 
@@ -213,10 +214,11 @@ export function AmoePostalCodeModal({ open, onClose }: Props) {
               !
             </span>
             <p className="amoe-postal-modal__warning-text">
-              <strong>Important:</strong> DO NOT refresh your AMOE code until after your entry
-              has been credited. Only the most recent code is saved in our system. Submitting
-              multiple letters is not allowed—only one letter will be accepted at a time, and
-              any new submission will be invalid until your previous letter has been credited.
+              <strong>Important:</strong> Please make sure the Mail-In Request Code written on
+              your outer envelope and Request Card exactly matches the code displayed on screen.
+              Each Mail-In Request Code may only be used once and is valid for 60 days after it
+              is generated. Request Cards that do not comply with the Sweepstakes Rules may be
+              disqualified.
             </p>
           </div>
 

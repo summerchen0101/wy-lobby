@@ -346,6 +346,10 @@ export default {
             "minTxWdraw": {
               "type": "int64",
               "id": 97
+            },
+            "frontImage": {
+              "type": "string",
+              "id": 98
             }
           }
         },
@@ -1106,6 +1110,10 @@ export default {
             "phoneNum": {
               "type": "string",
               "id": 2
+            },
+            "docvTransactionToken": {
+              "type": "string",
+              "id": 3
             }
           }
         },

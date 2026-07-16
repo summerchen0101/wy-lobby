@@ -282,6 +282,17 @@
   box-shadow: none;
 }
 
+.invite-friends-modal__terms-link {
+  color: var(--crown-gold);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.invite-friends-modal__terms-link:hover {
+  color: var(--crown-gold-hover);
+}
+
 @media (min-width: 48rem) {
   .app-modal.invite-friends-modal {
     max-width: min(30rem, calc(100vw - 2 * var(--page-pad-inline)));

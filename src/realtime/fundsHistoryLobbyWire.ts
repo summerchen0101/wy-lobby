@@ -1,5 +1,6 @@
 import * as protobuf from "protobufjs/light.js";
 import schema from "../gen/lobby_wire.schema.js";
+import { DISPLAY_TZ } from "../lib/displayTimezone";
 import { getActiveLocale } from "../i18n/getActiveLocale";
 import { SC_POINT_SCALE } from "../wallet/formatWalletAmount";
 
@@ -106,7 +107,7 @@ export function formatFundsHistoryScBonus(scAmountWire: string): string {
   }
 }
 
-/** timestamp 毫秒 → MM/DD/YYYY（en-US） */
+/** timestamp 毫秒 → MM/DD/YYYY（en-US, America/New_York） */
 export function formatFundsHistoryDate(timestampMs: string): string {
   const t = String(timestampMs ?? "").trim();
   if (!/^\d+$/.test(t)) return "—";
@@ -116,6 +117,7 @@ export function formatFundsHistoryDate(timestampMs: string): string {
     const n = Number(ms);
     if (!Number.isFinite(n)) return "—";
     return new Intl.DateTimeFormat("en-US", {
+      timeZone: DISPLAY_TZ,
       month: "2-digit",
       day: "2-digit",
       year: "numeric",

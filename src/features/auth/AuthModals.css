@@ -74,6 +74,14 @@
   gap: var(--space-3);
 }
 
+.auth-modal__social-label {
+  margin: 0 0 var(--space-2);
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 85%);
+}
+
 .auth-modal__social-row {
   display: flex;
   gap: var(--space-3);
@@ -99,6 +107,7 @@
   font: inherit;
   font-weight: 700;
   font-size: 0.875rem;
+  text-transform: uppercase;
   cursor: pointer;
   transition: opacity 0.15s ease;
 }
@@ -143,6 +152,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .auth-modal__divider::before,
@@ -210,7 +220,7 @@
 
 .auth-modal__forgot-password {
   margin: calc(var(--space-2) * -1) 0 var(--space-2);
-  text-align: right;
+  text-align: center;
   font-size: 0.8rem;
 }
 

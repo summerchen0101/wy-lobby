@@ -1,5 +1,7 @@
 import { refreshAccessToken } from "../lib/api/auth";
+import { ClientVersionError } from "../lib/api/clientVersionError";
 import type { AuthResponse } from "../lib/api/types";
+import { notifyClientVersionRequired } from "../lib/clientVersionNotify";
 import { notifySessionRefreshFailed } from "./sessionRefreshNotify";
 import {
   getStoredAccessToken,
@@ -27,7 +29,11 @@ export async function refreshSession(): Promise<AuthResponse | null> {
       const res = await refreshAccessToken(rt, getStoredAccessToken());
       persistAuthResponseFull(res);
       return res;
-    } catch {
+    } catch (err) {
+      if (err instanceof ClientVersionError) {
+        notifyClientVersionRequired(err);
+        return null;
+      }
       notifySessionRefreshFailed();
       return null;
     } finally {

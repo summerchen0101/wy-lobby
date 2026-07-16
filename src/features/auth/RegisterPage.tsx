@@ -3,10 +3,16 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { MarketingTopBar } from '../../components/MarketingTopBar'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
-import { buildAppMetaPayload, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
+import { buildAppMetaForAuthRequest, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
 import type { SignUpRequest } from '../../lib/api/types'
+import {
+  kickstartLobbyWelcomeVoiceFromUserGesture,
+  stopLobbyWelcomeVoice,
+} from '../../lib/lobbySound'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
 import './AuthPages.css'
+
+const PASSWORD_MAX_LENGTH = 12
 
 function buildRequest(params: { email: string; password: string; rePassword: string }): SignUpRequest {
   const em = params.email.trim()
@@ -15,7 +21,7 @@ function buildRequest(params: { email: string; password: string; rePassword: str
     password: params.password,
     rePassword: params.rePassword,
     answer: '',
-    app_meta: buildAppMetaPayload(),
+    app_meta: buildAppMetaForAuthRequest(),
     email: em,
     deviceID: getOrCreateWebDeviceId(),
   }
@@ -41,10 +47,15 @@ export function RegisterPage() {
   async function onSubmitFirst(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    if (password.length > PASSWORD_MAX_LENGTH) {
+      setError(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`)
+      return
+    }
     if (password !== password2) {
       setError('Passwords do not match')
       return
     }
+    kickstartLobbyWelcomeVoiceFromUserGesture()
     setSubmitting(true)
     const body = buildRequest({ email, password, rePassword: password2 })
     try {
@@ -55,10 +66,12 @@ export function RegisterPage() {
         return
       }
       if (result.needSMSAnswer) {
+        stopLobbyWelcomeVoice()
         setPending(body)
         return
       }
     } catch (err) {
+      stopLobbyWelcomeVoice()
       if (err instanceof ClientVersionError) {
         window.open(err.updateUrl, '_blank', 'noopener,noreferrer')
         setError('A new version is required. A download page was opened in a new tab.')
@@ -188,6 +201,7 @@ export function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
+                  maxLength={PASSWORD_MAX_LENGTH}
                 />
               </AuthClearableInputWrap>
             </div>
@@ -211,6 +225,7 @@ export function RegisterPage() {
                   onChange={(e) => setPassword2(e.target.value)}
                   required
                   minLength={6}
+                  maxLength={PASSWORD_MAX_LENGTH}
                 />
               </AuthClearableInputWrap>
             </div>
