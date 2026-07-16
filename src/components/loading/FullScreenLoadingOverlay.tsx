@@ -13,8 +13,8 @@ export function FullScreenLoadingOverlay() {
       <img
         src={LOBBY_LOADING_IMAGE}
         alt=""
-        width={348}
-        height={355}
+        width={352}
+        height={352}
         decoding="async"
         className="fullscreen-loading-overlay__animation"
       />
