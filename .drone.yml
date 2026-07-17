@@ -174,7 +174,7 @@ steps:
       VITE_ZENDESK_KEY: "9720e0de-05e6-449b-be95-f5b42d5e7df4"
       VITE_PUBLIC_IMAGE_CDN_BASE: "https://unityweb-cdn.luklokcasino.com/us-game-lobby"
       VITE_DEV_CONSOLE: "false"
-      #VITE_RADAR_PUBLISHABLE_KEY: "prj_live_pk_e6c2c0e370ace2db49c21d2fc81572acaafc61fa"
+      VITE_RADAR_PUBLISHABLE_KEY: "prj_live_pk_e6c2c0e370ace2db49c21d2fc81572acaafc61fa"
       # VITE_SOCURE_SDK_KEY:
       #   from_secret: vite_socure_sdk_key
       # VITE_SOCURE_DOCV_SDK_KEY:
