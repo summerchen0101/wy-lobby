@@ -11,7 +11,7 @@ export type AuthContextValue = {
   register: (body: RegisterBody) => Promise<void>
   /** 已取得的 `AuthResponse`（如註冊首輪即回 token）寫入 session */
   ingestAuthResponse: (res: AuthResponse) => void
-  logout: (options?: { redirectTo?: 'home' | 'login' }) => void
+  logout: () => void
   /** 清除 session 並導向未登入大廳 `/`（不自動開 login popup；refresh 失效、WS 拒絕等）。 */
   invalidateSessionToLogin: () => void
   refreshUser: () => Promise<void>
