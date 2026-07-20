@@ -2,6 +2,7 @@ import Radar from "radar-sdk-js";
 import { createFraudPlugin } from "@radarlabs/plugin-fraud";
 import type { RadarTrackVerifiedResponse } from "@radarlabs/plugin-fraud";
 import type { RadarUser } from "radar-sdk-js";
+import { isRadarUserId } from "./geoSession";
 
 const TRACKING_INTERVAL_SEC = 1200;
 
@@ -69,7 +70,7 @@ export function initRadarGeo(): boolean {
 export function identifyRadarPlayer(playerId?: string): void {
   if (!initRadarGeo()) return;
   const trimmed = playerId?.trim();
-  if (trimmed) {
+  if (isRadarUserId(trimmed)) {
     Radar.setUserId(trimmed);
     return;
   }
@@ -139,10 +140,16 @@ export async function runGeoVerification(
     return { status: "skipped" };
   }
 
-  identifyRadarPlayer(playerId);
+  const trimmed = playerId?.trim();
+  if (!isRadarUserId(trimmed)) {
+    return { status: "skipped" };
+  }
+
+  identifyRadarPlayer(trimmed);
 
   try {
     const result = await Radar.fraud.trackVerified({
+      userId: trimmed,
       skipVerifyApp: true,
       reason: "login",
     });
@@ -152,8 +159,11 @@ export async function runGeoVerification(
   }
 }
 
-export function startGeoTracking(): void {
+export function startGeoTracking(playerId?: string): void {
   if (!initRadarGeo()) return;
+  if (playerId !== undefined) {
+    identifyRadarPlayer(playerId);
+  }
   Radar.fraud.startTrackingVerified({
     skipVerifyApp: true,
     interval: TRACKING_INTERVAL_SEC,
