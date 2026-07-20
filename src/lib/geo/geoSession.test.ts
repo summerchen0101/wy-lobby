@@ -1,25 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { shouldVerifyOnTokenChange } from "./geoSession";
+import { shouldVerifyOnUserChange } from "./geoSession";
 
-describe("shouldVerifyOnTokenChange", () => {
-  it("returns true on session restore (undefined → token)", () => {
-    expect(shouldVerifyOnTokenChange(undefined, "access-token")).toBe(true);
+describe("shouldVerifyOnUserChange", () => {
+  it("returns true on login / session restore (undefined → userId)", () => {
+    expect(shouldVerifyOnUserChange(undefined, "player-1")).toBe(true);
   });
 
-  it("returns true on active login (null → token)", () => {
-    expect(shouldVerifyOnTokenChange(null, "access-token")).toBe(true);
+  it("returns true when switching accounts", () => {
+    expect(shouldVerifyOnUserChange("player-1", "player-2")).toBe(true);
   });
 
-  it("returns false on access token refresh (tokenA → tokenB)", () => {
-    expect(shouldVerifyOnTokenChange("token-a", "token-b")).toBe(false);
+  it("returns false when userId is unchanged (e.g. token refresh)", () => {
+    expect(shouldVerifyOnUserChange("player-1", "player-1")).toBe(false);
   });
 
-  it("returns false when current token is absent", () => {
-    expect(shouldVerifyOnTokenChange(undefined, null)).toBe(false);
-    expect(shouldVerifyOnTokenChange("token-a", null)).toBe(false);
-  });
-
-  it("returns false when token is unchanged", () => {
-    expect(shouldVerifyOnTokenChange("token-a", "token-a")).toBe(false);
+  it("returns false on logout or when not logged in", () => {
+    expect(shouldVerifyOnUserChange("player-1", undefined)).toBe(false);
+    expect(shouldVerifyOnUserChange(undefined, undefined)).toBe(false);
+    expect(shouldVerifyOnUserChange("player-1", "")).toBe(false);
+    expect(shouldVerifyOnUserChange("player-1", "   ")).toBe(false);
   });
 });
