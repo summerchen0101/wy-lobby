@@ -6,7 +6,10 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "../../auth/useAuth";
-import { shouldVerifyOnUserChange } from "../../lib/geo/geoSession";
+import {
+  isRadarUserId,
+  shouldVerifyOnUserChange,
+} from "../../lib/geo/geoSession";
 import {
   identifyRadarPlayer,
   isRadarGeoEnabled,
@@ -39,8 +42,8 @@ export function GeoProvider({ children }: { children: ReactNode }) {
 
   const applyVerificationResult = useCallback(
     (result: Awaited<ReturnType<typeof runGeoVerification>>) => {
-      // Never apply blocks while logged out (in-flight verify after logout).
-      if (!userIdRef.current?.trim()) {
+      // Never apply blocks without a real Radar user id (logout / placeholder).
+      if (!isRadarUserId(userIdRef.current)) {
         setBlockReason(undefined);
         setStatus("allowed");
         return;
@@ -49,7 +52,7 @@ export function GeoProvider({ children }: { children: ReactNode }) {
       if (result.status === "allowed") {
         setBlockReason(undefined);
         setStatus("allowed");
-        startGeoTracking();
+        startGeoTracking(userIdRef.current);
         return;
       }
 
@@ -70,7 +73,7 @@ export function GeoProvider({ children }: { children: ReactNode }) {
     if (!isRadarGeoEnabled()) return;
 
     const playerId = userIdRef.current?.trim();
-    if (!playerId) return;
+    if (!isRadarUserId(playerId)) return;
 
     const seq = ++verifySeqRef.current;
     const result = await runGeoVerification(playerId);
@@ -86,7 +89,7 @@ export function GeoProvider({ children }: { children: ReactNode }) {
     }
 
     const playerId = userIdRef.current?.trim();
-    if (!playerId) {
+    if (!isRadarUserId(playerId)) {
       setBlockReason(undefined);
       setStatus("allowed");
       return;
@@ -114,6 +117,7 @@ export function GeoProvider({ children }: { children: ReactNode }) {
     if (!loggedIn) {
       verifySeqRef.current += 1;
       stopGeoTracking();
+      identifyRadarPlayer(undefined);
       setBlockReason(undefined);
       setStatus("allowed");
       verifiedUserIdRef.current = undefined;
@@ -121,7 +125,8 @@ export function GeoProvider({ children }: { children: ReactNode }) {
     }
 
     const playerId = user?.id?.trim();
-    if (!playerId) return;
+    // Placeholder `"0"`: wait for LOBBY_GET real id before Radar.
+    if (!isRadarUserId(playerId)) return;
 
     if (!shouldVerifyOnUserChange(verifiedUserIdRef.current, playerId)) {
       return;
@@ -135,8 +140,8 @@ export function GeoProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isRadarGeoEnabled()) return;
     return subscribeGeoTokenUpdates((result) => {
-      // Periodic token updates only apply while still logged in.
-      if (!userIdRef.current?.trim()) return;
+      // Periodic token updates only apply while still logged in with a real id.
+      if (!isRadarUserId(userIdRef.current)) return;
 
       if (result.status === "allowed") {
         setBlockReason(undefined);
