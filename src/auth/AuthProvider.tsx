@@ -83,21 +83,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(
-    (options?: { redirectTo?: "home" | "login" }) => {
+    (_options?: { redirectTo?: "home" | "login" }) => {
       clearStoredSession();
       setToken(null);
       setUser(null);
       setReady(true);
-      navigate(
-        options?.redirectTo === "login" ? AUTH_LOGIN_ENTRY_PATH : "/",
-        { replace: true },
-      );
+      // Always guest landing — never `/?auth=login` (no auto login popup).
+      navigate(AUTH_LOGIN_ENTRY_PATH, { replace: true });
     },
     [navigate],
   );
 
   const invalidateSessionToLogin = useCallback(() => {
-    logout({ redirectTo: "login" });
+    logout();
   }, [logout]);
 
   const handleRefreshFailed = invalidateSessionToLogin;

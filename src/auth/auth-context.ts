@@ -12,7 +12,7 @@ export type AuthContextValue = {
   /** 已取得的 `AuthResponse`（如註冊首輪即回 token）寫入 session */
   ingestAuthResponse: (res: AuthResponse) => void
   logout: (options?: { redirectTo?: 'home' | 'login' }) => void
-  /** 清除 session 並導向 `/?auth=login`（refresh 失效、WS 拒絕等）。 */
+  /** 清除 session 並導向未登入大廳 `/`（不自動開 login popup；refresh 失效、WS 拒絕等）。 */
   invalidateSessionToLogin: () => void
   refreshUser: () => Promise<void>
   /** 與 LOBBY_GET 等來源合併玩家欄位並持久化 */
