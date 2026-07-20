@@ -3,13 +3,15 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { FullScreenLoadingOverlay } from "../../components/loading/FullScreenLoadingOverlay";
+import { useAuthModals } from "../auth/authModalsContext";
 import { GEO_MESSAGE_KEYS, LEGAL_GEO_PATHS } from "./geoConstants";
 import { GeoBlockModal } from "./GeoBlockModal";
 import { useGeo } from "./geoContext";
 
 export function GeoGate() {
-  const { token, user } = useAuth();
-  const { status, blockReason, recheck } = useGeo();
+  const { token, user, logout } = useAuth();
+  const { closeAllModals } = useAuthModals();
+  const { status, blockReason } = useGeo();
   const { pathname } = useLocation();
   const { t } = useTranslation("errors");
   const loggedIn = Boolean(token?.trim() && user?.id?.trim());
@@ -27,7 +29,14 @@ export function GeoGate() {
 
   const blockModal = showBlock
     ? createPortal(
-        <GeoBlockModal message={message} onRetry={() => void recheck()} />,
+        <GeoBlockModal
+          message={message}
+          onRetry={() => {
+            // Guest landing `/` only — do not use `/?auth=login` (no login popup).
+            closeAllModals();
+            logout();
+          }}
+        />,
         document.body,
       )
     : null;

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { AUTH_LOGIN_ENTRY_PATH } from "../../auth/loginEntry";
 import { useAuth } from "../../auth/useAuth";
 import { GameOverlay } from "../../components/GameOverlay";
 import {
@@ -52,7 +51,7 @@ export function GamePlayPage() {
       Boolean(getStoredAccessToken()?.trim()) ||
       Boolean(getStoredRefreshToken()?.trim());
     if (!hasSession) {
-      navigate(AUTH_LOGIN_ENTRY_PATH, { replace: true });
+      navigate("/", { replace: true });
     }
   }, [ready, requiresStoredSession, navigate]);
 

@@ -1,5 +1,5 @@
-/** 大廳登入 modal 入口（`LoginRedirect` 亦導向此 query） */
-export const AUTH_LOGIN_ENTRY_PATH = "/?auth=login";
+/** 未登入大廳首頁。強制登出／session 失效時導向此處，不帶 `auth=login`（不自動開 login popup）。 */
+export const AUTH_LOGIN_ENTRY_PATH = "/";
 
 /** 登入成功後預設進大廳（`/`），非基本資料頁。 */
 export const POST_LOGIN_LOBBY_PATH = "/";
@@ -16,4 +16,17 @@ export function resolvePostLoginRedirect(
     return POST_LOGIN_LOBBY_PATH;
   }
   return trimmed;
+}
+
+/** Build guest landing URL; optional `redirect` only — never sets `auth=login`. */
+export function guestLandingPath(
+  redirect?: string | null,
+): string {
+  const resolved = resolvePostLoginRedirect(redirect);
+  if (!resolved || resolved === POST_LOGIN_LOBBY_PATH) {
+    return AUTH_LOGIN_ENTRY_PATH;
+  }
+  const q = new URLSearchParams();
+  q.set("redirect", resolved);
+  return `/?${q.toString()}`;
 }

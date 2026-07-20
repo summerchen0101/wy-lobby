@@ -736,10 +736,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         const api = getAlertApi();
         if (api) {
           api.showBlockingAlert(text, {
-            onConfirm: () => logout({ redirectTo: "login" }),
+            onConfirm: () => logout(),
           });
         } else {
-          logout({ redirectTo: "login" });
+          logout();
         }
         return;
       }
