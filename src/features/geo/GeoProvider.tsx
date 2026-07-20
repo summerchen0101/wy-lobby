@@ -32,6 +32,8 @@ export function GeoProvider({ children }: { children: ReactNode }) {
   const userIdRef = useRef<string | undefined>(user?.id);
   const prevTokenRef = useRef<string | null | undefined>(undefined);
   const identifiedUserIdRef = useRef<string | undefined>(undefined);
+  /** True when the latest verify ran without a Radar userId (bypass rules cannot match). */
+  const verifiedWithoutUserIdRef = useRef(false);
 
   useEffect(() => {
     userIdRef.current = user?.id;
@@ -63,7 +65,9 @@ export function GeoProvider({ children }: { children: ReactNode }) {
     if (!isRadarGeoEnabled()) return;
 
     const seq = ++verifySeqRef.current;
-    const result = await runGeoVerification(userIdRef.current);
+    const playerId = userIdRef.current;
+    verifiedWithoutUserIdRef.current = !playerId?.trim();
+    const result = await runGeoVerification(playerId);
     if (seq !== verifySeqRef.current) return;
     applyVerificationResult(result);
   }, [applyVerificationResult]);
@@ -79,7 +83,9 @@ export function GeoProvider({ children }: { children: ReactNode }) {
     setStatus("checking");
     stopGeoTracking();
 
-    const result = await runGeoVerification(userIdRef.current);
+    const playerId = userIdRef.current;
+    verifiedWithoutUserIdRef.current = !playerId?.trim();
+    const result = await runGeoVerification(playerId);
     if (seq !== verifySeqRef.current) return;
     applyVerificationResult(result);
   }, [applyVerificationResult]);
@@ -102,6 +108,7 @@ export function GeoProvider({ children }: { children: ReactNode }) {
       setBlockReason(undefined);
       setStatus("allowed");
       identifiedUserIdRef.current = undefined;
+      verifiedWithoutUserIdRef.current = false;
       return;
     }
 
@@ -110,13 +117,18 @@ export function GeoProvider({ children }: { children: ReactNode }) {
     }
   }, [ready, token, verifyInBackground]);
 
+  // Bypass rules match on Radar userId. If the first check ran before playerId
+  // was known, identify and re-verify once the id arrives.
   useEffect(() => {
     const playerId = user?.id?.trim();
     if (!playerId || !isRadarGeoEnabled()) return;
     if (identifiedUserIdRef.current === playerId) return;
     identifiedUserIdRef.current = playerId;
     identifyRadarPlayer(playerId);
-  }, [user?.id]);
+    if (verifiedWithoutUserIdRef.current) {
+      void verifyInBackground();
+    }
+  }, [user?.id, verifyInBackground]);
 
   useEffect(() => {
     if (!isRadarGeoEnabled()) return;
