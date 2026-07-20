@@ -92,7 +92,9 @@ export function mapRadarErrorStatus(status: string | undefined): GeoBlockReason 
 export function mapVerificationResult(
   response: RadarTrackVerifiedLike,
 ): GeoVerificationResult {
-  if (response.passed) {
+  // Radar Dashboard Bypass / Block rules (whitelist): fraud.bypassed === true
+  // forces a pass for testing outside the jurisdiction allowlist.
+  if (response.passed || response.user?.fraud?.bypassed) {
     return { status: "allowed", token: response.token };
   }
 

@@ -11,6 +11,36 @@ describe("mapVerificationResult", () => {
     ).toEqual({ status: "allowed", token: "jwt" });
   });
 
+  it("returns allowed when fraud.bypassed is true (dashboard whitelist)", () => {
+    expect(
+      mapVerificationResult({
+        passed: false,
+        token: "jwt",
+        failureReasons: ["jurisdiction_not_allowed"],
+        user: {
+          _id: "u1",
+          fraud: {
+            passed: true,
+            bypassed: true,
+            verified: true,
+            proxy: false,
+            mocked: false,
+            compromised: false,
+            jumped: false,
+            sharing: false,
+          },
+          country: {
+            _id: "c1",
+            type: "country",
+            code: "TW",
+            name: "Taiwan",
+            passed: false,
+          },
+        },
+      }),
+    ).toEqual({ status: "allowed", token: "jwt" });
+  });
+
   it("returns proxy when fraud.proxy is true", () => {
     expect(
       mapVerificationResult({
