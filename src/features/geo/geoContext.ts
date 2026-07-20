@@ -26,6 +26,8 @@ export function useGeo(): GeoContextValue {
 }
 
 export function useGeoAllowed(): boolean {
-  const { status } = useGeo();
+  const { isBlocked, status } = useGeo();
+  if (isBlocked) return false;
+  // Pre-login status is "allowed". Post-login "checking" still blocks shell open.
   return isAllowedStatus(status);
 }
