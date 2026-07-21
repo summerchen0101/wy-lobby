@@ -11,8 +11,8 @@ import {
   SWEEPS_POLICY_EFFECTIVE,
   SWEEPS_POLICY_INTRO,
   SWEEPS_POLICY_SECTIONS,
-  SWEEPS_POLICY_TITLE,
 } from './sweepsPolicyContent'
+import { getWord } from '../../wordData/getWord'
 import './PrivacyPolicyPage.css'
 
 export function SweepsPolicyPage() {
@@ -22,7 +22,7 @@ export function SweepsPolicyPage() {
 
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Sweeps Policy | LukLok'
+    document.title = `${getWord(210)} | LukLok`
     return () => {
       document.title = previousTitle
     }
@@ -47,7 +47,7 @@ export function SweepsPolicyPage() {
         <Link className="legal-page__back" to="/">
           ← Back to lobby
         </Link>
-        <h1 className="legal-page__title">{SWEEPS_POLICY_TITLE}</h1>
+        <h1 className="legal-page__title">{getWord(210)}</h1>
         <p className="legal-page__revised">{SWEEPS_POLICY_EFFECTIVE}</p>
       </header>
 

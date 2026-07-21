@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as protobuf from "protobufjs/light.js";
 import schema from "../gen/lobby_wire.schema.js";
+import { getWord } from "../wordData/getWord";
 import {
   decodeListPurchaseAndPrizeHistoriesResponseBytes,
   formatFundsHistoryDate,
@@ -34,13 +35,13 @@ describe("fundsHistoryLobbyWire", () => {
     const raw = Uint8Array.from(ResponseType.encode(resp).finish());
     const { histories } = decodeListPurchaseAndPrizeHistoriesResponseBytes(raw);
     expect(histories).toHaveLength(1);
-    expect(histories[0]?.tradeEventLabel).toBe("PaymentBuyGold Reward");
+    expect(histories[0]?.tradeEventLabel).toBe(getWord(510769));
     expect(formatFundsHistoryGcAmount(histories[0]!.gcAmountWire)).toBe("600K");
     expect(formatFundsHistoryScBonus(histories[0]!.scAmountWire)).toBe("2");
   });
 
   it("formats trade event enum name fallback", () => {
-    expect(tradeEventToLabel("PAYMENT_BUY_GOLD")).toBe("PaymentBuyGold Reward");
+    expect(tradeEventToLabel("PAYMENT_BUY_GOLD")).toBe(getWord(510769));
   });
 
   it("formats timestamp as MM/DD/YYYY in America/New_York", () => {

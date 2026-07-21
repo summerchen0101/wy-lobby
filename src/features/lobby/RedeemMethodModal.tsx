@@ -28,6 +28,8 @@ import {
   resolveMinRedeemRaw,
 } from "./redeemMinAmount";
 import type { LobbyGetDecoded } from "../../realtime/lobbyDecode";
+import { useWordData } from "../../wordData/useWordData";
+import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import "./RedeemFormPage.css";
 import "./RedeemMethodModal.css";
 
@@ -106,6 +108,7 @@ export function RedeemMethodModal({
   redeemableAmountRaw,
   lobbyGet,
 }: Props) {
+  const w = useWordData();
   const { show } = useAlert();
   const { user } = useAuth();
   const { requestRef, gatewayRequestReady } = useGatewayLobby();
@@ -188,7 +191,7 @@ export function RedeemMethodModal({
       return;
     }
     if (wireAmt < BigInt(minRaw)) {
-      show(`Minimum redemption is ${minDisplay} SC.`, { variant: "error" });
+      show(w(510488, minDisplay), { variant: "error" });
       return;
     }
     if (redeemableAmountRaw !== undefined) {
@@ -231,7 +234,7 @@ export function RedeemMethodModal({
       const code = String(r.code ?? "");
       if (!isGatewaySuccessCode(code)) {
         paymentTab?.close();
-        show(r.errMessage?.trim() || `Withdrawal failed (${code})`, {
+        show(translateGatewayError(code, r.errMessage, `Withdrawal failed (${code})`), {
           variant: "error",
         });
         return;
@@ -280,6 +283,7 @@ export function RedeemMethodModal({
     gatewayRequestReady,
     user,
     show,
+    w,
     finalizeSuccessFlow,
   ]);
 
@@ -367,7 +371,7 @@ export function RedeemMethodModal({
           ) : (
             <>
               <label className="redeem-method-modal__label" htmlFor={amountId}>
-                AMOUNT TO REDEEM*
+                {w(510487)}
               </label>
               <input
                 id={amountId}
@@ -393,7 +397,7 @@ export function RedeemMethodModal({
                 className="redeem-form-page__confirm"
                 disabled={submitBusy || !pickAmount.trim()}
                 onClick={() => void submitWithdrawOrder()}>
-                {submitBusy ? "…" : "CONTINUE"}
+                {submitBusy ? "…" : w(510490)}
               </button>
             </>
           )}

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useWordData } from '../../wordData/useWordData'
 import './AuthModals.css'
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
 }
 
 export function TermsGateModal({ open, onClose, onAccept }: Props) {
+  const w = useWordData()
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -34,20 +36,20 @@ export function TermsGateModal({ open, onClose, onAccept }: Props) {
             ×
           </button>
           <h2 id="terms-gate-title" className="app-modal__title">
-            YOU ARE ALMOST THERE
+            {w(13)}
           </h2>
         </div>
         <hr className="app-modal__rule" />
         <div className="app-modal__body">
           <p className="auth-modal__text">
-            To start playing, you need to accept our{' '}
+            {w(14)}{' '}
             <a
               className="auth-modal__link"
               href="/terms"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Terms of Service
+              {w(208)}
             </a>{' '}
             &amp;{' '}
             <a
@@ -56,17 +58,14 @@ export function TermsGateModal({ open, onClose, onAccept }: Props) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Privacy Policy
+              {w(209)}
             </a>{' '}
-            (which include a provision requiring arbitration of disputes).
+            {w(15)}
           </p>
-          <p className="auth-modal__text">
-            By using our site, you confirm you&apos;re 18+ and not a resident of an excluded
-            territory.
-          </p>
+          <p className="auth-modal__text">{w(16)}</p>
           <div className="auth-modal__accept">
             <button type="button" className="auth-modal__btn-accept" onClick={onAccept}>
-              ACCEPT
+              {w(17)}
             </button>
           </div>
         </div>

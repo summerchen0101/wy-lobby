@@ -68,6 +68,8 @@ import type { ActiveWallet } from "../wallet/walletContext";
 import { wireUInt64Field } from "./wireUint64";
 import { LobbyHydrationGate } from "./LobbyHydrationGate";
 import { getAlertApi } from "../components/alert/alertImperative";
+import { translateGatewayError } from "../i18n/apiErrorMessage";
+import { getWordPlain } from "../wordData/getWord";
 
 const LOBBY_WS_TIMEOUT_RETRY_MSG = "Lobby data timed out, retrying…";
 const LOBBY_WS_TIMEOUT_USER_MSG =
@@ -409,7 +411,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             if (wsLobbyEnabled) {
               setLobbyGames([]);
               setLobbyError(
-                r.errMessage?.trim() || `Lobby request failed (${codeStr})`,
+                translateGatewayError(codeStr, r.errMessage, `Lobby request failed (${codeStr})`),
               );
             } else {
               setLobbyGames(null);
@@ -693,6 +695,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           wsReconnectExhaustedNotifiedRef.current = true;
           if (gateActive) setLobbyWsBootstrapDone(true);
           const msg =
+            getWordPlain(400015) ||
             "Could not connect to the game server. Check your network and try again.";
           if (wsLobbyEnabled) {
             setLobbyError(msg);

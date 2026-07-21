@@ -6,6 +6,7 @@ import { fetchAppleOAuthState, fetchOAuthLink } from "../../lib/api/oauth";
 import { ApiError } from "../../lib/api/client";
 import { appleOAuthClientId, getApiBase } from "../../lib/env";
 import { buildOAuthBackUrl } from "../../lib/oauth/backUrl";
+import { useWordData } from "../../wordData/useWordData";
 
 type Props = {
   mode: "signin" | "signup";
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function AuthSocialButtons({ mode, searchParams, onError }: Props) {
+  const w = useWordData();
   const [appleState, setAppleState] = useState("");
   const [appleLoading, setAppleLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -24,7 +26,7 @@ export function AuthSocialButtons({ mode, searchParams, onError }: Props) {
     ? `${apiBase}/api/v1/apple/auth`
     : "/api/v1/apple/auth";
 
-  const label = mode === "signin" ? "Sign in with:" : "Sign up with:";
+  const label = mode === "signin" ? w(4) : w(19);
   const appleAria =
     mode === "signin" ? "Log in with Apple" : "Sign up with Apple";
   const googleAria =

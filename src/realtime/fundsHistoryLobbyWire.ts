@@ -3,6 +3,7 @@ import schema from "../gen/lobby_wire.schema.js";
 import { DISPLAY_TZ } from "../lib/displayTimezone";
 import { getActiveLocale } from "../i18n/getActiveLocale";
 import { SC_POINT_SCALE } from "../wallet/formatWalletAmount";
+import { tradeEventToLabel } from "../wordData/tradeEventWordData";
 
 const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
 
@@ -24,11 +25,6 @@ const wireToObjectOpts = {
   enums: String,
 } as const;
 
-/** wallet.TradeEvent — 常用於 Funds History 顯示 */
-const TRADE_EVENT_LABEL: Record<number, string> = {
-  17: "PaymentBuyGold Reward",
-};
-
 export type FundsHistoryWireRow = {
   tradeEventRaw: number;
   tradeEventLabel: string;
@@ -37,36 +33,7 @@ export type FundsHistoryWireRow = {
   timestampMs: string;
 };
 
-export function tradeEventToLabel(raw: unknown): string {
-  const n =
-    typeof raw === "number" && Number.isFinite(raw)
-      ? raw
-      : typeof raw === "string"
-        ? Number(raw.trim())
-        : NaN;
-  if (Number.isFinite(n) && TRADE_EVENT_LABEL[n]) {
-    return TRADE_EVENT_LABEL[n];
-  }
-  if (typeof raw === "string" && raw.trim()) {
-    return formatTradeEventEnumName(raw.trim());
-  }
-  if (Number.isFinite(n)) {
-    return `TradeEvent ${n}`;
-  }
-  return "Transaction";
-}
-
-function formatTradeEventEnumName(name: string): string {
-  if (name === "PAYMENT_BUY_GOLD") return "PaymentBuyGold Reward";
-  return name
-    .split("_")
-    .map((part) =>
-      part.length > 0
-        ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
-        : "",
-    )
-    .join(" ");
-}
+export { tradeEventToLabel } from "../wordData/tradeEventWordData";
 
 /** GC 顯示：600000 → 600K（對齊 Shop gcLabel） */
 export function formatFundsHistoryGcAmount(gcAmountWire: string): string {

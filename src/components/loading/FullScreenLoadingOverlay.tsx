@@ -1,4 +1,5 @@
 import { LOBBY_LOADING_IMAGE } from "../../lib/brandLogos";
+import { getWord } from "../../wordData/getWord";
 import "./FullScreenLoadingOverlay.css";
 
 export function FullScreenLoadingOverlay() {
@@ -9,7 +10,7 @@ export function FullScreenLoadingOverlay() {
       aria-busy="true"
       aria-live="polite"
     >
-      <span className="fullscreen-loading-overlay__sr-only">Loading</span>
+      <span className="fullscreen-loading-overlay__sr-only">{getWord(2297)}</span>
       <img
         src={LOBBY_LOADING_IMAGE}
         alt=""

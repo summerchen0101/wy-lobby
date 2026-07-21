@@ -18,6 +18,7 @@ import { ChangeHeadIconModal } from "./ChangeHeadIconModal";
 import { FundsHistoryModal } from "./FundsHistoryModal";
 import { MyProfileModal } from "./MyProfileModal";
 import { VipModal } from "./VipModal";
+import { DeleteAccountModal } from "./DeleteAccountModal";
 import {
   effectiveAvatarId,
   getProfileAvatarById,
@@ -35,11 +36,13 @@ import {
 } from "../../lib/lobbySound";
 import { profileVipProgress } from "./profileVipProgress";
 import { resolveProfileVipTitle } from "./profileVipTitle";
+import { useWordData } from "../../wordData/useWordData";
 import "./ProfilePage.css";
 import "./SessionPageDecor.css";
 import "../../components/profile/ProfileAvatarFrame.css";
 
 export function ProfilePage() {
+  const w = useWordData();
   const { show } = useAlert();
   const { user, mergeUser, refreshUser, logout } = useAuth();
   const { requestRef, lobbyLoading } = useGatewayLobby();
@@ -51,6 +54,7 @@ export function ProfilePage() {
   const [myProfileOpen, setMyProfileOpen] = useState(false);
   const [vipOpen, setVipOpen] = useState(false);
   const [fundsHistoryOpen, setFundsHistoryOpen] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [avatarImgFailed, setAvatarImgFailed] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const soundLabelId = useId();
@@ -225,7 +229,7 @@ export function ProfilePage() {
       className="profile-page page-container session-page session-page--pattern"
       aria-labelledby="profile-heading">
       <h1 id="profile-heading" className="profile-page__sr-only">
-        Profile
+        {w(510750)}
       </h1>
       <div className="profile-page__card">
         <div className="profile-page__hero">
@@ -338,7 +342,7 @@ export function ProfilePage() {
                 strokeWidth={2}
                 aria-hidden
               />
-              Sound
+              {w(510752)}
             </span>
             <button
               type="button"
@@ -357,30 +361,36 @@ export function ProfilePage() {
             type="button"
             className="profile-page__btn-pill"
             onClick={onMyProfile}>
-            MY PROFILE
+            {w(510753)}
           </button>
           <button
             type="button"
             className="profile-page__btn-pill"
             onClick={onSupport}>
-            SUPPORT
+            {w(510754)}
           </button>
           <button
             type="button"
             className="profile-page__btn-pill"
             onClick={() => setFundsHistoryOpen(true)}>
-            FUNDS HISTORY
+            {w(510755)}
           </button>
           <button
             type="button"
             className="profile-page__btn-pill"
             onClick={() => logout()}>
-            SIGN OUT
+            {w(510756)}
+          </button>
+          <button
+            type="button"
+            className="profile-page__btn-pill profile-page__btn-pill--danger"
+            onClick={() => setDeleteAccountOpen(true)}>
+            {w(510757)}
           </button>
         </div>
 
         <a className="profile-page__privacy" href="/privacy">
-          Privacy Policy
+          {w(209)}
         </a>
       </div>
 
@@ -410,6 +420,10 @@ export function ProfilePage() {
       />
 
       <VipModal open={vipOpen} onClose={() => setVipOpen(false)} />
+      <DeleteAccountModal
+        open={deleteAccountOpen}
+        onClose={() => setDeleteAccountOpen(false)}
+      />
     </section>
   );
 }

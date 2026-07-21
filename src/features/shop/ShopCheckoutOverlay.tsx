@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { IoChevronBack } from "react-icons/io5";
+import { useWordData } from "../../wordData/useWordData";
 import "./ShopCheckout.css";
 import { ProtectAccountView } from "./ProtectAccountView";
 import type {
@@ -40,6 +41,7 @@ function LoadingView({
   buyError: string | null;
   onClose: () => void;
 }) {
+  const w = useWordData();
   return (
     <>
       <header className="app-modal__head-row">
@@ -53,7 +55,7 @@ function LoadingView({
         <h2
           className="app-modal__title--abs-center shop-checkout__title"
           id="shop-checkout-dialog-title">
-          {buyError ? "PURCHASE" : "PREPARING PAYMENT"}
+          {w(103)}
         </h2>
         <button
           type="button"
@@ -96,6 +98,7 @@ function PaymentFrameView({
   onClose: () => void;
   onOpenPaymentPage: (url: string) => boolean;
 }) {
+  const w = useWordData();
   return (
     <>
       <header className="app-modal__head-row">
@@ -109,7 +112,7 @@ function PaymentFrameView({
         <h2
           className="app-modal__title--abs-center shop-checkout__title"
           id="shop-checkout-dialog-title">
-          COMPLETE PAYMENT
+          {w(103)}
         </h2>
         <span className="app-modal__head-spacer" aria-hidden />
       </header>
@@ -134,6 +137,7 @@ function PaymentFrameView({
 }
 
 function SuccessView({ onClose }: { onClose: () => void }) {
+  const w = useWordData();
   return (
     <>
       <header className="app-modal__head-row">
@@ -141,7 +145,7 @@ function SuccessView({ onClose }: { onClose: () => void }) {
         <h2
           className="app-modal__title--abs-center shop-checkout__title"
           id="shop-checkout-dialog-title">
-          THANK YOU
+          {w(103)}
         </h2>
         <button
           type="button"

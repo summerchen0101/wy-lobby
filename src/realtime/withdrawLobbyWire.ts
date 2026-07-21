@@ -1,6 +1,7 @@
 import * as protobuf from "protobufjs/light.js";
 import schema from "../gen/lobby_wire.schema.js";
 import { wireUInt64Field } from "./wireUint64";
+import { withdrawOrderPaymentStatusToLabel } from "../wordData/withdrawStatusWordData";
 
 const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
 
@@ -39,45 +40,7 @@ const wireToObjectOpts = {
   enums: String,
 } as const;
 
-/** megaman ListWithdrawOrdersRespWithdrawOrder.withdrawOrderPaymentStatus（int32）顯示用 */
-export function withdrawOrderPaymentStatusToLabel(raw: unknown): string {
-  const n =
-    typeof raw === "number" && Number.isFinite(raw)
-      ? raw
-      : typeof raw === "string"
-        ? Number(raw.trim())
-        : NaN;
-  const mapNum: Record<number, string> = {
-    0: "Unknown",
-    1: "Reviewing",
-    2: "Passed",
-    3: "Rejected",
-    4: "Processing",
-    5: "Success",
-    6: "Failed",
-    7: "Expired",
-  };
-  if (Number.isFinite(n) && mapNum[n as keyof typeof mapNum]) {
-    return mapNum[n as keyof typeof mapNum];
-  }
-  const s =
-    typeof raw === "string"
-      ? raw.trim()
-      : typeof raw === "number"
-        ? String(raw)
-        : "";
-  const mapName: Record<string, string> = {
-    UnknownWithdrawOrderPaymentStatus: "Unknown",
-    Reviewing: "Reviewing",
-    Passed: "Passed",
-    Rejected: "Rejected",
-    Proccessing: "Processing",
-    Success: "Success",
-    Failed: "Failed",
-    ExpirationRejected: "Expired",
-  };
-  return mapName[s] ?? (s || "Unknown");
-}
+export { withdrawOrderPaymentStatusToLabel } from "../wordData/withdrawStatusWordData";
 
 export function encodeListWithdrawOrdersRequestBytes(
   userId: bigint | number | string,

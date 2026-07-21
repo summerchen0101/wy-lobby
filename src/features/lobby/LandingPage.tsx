@@ -20,6 +20,7 @@ import { LobbyComplianceFooter } from "../../components/LobbyComplianceFooter";
 import { TrustpilotSection } from "../../components/TrustpilotSection";
 import { useGameShell } from "../../components/useGameShell";
 import { useBlockingLoad } from "../../components/loading/useBlockingLoad";
+import { getWord } from "../../wordData/getWord";
 import { useAuthModals } from "../auth/authModalsContext";
 import { ForgotPasswordModal } from "../auth/ForgotPasswordModal";
 import { LoginModal } from "../auth/LoginModal";
@@ -79,12 +80,12 @@ type LobbyFilterTab = "all" | "hot" | "providers" | "slots";
 
 function lobbyFilterTabs(thirdPartyGamesEnabled: boolean) {
   return [
-    { id: "all" as const, label: "ALL" },
-    { id: "hot" as const, label: "HOT" },
+    { id: "all" as const, label: getWord(510670) },
+    { id: "hot" as const, label: getWord(510672) },
     ...(thirdPartyGamesEnabled
       ? [{ id: "providers" as const, label: "PROVIDERS" }]
       : []),
-    { id: "slots" as const, label: "SLOTS" },
+    { id: "slots" as const, label: getWord(510673) },
   ];
 }
 
@@ -1077,7 +1078,7 @@ export function LandingPage() {
               type="button"
               className="guest-landing__claim-banner"
               onClick={() => openLoginDirect()}>
-              CLAIM WELCOME BONUS
+              {getWord(201)}
             </button>
           </div>
           <h2 id="guest-top-games-heading" className="guest-landing__row-title">
@@ -1116,7 +1117,7 @@ export function LandingPage() {
             type="button"
             className="guest-landing__signup-wide"
             onClick={onGuestSignUp}>
-            SIGN UP TO PLAY FOR FREE
+            {getWord(202)}
           </button>
         </div>
 
@@ -1139,7 +1140,7 @@ export function LandingPage() {
           type="button"
           className="guest-landing__sticky-btn"
           onClick={onGuestSignUp}>
-          SIGN UP TO PLAY FOR FREE
+          {getWord(202)}
         </button>
       </div>
 

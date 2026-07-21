@@ -6,18 +6,17 @@ import {
   requestPasswordReset,
 } from '../../lib/api/auth'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
+import { useWordData } from '../../wordData/useWordData'
 import './AuthModals.css'
 
 type Props = {
   open: boolean
   onClose: () => void
-  /** From step A header back, or success → open login modal */
   onSwitchToLogin: () => void
 }
 
 type Phase = 'email' | 'form' | 'success'
 
-/** Icon when password is hidden — click to reveal. */
 function IconEyeOpen() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -38,6 +37,7 @@ const OTP_MIN_LEN = 4
 const OTP_MAX_LEN = 6
 
 export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
+  const w = useWordData()
   const formId = useId()
   const emailId = `${formId}-email`
   const codeId = `${formId}-code`
@@ -78,7 +78,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
     setError(null)
     const trimmed = email.trim()
     if (!trimmed) {
-      setError('Enter your email')
+      setError(w(550))
       return
     }
     setSubmitting(true)
@@ -89,7 +89,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
     } catch (err) {
       if (err instanceof ClientVersionError) {
         window.open(err.updateUrl, '_blank', 'noopener,noreferrer')
-        setError('A new version is required. A download page was opened in a new tab.')
+        setError(w(2302))
         return
       }
       const msg =
@@ -109,11 +109,11 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
     setError(null)
     const c = code.replace(/\s/g, '')
     if (c.length < OTP_MIN_LEN || c.length > OTP_MAX_LEN) {
-      setError(`Enter a code between ${OTP_MIN_LEN} and ${OTP_MAX_LEN} characters`)
+      setError(w(106))
       return
     }
     if (password !== passwordConfirm) {
-      setError('Passwords do not match')
+      setError(w(552))
       return
     }
     setSubmitting(true)
@@ -127,7 +127,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
     } catch (err) {
       if (err instanceof ClientVersionError) {
         window.open(err.updateUrl, '_blank', 'noopener,noreferrer')
-        setError('A new version is required. A download page was opened in a new tab.')
+        setError(w(2302))
         return
       }
       const msg =
@@ -146,11 +146,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
 
   const titleId = 'auth-forgot-dialog-title'
   const headline =
-    phase === 'success'
-      ? 'Password updated'
-      : phase === 'form'
-        ? 'Set new password'
-        : 'Forgot password'
+    phase === 'success' ? w(42) : phase === 'form' ? w(33) : w(28)
 
   return createPortal(
     <div className="app-modal-overlay" role="presentation" onClick={onClose}>
@@ -199,15 +195,12 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
           {phase === 'email' ? (
             <form onSubmit={onSendEmail} noValidate>
               <fieldset disabled={submitting} className="auth-form-fieldset-reset">
-              <p className="auth-modal__text">
-                Enter the email on your account. We will send a verification code you can use to
-                choose a new password.
-              </p>
+              <p className="auth-modal__text">{w(29)}</p>
               <label
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={emailId}
               >
-                Email:
+                {w(6)}:
               </label>
               <input
                 id={emailId}
@@ -215,14 +208,14 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 name="email"
                 type="email"
                 autoComplete="email"
-                placeholder="Please enter email"
+                placeholder={w(7)}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
               {error ? <p className="auth-modal__error">{error}</p> : null}
               <button type="submit" className="auth-modal__submit" disabled={submitting}>
-                {submitting ? '…' : 'SEND RESET CODE'}
+                {submitting ? '…' : w(30)}
               </button>
               </fieldset>
             </form>
@@ -232,13 +225,13 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
             <form onSubmit={onSubmitNewPassword} noValidate>
               <fieldset disabled={submitting} className="auth-form-fieldset-reset">
               <p className="auth-modal__text">
-                We sent a code to <strong>{email}</strong>. Enter it below with your new password.
+                {w(34)} <strong>{email}</strong>
               </p>
               <label
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={codeId}
               >
-                Verification code:
+                {w(35)}:
               </label>
               <input
                 id={codeId}
@@ -247,7 +240,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                placeholder="Enter code from email"
+                placeholder={w(36)}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 required
@@ -256,7 +249,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={pwdId}
               >
-                New password:
+                {w(37)}:
               </label>
               <div className="auth-modal__password-wrap">
                 <input
@@ -265,7 +258,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  placeholder="Enter new password"
+                  placeholder={w(38)}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -284,7 +277,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={pwd2Id}
               >
-                Confirm new password:
+                {w(21)}:
               </label>
               <div className="auth-modal__password-wrap">
                 <input
@@ -292,7 +285,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                   className="auth-modal__input auth-modal__input--register auth-modal__input--password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  placeholder="Re-enter new password"
+                  placeholder={w(22)}
                   value={passwordConfirm}
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                   required
@@ -309,7 +302,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
               </div>
               {error ? <p className="auth-modal__error">{error}</p> : null}
               <button type="submit" className="auth-modal__submit" disabled={submitting}>
-                {submitting ? '…' : 'UPDATE PASSWORD'}
+                {submitting ? '…' : w(41)}
               </button>
               </fieldset>
             </form>
@@ -317,9 +310,9 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
 
           {phase === 'success' ? (
             <div>
-              <p className="auth-modal__text">Your password has been updated. You can sign in with your new password.</p>
+              <p className="auth-modal__text">{w(42)}</p>
               <button type="button" className="auth-modal__submit" onClick={onSwitchToLogin}>
-                BACK TO LOGIN
+                {w(25)}
               </button>
             </div>
           ) : null}

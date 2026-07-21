@@ -10,6 +10,7 @@ import {
   stopLobbyWelcomeVoice,
 } from '../../lib/lobbySound'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
+import { useWordData } from '../../wordData/useWordData'
 import './AuthPages.css'
 
 const PASSWORD_MAX_LENGTH = 12
@@ -28,6 +29,7 @@ function buildRequest(params: { email: string; password: string; rePassword: str
 }
 
 export function RegisterPage() {
+  const w = useWordData()
   const { signUp, register, ingestAuthResponse, user, ready } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -52,7 +54,7 @@ export function RegisterPage() {
       return
     }
     if (password !== password2) {
-      setError('Passwords do not match')
+      setError(w(552))
       return
     }
     kickstartLobbyWelcomeVoiceFromUserGesture()
@@ -112,13 +114,13 @@ export function RegisterPage() {
       <div className="auth-layout">
         <MarketingTopBar primary={{ to: '/login', label: 'Log in' }} />
         <div className="page-container auth-page">
-          <h1 className="auth-page__title">Verify your email</h1>
-          <p className="auth-page__lede">Enter the code sent to {pending.email}.</p>
+          <h1 className="auth-page__title">{w(43)}</h1>
+          <p className="auth-page__lede">{w(46)} {pending.email}</p>
           <form className="auth-form auth-form--card" onSubmit={onSubmitCode} noValidate>
             <fieldset disabled={submitting} className="auth-form-fieldset-reset">
               <div className="auth-form__field">
                 <label className="auth-form__label" htmlFor="reg-code">
-                  Verification code
+                  {w(35)}
                 </label>
                 <AuthClearableInputWrap
                   variant="page"
@@ -141,7 +143,7 @@ export function RegisterPage() {
               {error ? <p className="auth-form__error">{error}</p> : null}
               <div className="auth-form__actions">
                 <button type="submit" className="btn-crown-primary auth-form__submit" disabled={submitting}>
-                  {submitting ? 'Submitting…' : 'Complete registration'}
+                  {submitting ? '…' : w(45)}
                 </button>
               </div>
             </fieldset>
@@ -155,13 +157,13 @@ export function RegisterPage() {
     <div className="auth-layout">
       <MarketingTopBar primary={{ to: '/login', label: 'Log in' }} />
       <div className="page-container auth-page">
-        <h1 className="auth-page__title">Register</h1>
-        <p className="auth-page__lede">Create an account to use the lobby and games.</p>
+        <h1 className="auth-page__title">{w(18)}</h1>
+        <p className="auth-page__lede">{w(14)}</p>
         <form className="auth-form auth-form--card" onSubmit={onSubmitFirst} noValidate>
           <fieldset disabled={submitting} className="auth-form-fieldset-reset">
             <div className="auth-form__field">
               <label className="auth-form__label" htmlFor="reg-email">
-                Email
+                {w(6)}
               </label>
               <AuthClearableInputWrap
                 variant="page"
@@ -183,7 +185,7 @@ export function RegisterPage() {
             </div>
             <div className="auth-form__field">
               <label className="auth-form__label" htmlFor="reg-password">
-                Password
+                {w(8)}
               </label>
               <AuthClearableInputWrap
                 variant="page"
@@ -207,7 +209,7 @@ export function RegisterPage() {
             </div>
             <div className="auth-form__field">
               <label className="auth-form__label" htmlFor="reg-password2">
-                Confirm password
+                {w(21)}
               </label>
               <AuthClearableInputWrap
                 variant="page"
@@ -232,13 +234,13 @@ export function RegisterPage() {
             {error ? <p className="auth-form__error">{error}</p> : null}
             <div className="auth-form__actions">
               <button type="submit" className="btn-crown-primary auth-form__submit" disabled={submitting}>
-                {submitting ? 'Submitting…' : 'Register'}
+                {submitting ? '…' : w(23)}
               </button>
             </div>
           </fieldset>
         </form>
         <p className="auth-page__link">
-          Already have an account? <Link to="/login">Log in</Link>
+          {w(24)} <Link to="/login">{w(25)}</Link>
         </p>
       </div>
     </div>
