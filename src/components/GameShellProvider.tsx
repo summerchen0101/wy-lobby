@@ -5,6 +5,7 @@ import {
   agentDebugUrlPreview,
 } from '../debug/agentDebugIngest'
 import {
+  appendGameLaunchQueryParams,
   buildGamePopoutPathQuery,
   shouldOpenInNewWindow,
 } from '../lib/gameShell'
@@ -67,7 +68,7 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
       writeGameShellLobbyReturn(o.lobbyReturn)
     }
     if (shouldOpenInNewWindow(o.openInNewWindow)) {
-      const trimmed = o.url.trim()
+      const trimmed = appendGameLaunchQueryParams(o.url.trim())
       // #region agent log
       agentDebugLog({
         hypothesisId: 'A',
@@ -112,7 +113,7 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
       })
       return
     }
-    const trimmed = o.url.trim()
+    const trimmed = appendGameLaunchQueryParams(o.url.trim())
     // #region agent log
     agentDebugLog({
       hypothesisId: 'A',
