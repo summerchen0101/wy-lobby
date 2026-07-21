@@ -134,6 +134,17 @@ const LOBBY_GRID_LOAD_ROOT_MARGIN = "200px 0px 280px 0px";
 const LOBBY_TRACK_LOAD_ROOT_MARGIN = "0px 240px 0px 0px";
 /** 訪客 HOT 列 LOBBY_GET 完成前之骨架卡數（僅佔位，不顯示假遊戲圖） */
 const GUEST_HOT_SKELETON_COUNT = 4;
+const LOBBY_GAMES_SECTION_ID = "lobby-games-section";
+
+function scrollLobbyGamesSectionIntoView(): void {
+  const el = document.getElementById(LOBBY_GAMES_SECTION_ID);
+  if (!el) return;
+  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({
+    behavior: smooth ? "smooth" : "auto",
+    block: "start",
+  });
+}
 
 type LobbyGameCardRenderer = (
   g: Game,
@@ -446,7 +457,6 @@ export function LandingPage() {
   const [lobbySearchExpanded, setLobbySearchExpanded] = useState(false);
   const lobbySearchInputRef = useRef<HTMLInputElement | null>(null);
   const lobbyGameFilterRef = useRef<HTMLDivElement | null>(null);
-  const lobbyGamesSectionRef = useRef<HTMLElement | null>(null);
   const providerTabBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useLayoutEffect(() => {
@@ -845,30 +855,16 @@ export function LandingPage() {
     [requestRef, openShell, lobbyFilter, providerPlatformFilter],
   );
 
-  const scrollLobbyGamesSectionIntoView = useCallback(() => {
-    const el = lobbyGamesSectionRef.current;
-    if (!el) return;
-    const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)")
-      .matches;
-    el.scrollIntoView({
-      behavior: smooth ? "smooth" : "auto",
-      block: "start",
+  const onSeeAllSubcategory = useCallback((subId: LobbyAllSubsectionId) => {
+    setLobbyFilter(subId);
+    if (isProviderTabId(subId)) {
+      setProviderPlatformFilter(providerPlatformFromTabId(subId));
+    }
+    setProviderMenuOpen(false);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollLobbyGamesSectionIntoView);
     });
   }, []);
-
-  const onSeeAllSubcategory = useCallback(
-    (subId: LobbyAllSubsectionId) => {
-      setLobbyFilter(subId);
-      if (isProviderTabId(subId)) {
-        setProviderPlatformFilter(providerPlatformFromTabId(subId));
-      }
-      setProviderMenuOpen(false);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(scrollLobbyGamesSectionIntoView);
-      });
-    },
-    [scrollLobbyGamesSectionIntoView],
-  );
 
   useEffect(() => {
     if (!lobbySearchExpanded) return;
@@ -1236,7 +1232,7 @@ export function LandingPage() {
         </section>
 
         <section
-          ref={lobbyGamesSectionRef}
+          id={LOBBY_GAMES_SECTION_ID}
           className="lobby-games-section"
           aria-label="Games">
           {user ? (
