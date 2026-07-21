@@ -67,4 +67,17 @@ describe("gameShellLobbyReturn", () => {
       buildGameShellLobbyReturn("hot", "  PRAGMATIC  ").providerPlatform,
     ).toBe("PRAGMATIC");
   });
+
+  it("round-trips provider tab filter id", () => {
+    writeGameShellLobbyReturn({
+      lobbyFilter: "provider:BGAMING",
+      providerPlatform: "BGAMING",
+      scrollY: 88,
+    });
+    expect(consumeGameShellLobbyReturn()).toEqual({
+      lobbyFilter: "provider:BGAMING",
+      providerPlatform: "BGAMING",
+      scrollY: 88,
+    });
+  });
 });

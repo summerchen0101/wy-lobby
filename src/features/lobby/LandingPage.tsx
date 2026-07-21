@@ -39,6 +39,11 @@ import {
 import {
   buildGameShellLobbyReturn,
   consumeGameShellLobbyReturn,
+  isProviderTabId,
+  lobbyTabDomId,
+  providerPlatformFromTabId,
+  providerTabId,
+  type LobbyFilterTab,
 } from "../../lib/gameShellLobbyReturn";
 import { GATEWAY_API_GET_THIRD_PARTY_GAME_INFO } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
@@ -76,26 +81,49 @@ import {
 import { LobbyGamesScroller } from "./LobbyGamesScroller";
 import "./LobbyPage.css";
 
-type LobbyFilterTab = "all" | "hot" | "providers" | "slots";
+const LOBBY_SLOTS_ALL_SUBSECTION_LABEL = "Mega X Widescreen Exclusive";
 
-function lobbyFilterTabs(thirdPartyGamesEnabled: boolean) {
+type LobbyFilterTabEntry = { id: LobbyFilterTab; label: string };
+type LobbyAllSubsectionId = Exclude<LobbyFilterTab, "all" | "providers">;
+
+function lobbyAllSubsectionLabel(
+  subId: LobbyAllSubsectionId,
+  tabs: LobbyFilterTabEntry[],
+): string {
+  if (subId === "slots") return LOBBY_SLOTS_ALL_SUBSECTION_LABEL;
+  return tabs.find((t) => t.id === subId)?.label ?? subId;
+}
+
+function lobbyFilterTabs(
+  thirdPartyGamesEnabled: boolean,
+  providerPlatforms: string[],
+): LobbyFilterTabEntry[] {
   return [
-    { id: "all" as const, label: getWord(510670) },
-    { id: "hot" as const, label: getWord(510672) },
+    { id: "all", label: getWord(510670) },
+    { id: "slots", label: getWord(510673) },
+    { id: "hot", label: getWord(510672) },
     ...(thirdPartyGamesEnabled
-      ? [{ id: "providers" as const, label: "PROVIDERS" }]
+      ? [
+          { id: "providers" as const, label: "PROVIDERS" },
+          ...providerPlatforms.map((p) => ({
+            id: providerTabId(p),
+            label: p,
+          })),
+        ]
       : []),
-    { id: "slots" as const, label: getWord(510673) },
   ];
 }
 
 function lobbyAllSubsections(
   thirdPartyGamesEnabled: boolean,
-): Array<Exclude<LobbyFilterTab, "all">> {
+  providerPlatforms: string[],
+): LobbyAllSubsectionId[] {
   return [
-    "hot",
-    ...(thirdPartyGamesEnabled ? (["providers"] as const) : []),
     "slots",
+    "hot",
+    ...(thirdPartyGamesEnabled
+      ? providerPlatforms.map((p) => providerTabId(p))
+      : []),
   ];
 }
 
@@ -262,11 +290,12 @@ function pickGuestSlotRowGames(
 }
 
 function lobbySortMenuForTab(f: LobbyFilterTab): LobbyGameSortMenu {
+  if (isProviderTabId(f)) return "providers";
   return f;
 }
 
 function gamesForFilter(displayGames: Game[], f: LobbyFilterTab): Game[] {
-  if (f === "all") {
+  if (f === "all" || isProviderTabId(f) || f === "providers") {
     return displayGames;
   }
   if (f === "hot") {
@@ -394,18 +423,6 @@ export function LandingPage() {
 
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const thirdPartyGamesEnabled = isThirdPartyGamesEnabled();
-  const lobbyFilterTabsList = useMemo(
-    () => lobbyFilterTabs(thirdPartyGamesEnabled),
-    [thirdPartyGamesEnabled],
-  );
-  const lobbyFilterOrder = useMemo(
-    () => lobbyFilterTabsList.map((t) => t.id),
-    [lobbyFilterTabsList],
-  );
-  const lobbyAllSubsectionsList = useMemo(
-    () => lobbyAllSubsections(thirdPartyGamesEnabled),
-    [thirdPartyGamesEnabled],
-  );
   const [searchParams, setSearchParams] = useSearchParams();
   const [lobbyFilter, setLobbyFilter] = useState<LobbyFilterTab>("all");
   const [providerPlatformFilter, setProviderPlatformFilter] = useState<
@@ -420,7 +437,9 @@ export function LandingPage() {
 
   useEffect(() => {
     if (!thirdPartyGamesEnabled) {
-      setLobbyFilter((f) => (f === "providers" ? "all" : f));
+      setLobbyFilter((f) =>
+        f === "providers" || isProviderTabId(f) ? "all" : f,
+      );
     }
   }, [thirdPartyGamesEnabled]);
   const [lobbySearch, setLobbySearch] = useState("");
@@ -434,12 +453,19 @@ export function LandingPage() {
     const ret = consumeGameShellLobbyReturn();
     if (!ret) return;
     let filter: LobbyFilterTab = ret.lobbyFilter;
-    if (filter === "providers" && !thirdPartyGamesEnabled) {
+    if (
+      !thirdPartyGamesEnabled &&
+      (filter === "providers" || isProviderTabId(filter))
+    ) {
       filter = "all";
     }
     setLobbyFilter(filter);
-    if (filter === "providers") {
-      setProviderPlatformFilter(ret.providerPlatform);
+    if (filter === "providers" || isProviderTabId(filter)) {
+      setProviderPlatformFilter(
+        isProviderTabId(filter)
+          ? providerPlatformFromTabId(filter)
+          : ret.providerPlatform,
+      );
     }
     const scrollY = ret.scrollY;
     requestAnimationFrame(() => {
@@ -554,6 +580,19 @@ export function LandingPage() {
     return out;
   }, [providerGamesFiltered]);
 
+  const lobbyFilterTabsList = useMemo(
+    () => lobbyFilterTabs(thirdPartyGamesEnabled, providerPlatforms),
+    [thirdPartyGamesEnabled, providerPlatforms],
+  );
+  const lobbyFilterOrder = useMemo(
+    () => lobbyFilterTabsList.map((t) => t.id),
+    [lobbyFilterTabsList],
+  );
+  const lobbyAllSubsectionsList = useMemo(
+    () => lobbyAllSubsections(thirdPartyGamesEnabled, providerPlatforms),
+    [thirdPartyGamesEnabled, providerPlatforms],
+  );
+
   const providerGamesForFilter = useMemo(() => {
     if (!providerPlatformFilter) return providerGamesFiltered;
     return providerGamesFiltered.filter(
@@ -563,12 +602,22 @@ export function LandingPage() {
 
   /** 各分類一份列表（已登入分頁用） */
   const gamesByFilter = useMemo(() => {
-    const out = {} as Record<LobbyFilterTab, Game[]>;
+    const out: Record<string, Game[]> = {};
     const sessionProviders =
       thirdPartyGamesEnabled && user ? providerGamesForFilter : [];
     for (const f of lobbyFilterOrder) {
       if (f === "providers") {
         out[f] = sessionProviders;
+        continue;
+      }
+      if (isProviderTabId(f)) {
+        const platform = providerPlatformFromTabId(f);
+        out[f] =
+          platform === null
+            ? []
+            : providerGamesFiltered.filter(
+                (g) => g.thirdPartyLaunch?.platform === platform,
+              );
         continue;
       }
       const filtered = gamesForFilter(searchFilteredGames, f);
@@ -578,6 +627,7 @@ export function LandingPage() {
   }, [
     searchFilteredGames,
     providerGamesForFilter,
+    providerGamesFiltered,
     user,
     thirdPartyGamesEnabled,
     lobbyFilterOrder,
@@ -589,8 +639,18 @@ export function LandingPage() {
       !providerPlatforms.includes(providerPlatformFilter)
     ) {
       setProviderPlatformFilter(null);
+      setLobbyFilter((f) => (isProviderTabId(f) ? "all" : f));
     }
   }, [providerPlatformFilter, providerPlatforms]);
+
+  useEffect(() => {
+    if (!isProviderTabId(lobbyFilter)) return;
+    const platform = providerPlatformFromTabId(lobbyFilter);
+    if (!platform || !providerPlatforms.includes(platform)) {
+      setLobbyFilter("all");
+      setProviderPlatformFilter(null);
+    }
+  }, [lobbyFilter, providerPlatforms]);
 
   const updateProviderMenuPos = useCallback(() => {
     const el = providerTabBtnRef.current;
@@ -640,6 +700,12 @@ export function LandingPage() {
 
   const selectProviderPlatform = useCallback((platform: string | null) => {
     setLobbyFilter("providers");
+    setProviderPlatformFilter(platform);
+    setProviderMenuOpen(false);
+  }, []);
+
+  const selectProviderTab = useCallback((platform: string) => {
+    setLobbyFilter(providerTabId(platform));
     setProviderPlatformFilter(platform);
     setProviderMenuOpen(false);
   }, []);
@@ -791,8 +857,12 @@ export function LandingPage() {
   }, []);
 
   const onSeeAllSubcategory = useCallback(
-    (subId: Exclude<LobbyFilterTab, "all">) => {
+    (subId: LobbyAllSubsectionId) => {
       setLobbyFilter(subId);
+      if (isProviderTabId(subId)) {
+        setProviderPlatformFilter(providerPlatformFromTabId(subId));
+      }
+      setProviderMenuOpen(false);
       requestAnimationFrame(() => {
         requestAnimationFrame(scrollLobbyGamesSectionIntoView);
       });
@@ -824,7 +894,7 @@ export function LandingPage() {
   useEffect(() => {
     if (!user) return;
     const filterEl = lobbyGameFilterRef.current;
-    const tabEl = document.getElementById(`lobby-tab-${lobbyFilter}`);
+    const tabEl = document.getElementById(lobbyTabDomId(lobbyFilter));
     if (!filterEl || !tabEl) return;
     const filterRect = filterEl.getBoundingClientRect();
     const tabRect = tabEl.getBoundingClientRect();
@@ -1239,22 +1309,26 @@ export function LandingPage() {
                       <div key={id} className="lobby-provider-tab">
                         <button
                           ref={providerTabBtnRef}
-                          id={`lobby-tab-${id}`}
+                          id={lobbyTabDomId(id)}
                           type="button"
                           className={
                             "lobby-game-filter__tab lobby-game-filter__tab--providers" +
-                            (lobbyFilter === id || providerMenuOpen
+                            (lobbyFilter === "providers" || providerMenuOpen
                               ? " is-active"
                               : "") +
                             (providerMenuOpen ? " is-menu-open" : "")
                           }
                           role="tab"
-                          aria-selected={lobbyFilter === id || providerMenuOpen}
+                          aria-selected={
+                            lobbyFilter === "providers" || providerMenuOpen
+                          }
                           aria-controls="lobby-games-panel"
                           aria-haspopup="listbox"
                           aria-expanded={providerMenuOpen}
                           tabIndex={
-                            lobbyFilter === id || providerMenuOpen ? 0 : -1
+                            lobbyFilter === "providers" || providerMenuOpen
+                              ? 0
+                              : -1
                           }
                           onClick={onProvidersTabClick}>
                           <span>{label}</span>
@@ -1265,10 +1339,33 @@ export function LandingPage() {
                           />
                         </button>
                       </div>
+                    ) : isProviderTabId(id) ? (
+                      <button
+                        key={id}
+                        id={lobbyTabDomId(id)}
+                        type="button"
+                        className={
+                          "lobby-game-filter__tab" +
+                          (lobbyFilter === id && !providerMenuOpen
+                            ? " is-active"
+                            : "")
+                        }
+                        role="tab"
+                        aria-selected={lobbyFilter === id && !providerMenuOpen}
+                        aria-controls="lobby-games-panel"
+                        tabIndex={
+                          lobbyFilter === id && !providerMenuOpen ? 0 : -1
+                        }
+                        onClick={() => {
+                          const platform = providerPlatformFromTabId(id);
+                          if (platform) selectProviderTab(platform);
+                        }}>
+                        {label}
+                      </button>
                     ) : (
                       <button
                         key={id}
-                        id={`lobby-tab-${id}`}
+                        id={lobbyTabDomId(id)}
                         type="button"
                         className={
                           "lobby-game-filter__tab" +
@@ -1306,7 +1403,7 @@ export function LandingPage() {
             !loading &&
             !error &&
             displayGames.length > 0 &&
-            gamesByFilter[lobbyFilter].length === 0 ? (
+            gamesByFilter[lobbyFilter]?.length === 0 ? (
               <p className="lobby-games-hint">
                 No games match your search or filter.
               </p>
@@ -1316,19 +1413,20 @@ export function LandingPage() {
                 id="lobby-games-panel"
                 className="lobby-games-panel-host"
                 role="tabpanel"
-                aria-labelledby={`lobby-tab-${lobbyFilter}`}>
+                aria-labelledby={lobbyTabDomId(lobbyFilter)}>
                 <div key={lobbyFilter} className="lobby-games-panel-swap">
                   {lobbyFilter === "all" ? (
                     (() => {
                       let thumbBase = 0;
                       return lobbyAllSubsectionsList.map((subId) => {
-                        const games = gamesByFilter[subId];
+                        const games = gamesByFilter[subId] ?? [];
                         if (games.length === 0) return null;
                         const off = thumbBase;
                         thumbBase += games.length;
-                        const subLabel =
-                          lobbyFilterTabsList.find((t) => t.id === subId)
-                            ?.label ?? subId;
+                        const subLabel = lobbyAllSubsectionLabel(
+                          subId,
+                          lobbyFilterTabsList,
+                        );
                         return (
                           <div key={subId} className="lobby-games-group">
                             <div className="lobby-games-group-head">
@@ -1359,7 +1457,7 @@ export function LandingPage() {
                   ) : (
                     <PaginatedGameGrid
                       key={`${lobbyFilter}\u0000${lobbySearch}`}
-                      games={gamesByFilter[lobbyFilter]}
+                      games={gamesByFilter[lobbyFilter] ?? []}
                       thumbOffset={0}
                       gameCard={gameCard}
                     />
