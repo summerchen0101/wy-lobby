@@ -1,5 +1,11 @@
 import { supportChatUrl } from "./env";
 
+export const ZENDESK_HELP_CENTER_URL =
+  "https://luklokcasino.zendesk.com/hc/en-us";
+
+export const ZENDESK_CONTACT_REQUEST_URL =
+  "https://luklokcasino.zendesk.com/hc/en-us/requests/new";
+
 /** Embeddable `snippet.js` URL for Messaging / Classic Zendesk widgets. */
 export function zendeskSnippetScriptUrl(widgetKey: string): string {
   return `https://static.zdassets.com/ekr/snippet.js?key=${encodeURIComponent(widgetKey)}`;

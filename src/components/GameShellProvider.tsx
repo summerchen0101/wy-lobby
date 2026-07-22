@@ -10,6 +10,7 @@ import {
   shouldOpenInNewWindow,
 } from '../lib/gameShell'
 import { writeGameShellLobbyReturn } from '../lib/gameShellLobbyReturn'
+import { markPendingBeggarEnvelopeCheck } from '../lib/beggarEnvelopeCheck'
 import { GAME_SHELL_POPOUT_CLOSED_TYPE } from '../lib/gameShellMessages'
 import {
   logGameOpenedNewTab,
@@ -49,6 +50,7 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
         (d as { type?: string }).type === GAME_SHELL_POPOUT_CLOSED_TYPE
       ) {
         void refreshLobbyGet()
+        markPendingBeggarEnvelopeCheck()
       }
     }
     window.addEventListener('message', onMessage)
@@ -149,6 +151,7 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
       if (prev && !prev.isPayment) {
         void refreshLobbyGet()
       }
+      markPendingBeggarEnvelopeCheck()
       return null
     })
   }, [refreshLobbyGet])

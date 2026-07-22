@@ -127,7 +127,9 @@ export function SessionHeader() {
                 {activeWallet}
               </span>
             </span>
-            <span className="session-header__pill-amount">{amount}</span>
+            <span className="session-header__pill-amount" data-wallet-balance-target>
+              {amount}
+            </span>
             <Link
               to="/shop"
               className="session-header__pill-plus"

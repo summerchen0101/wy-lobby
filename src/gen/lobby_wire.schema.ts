@@ -67,6 +67,26 @@ export default {
             }
           }
         },
+        "WalletGetRequest": {
+          "fields": {
+            "walletType": {
+              "type": "WalletType",
+              "id": 1
+            }
+          }
+        },
+        "WalletGetResponse": {
+          "fields": {
+            "bag": {
+              "type": "Bag",
+              "id": 1
+            },
+            "subsidyAmount": {
+              "type": "int64",
+              "id": 2
+            }
+          }
+        },
         "SlotJackPotInfo": {
           "fields": {
             "jackpotAmounts": {

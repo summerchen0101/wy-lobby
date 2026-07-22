@@ -44,6 +44,11 @@ interface ImportMetaEnv {
   readonly VITE_DEV_GATEWAY_WS?: string;
   /** 僅 dev：連上後是否自動送 LOBBY_GET；`"false"` 關閉 */
   readonly VITE_DEV_LOBBY_GET?: string;
+  /**
+   * 僅 dev：乞丐紅包 WALLET_GET mock。設為正整數（如 `100000`）時略過真實 API；
+   * 搭配 `window.__ffgtDevBeggarEnvelope` 在 console 測試。
+   */
+  readonly VITE_DEV_WALLET_GET_SUBSIDY?: string;
   /** 寫入 Gateway RequestBasic.clientVer */
   readonly VITE_CLIENT_VER?: string;
   /**

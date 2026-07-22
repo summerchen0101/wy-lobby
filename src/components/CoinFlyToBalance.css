@@ -1,0 +1,14 @@
+.coin-fly-layer {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--modal-z-index) + 20);
+  pointer-events: none;
+}
+
+.coin-fly-layer__coin {
+  position: fixed;
+  width: 2.25rem;
+  height: auto;
+  object-fit: contain;
+  will-change: transform, opacity, left, top;
+}

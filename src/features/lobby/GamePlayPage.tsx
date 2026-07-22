@@ -15,6 +15,7 @@ import {
   logGameOverlayClosed,
   logPerfMemorySnapshot,
 } from "../../lib/gameShellTelemetry";
+import { markPendingBeggarEnvelopeCheck } from "../../lib/beggarEnvelopeCheck";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { usePaymentCallbackListener } from "../payment/usePaymentCallbackListener";
 
@@ -60,6 +61,7 @@ export function GamePlayPage() {
     logGameOverlayClosed();
     logPerfMemorySnapshot("[game-shell][dev] heap on play_route_close");
     void refreshLobbyGet();
+    markPendingBeggarEnvelopeCheck();
     navigate("/", { replace: true });
   }, [k, navigate, refreshLobbyGet]);
 
