@@ -14,6 +14,7 @@ import { profileAvatarFrameUrl } from "../../lib/profileAssets";
 import { GATEWAY_API_WALLET_USE } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
+import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import { encodeWalletUseRequestBytes } from "../../realtime/walletLobbyWire";
 import { getWalletDisplay } from "../../wallet/formatWalletAmount";
 import type { ActiveWallet } from "../../wallet/walletContext";
@@ -62,8 +63,11 @@ export function SessionHeader() {
       });
       if (!isGatewaySuccessCode(String(r.code ?? ""))) {
         throw new Error(
-          r.errMessage?.trim() ||
-            `Wallet switch failed (${String(r.code ?? "")})`,
+          translateGatewayError(
+            String(r.code ?? ''),
+            r.errMessage,
+            `Wallet switch failed (${String(r.code ?? '')})`,
+          ),
         );
       }
       setActiveWallet(next);

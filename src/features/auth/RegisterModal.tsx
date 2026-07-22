@@ -13,6 +13,7 @@ import { useAuthModals } from './authModalsContext'
 import type { SignUpRequest } from '../../lib/api/types'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
 import { AuthSocialButtons } from './AuthSocialButtons'
+import { useWordData } from '../../wordData/useWordData'
 import './AuthModals.css'
 
 const PASSWORD_MAX_LENGTH = 12
@@ -72,6 +73,7 @@ function buildSignUpRequest(params: {
 }
 
 export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
+  const w = useWordData()
   const { signUp, ingestAuthResponse } = useAuth()
   const [searchParams] = useSearchParams()
   const nav = useNavigate()
@@ -123,7 +125,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
       return
     }
     if (password !== passwordConfirm) {
-      setError('Passwords do not match')
+      setError(w(552))
       return
     }
     const body = buildSignUpRequest({
@@ -182,7 +184,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             ×
           </button>
           <h2 id="register-modal-title" className="app-modal__title">
-            CREATE ACCOUNT
+            {w(18)}
           </h2>
         </div>
         <hr className="app-modal__rule" />
@@ -195,13 +197,13 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
           {oauthError ? <p className="auth-modal__error">{oauthError}</p> : null}
 
           <div className="auth-modal__divider" aria-hidden>
-            OR
+            {w(20)}
           </div>
 
           <form onSubmit={onSubmit} noValidate>
             <fieldset disabled={submitting} className="auth-form-fieldset-reset">
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={emailId}>
-              Email:
+              {w(6)}:
             </label>
             <AuthClearableInputWrap
               variant="modal"
@@ -214,7 +216,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 className="auth-modal__input auth-modal__input--register"
                 type="email"
                 autoComplete="email"
-                placeholder="Enter email"
+                placeholder={w(7)}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -222,7 +224,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             </AuthClearableInputWrap>
 
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={passwordId}>
-              Password:
+              {w(8)}:
             </label>
             <AuthClearableInputWrap
               variant="modal"
@@ -247,7 +249,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 className="auth-modal__input auth-modal__input--register auth-modal__input--password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
-                placeholder="Please enter password"
+                placeholder={w(9)}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -257,7 +259,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             </AuthClearableInputWrap>
 
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={password2Id}>
-              Confirm password:
+              {w(21)}:
             </label>
             <AuthClearableInputWrap
               variant="modal"
@@ -271,7 +273,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 className="auth-modal__input auth-modal__input--register auth-modal__input--password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
-                placeholder="Re-enter password"
+                placeholder={w(22)}
                 value={passwordConfirm}
                 onChange={(e) => setPasswordConfirm(e.target.value)}
                 required
@@ -281,7 +283,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             </AuthClearableInputWrap>
 
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={referralId}>
-              Referral Code (optional):
+              {w(26)}
             </label>
             <AuthClearableInputWrap
               variant="modal"
@@ -293,7 +295,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 id={referralId}
                 className="auth-modal__input auth-modal__input--register"
                 autoComplete="off"
-                placeholder="Referral Code"
+                placeholder={w(27)}
                 value={referral}
                 onChange={(e) => setReferral(e.target.value)}
               />
@@ -301,14 +303,14 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
 
             {error ? <p className="auth-modal__error">{error}</p> : null}
             <button type="submit" className="auth-modal__submit" disabled={submitting}>
-              {submitting ? '…' : 'REGISTER'}
+              {submitting ? '…' : w(23)}
             </button>
             </fieldset>
           </form>
           <p className="auth-modal__footer">
-            Already have an account?{' '}
+            {w(24)}{' '}
             <button type="button" className="auth-modal__footer-link" onClick={onSwitchLogin}>
-              Login
+              {w(25)}
             </button>
           </p>
         </div>

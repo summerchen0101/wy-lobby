@@ -1,5 +1,6 @@
 import * as protobuf from "protobufjs/light.js";
 import schema from "../gen/gateway_wire.schema.js";
+import { getWord, getWordPlain } from "../wordData/getWord";
 
 const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
 
@@ -113,21 +114,21 @@ export function messageForUserKickReason(
   reason: string | number | undefined,
 ): string {
   if (reason === undefined) {
-    return "Please log in again.";
+    return getWord(401004) || "Please log in again.";
   }
 
   const n = userKickReasonOrdinal(reason);
 
   switch (n) {
     case 0:
-      return "Your session ended. Please log in again.";
+      return getWordPlain(400023) || getWord(401004) || "Please log in again.";
     case 1:
-      return "This account was signed in on another device. Please log in again.";
+      return getWord(1019) || "Account repeated login";
     case 2:
-      return "The game is closed. Please log in again later.";
+      return getWord(400022) || "The game is closed.";
     case 3:
-      return "This account has been deleted.";
+      return getWord(1623) || "This account has been deleted.";
     default:
-      return "Please log in again.";
+      return getWord(1018) || getWord(401004) || "Please log in again.";
   }
 }

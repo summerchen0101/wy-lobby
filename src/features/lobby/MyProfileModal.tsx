@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/useAuth";
 import { profileAvatarFrameUrl } from "../../lib/profileAssets";
 import { getProfileAvatarById } from "./profileAvatars";
 import { resolveProfileVipTitle } from "./profileVipTitle";
+import { useWordData } from "../../wordData/useWordData";
 import "./MyProfileModal.css";
 import "../../components/profile/ProfileAvatarFrame.css";
 
@@ -32,6 +33,7 @@ export function MyProfileModal({
   phone,
   profileSyncPending = false,
 }: Props) {
+  const w = useWordData();
   const { user } = useAuth();
   const titleId = useId();
   const [avatarImgFailed, setAvatarImgFailed] = useState(false);
@@ -87,7 +89,7 @@ export function MyProfileModal({
       >
         <div className="app-modal__header">
           <h2 id={titleId} className="app-modal__title">
-            MY PROFILE
+            {w(510753)}
           </h2>
           <button
             type="button"
@@ -150,7 +152,7 @@ export function MyProfileModal({
           </div>
           <div className="my-profile-modal__fields">
             <div className="my-profile-modal__field">
-              <span className="my-profile-modal__field-label">Email:</span>
+              <span className="my-profile-modal__field-label">{w(510010)}:</span>
               <span
                 className={
                   "my-profile-modal__field-value" +
@@ -162,7 +164,7 @@ export function MyProfileModal({
               </span>
             </div>
             <div className="my-profile-modal__field">
-              <span className="my-profile-modal__field-label">Phone:</span>
+              <span className="my-profile-modal__field-label">{w(510011)}</span>
               <span
                 className={
                   "my-profile-modal__field-value" +

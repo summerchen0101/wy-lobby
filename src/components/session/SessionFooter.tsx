@@ -6,16 +6,17 @@ import {
   type FooterIconId,
 } from '../../lib/sessionChromeAssets'
 import { useWallet } from '../../wallet/walletContext'
+import { getWord } from '../../wordData/getWord'
 import './SessionChrome.css'
 
 type Item = { to: string; label: string; end?: boolean; icon: FooterIconId }
 
 const footerItems: Item[] = [
-  { to: '/shop', label: 'SHOP', icon: 'shop' },
-  { to: '/redeem', label: 'REDEEM', icon: 'redeem' },
+  { to: '/shop', label: getWord(100), icon: 'shop' },
+  { to: '/redeem', label: getWord(136), icon: 'redeem' },
   { to: '/', label: 'LOBBY', end: true, icon: 'lobby' },
   { to: '/promo', label: 'PROMO', icon: 'promo' },
-  { to: '/profile', label: 'PROFILE', icon: 'profile' },
+  { to: '/profile', label: getWord(510750), icon: 'profile' },
 ]
 
 export function SessionFooter() {

@@ -1,6 +1,6 @@
 import type { VipDataRow } from "./vipData";
 import { VIP_DATA, VIP_DATA_BY_VIPLV } from "./vipData";
-import { VIP_BENEFIT_WORD_DATA } from "./vipBenefitWordData";
+import { getWord } from "../../wordData/getWord";
 import { resolveProfileVipTitle } from "./profileVipTitle";
 
 export const VIP_LEVEL_COUNT = VIP_DATA.length;
@@ -25,7 +25,7 @@ export function vipRowForLevel(vipLevel: number): VipDataRow | undefined {
 export function resolveVipBenefits(row: VipDataRow | undefined): string[] {
   if (!row) return [];
   return parseVipWordDataIds(row.WordDataIDs)
-    .map((id) => VIP_BENEFIT_WORD_DATA[id])
+    .map((id) => getWord(id))
     .filter((text): text is string => Boolean(text?.trim()));
 }
 

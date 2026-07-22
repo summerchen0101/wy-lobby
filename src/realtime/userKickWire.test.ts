@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as protobuf from "protobufjs/light.js";
 import schema from "../gen/gateway_wire.schema.js";
+import { getWord, getWordPlain } from "../wordData/getWord";
 import {
   decodeUserKickBeforeReasonBytes,
   messageForUserKickReason,
@@ -39,20 +40,18 @@ describe("decodeUserKickBeforeReasonBytes", () => {
 
 describe("messageForUserKickReason", () => {
   it("依數值與列舉名稱對應文案", () => {
-    expect(messageForUserKickReason(0)).toContain("session ended");
-    expect(messageForUserKickReason(1)).toContain("another device");
-    expect(messageForUserKickReason(2)).toContain("game is closed");
-    expect(messageForUserKickReason(3)).toContain("deleted");
-    expect(messageForUserKickReason("DuplicateConn")).toContain("another device");
-    expect(messageForUserKickReason("GameIsClose")).toContain("game is closed");
-    expect(messageForUserKickReason("AccountStatusDeleted")).toContain(
-      "deleted",
-    );
-    expect(messageForUserKickReason("Default")).toContain("session ended");
+    expect(messageForUserKickReason(0)).toBe(getWordPlain(400023));
+    expect(messageForUserKickReason(1)).toBe(getWord(1019));
+    expect(messageForUserKickReason(2)).toBe(getWord(400022));
+    expect(messageForUserKickReason(3)).toBe(getWord(1623));
+    expect(messageForUserKickReason("DuplicateConn")).toBe(getWord(1019));
+    expect(messageForUserKickReason("GameIsClose")).toBe(getWord(400022));
+    expect(messageForUserKickReason("AccountStatusDeleted")).toBe(getWord(1623));
+    expect(messageForUserKickReason("Default")).toBe(getWordPlain(400023));
   });
 
   it("undefined 為通用登入提示", () => {
-    expect(messageForUserKickReason(undefined)).toBe("Please log in again.");
+    expect(messageForUserKickReason(undefined)).toBe(getWord(401004));
   });
 });
 

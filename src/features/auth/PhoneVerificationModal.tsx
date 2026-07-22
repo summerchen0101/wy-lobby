@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
 import type { RegisterBody } from '../../lib/api/types'
+import { useWordData } from '../../wordData/useWordData'
 import './AuthModals.css'
 import './PhoneVerificationModal.css'
 
@@ -20,6 +21,7 @@ type Props = {
 }
 
 export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBody }: Props) {
+  const w = useWordData()
   const { register } = useAuth()
   const navigate = useNavigate()
   const formId = useId()
@@ -63,7 +65,7 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
     setError(null)
     const code = otp.replace(/\s/g, '')
     if (code.length < OTP_MIN_LEN || code.length > OTP_MAX_LEN) {
-      setError(`Enter a code between ${OTP_MIN_LEN} and ${OTP_MAX_LEN} digits`)
+      setError(w(106))
       return
     }
     setSubmitting(true)
@@ -101,13 +103,13 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
             ×
           </button>
           <h2 id="email-verify-title" className="app-modal__title">
-            Verify your email
+            {w(43)}
           </h2>
         </div>
         <hr className="app-modal__rule" />
         <div className="app-modal__body phone-verify-modal__body">
           <p className="auth-modal__text phone-verify-modal__sent">
-            We sent a verification code. Reference (email on file):{' '}
+            {w(46)}{' '}
             <span className="phone-verify-modal__email">{displayEmail}</span>
           </p>
 
@@ -115,7 +117,7 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
             <fieldset disabled={submitting} className="auth-form-fieldset-reset">
             <div className="phone-verify-modal__row">
               <label className="phone-verify-modal__otp-label" htmlFor={otpId}>
-                Verification code
+                {w(35)}
               </label>
               <div className="phone-verify-modal__input-wrap">
                 <input
@@ -124,7 +126,7 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  placeholder="Enter OTP"
+                  placeholder={w(36)}
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, OTP_MAX_LEN))}
                 />
@@ -134,14 +136,14 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
                   disabled={resendLeft > 0}
                   onClick={onResend}
                 >
-                  {resendLeft > 0 ? `Resend (${resendLeft} seconds)` : 'Resend'}
+                  {resendLeft > 0 ? w(40, resendLeft) : w(39)}
                 </button>
               </div>
             </div>
 
             {error ? <p className="auth-modal__error">{error}</p> : null}
             <button type="submit" className="auth-modal__submit phone-verify-modal__submit" disabled={submitting}>
-              {submitting ? '…' : 'Sign Up'}
+              {submitting ? '…' : w(45)}
             </button>
             </fieldset>
           </form>

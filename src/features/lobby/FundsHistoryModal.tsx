@@ -13,6 +13,8 @@ import {
   type FundsHistoryWireRow,
 } from "../../realtime/fundsHistoryLobbyWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
+import { translateGatewayError } from "../../i18n/apiErrorMessage";
+import { useWordData } from "../../wordData/useWordData";
 import "./FundsHistoryModal.css";
 
 type Props = {
@@ -21,6 +23,7 @@ type Props = {
 };
 
 export function FundsHistoryModal({ open, onClose }: Props) {
+  const w = useWordData();
   const titleId = useId();
   const { requestRef, gatewayRequestReady } = useGatewayLobby();
   const [rows, setRows] = useState<FundsHistoryWireRow[]>([]);
@@ -56,7 +59,7 @@ export function FundsHistoryModal({ open, onClose }: Props) {
       });
       const code = String(r.code ?? "");
       if (!isGatewaySuccessCode(code)) {
-        setError(r.errMessage?.trim() || `Request failed (${code})`);
+        setError(translateGatewayError(code, r.errMessage));
         setRows([]);
         return;
       }
@@ -108,7 +111,8 @@ export function FundsHistoryModal({ open, onClose }: Props) {
             panelClassName="funds-history-modal__info-popover-wrap"
             content={
               <p className="funds-history-modal__info-popover-text">
-                Some Information about Funds History.
+                {w(510800)}
+                <a href="#support">{w(510801)}</a>
               </p>
             }>
             {(p, triggerRef) => (
@@ -122,7 +126,7 @@ export function FundsHistoryModal({ open, onClose }: Props) {
             )}
           </InfoPopover>
           <h2 id={titleId} className="app-modal__title">
-            FUNDS HISTORY
+            {w(510755)}
           </h2>
           <button
             type="button"
@@ -139,7 +143,7 @@ export function FundsHistoryModal({ open, onClose }: Props) {
               {error}
             </p>
           ) : loading ? (
-            <p className="funds-history-modal__empty">Loading history…</p>
+            <p className="funds-history-modal__empty">{w(2297)}</p>
           ) : rows.length === 0 ? (
             <p className="funds-history-modal__empty">No transactions yet.</p>
           ) : (
@@ -175,7 +179,7 @@ export function FundsHistoryModal({ open, onClose }: Props) {
                       ) : null}
                       {scBonus ? (
                         <>
-                          <span className="funds-history-modal__free">+FREE</span>
+                          <span className="funds-history-modal__free">{w(105)}</span>
                           <span className="funds-history-modal__coin-group">
                             <img
                               className="funds-history-modal__coin"

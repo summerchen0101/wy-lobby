@@ -35,6 +35,9 @@ import {
 } from "../../lib/socure/socureDocv";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { splitPhoneForBindingForm } from "../shop/splitPhoneForBindingForm";
+import { getWord } from "../../wordData/getWord";
+import { useWordData } from "../../wordData/useWordData";
+import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import "../shop/ShopCheckout.css";
 import "./RedeemProtectAccountView.css";
 
@@ -86,6 +89,7 @@ export function RedeemProtectAccountView({
   onBound,
   bindingPrefill,
 }: Props) {
+  const w = useWordData();
   const { show } = useAlert();
   const { user, mergeUser } = useAuth();
   const { requestRef, gatewayRequestReady, refreshLobbyGet } = useGatewayLobby();
@@ -204,7 +208,7 @@ export function RedeemProtectAccountView({
       const binding = await fetchBindingState();
       if (binding.hasFrontImage) {
         onBound();
-        show("Verification complete. You can continue your redemption.", {
+        show(w(1209), {
           variant: "success",
         });
         return;
@@ -217,7 +221,7 @@ export function RedeemProtectAccountView({
       setBusy(false);
       setDocvLaunching(false);
     }
-  }, [refreshLobbyGet, fetchBindingState, onBound, show, onClose]);
+  }, [refreshLobbyGet, fetchBindingState, onBound, show, onClose, w]);
 
   const beginDocvFlow = useCallback(
     (token: string, fullAddress: string, boundPhone: string) => {
@@ -240,16 +244,14 @@ export function RedeemProtectAccountView({
       if (decoded.needSMSAnswer) {
         setStep("sms");
         if (answer.trim()) {
-          setError("Invalid or expired verification code.");
+          setError(getWord(1222));
         }
         setBusy(false);
         return;
       }
       const token = decoded.docvTransactionToken;
       if (!token) {
-        setError(
-          "Verification failed. Please check your details and try again.",
-        );
+        setError(getWord(1222));
         setBusy(false);
         return;
       }
@@ -284,7 +286,7 @@ export function RedeemProtectAccountView({
         if (cancelled) return;
         setDocvLaunching(false);
         setBusy(false);
-        setError("Document verification failed. Please try again.");
+        setError(getWord(1222));
       },
     }).then((result) => {
       if (cancelled) return;
@@ -418,7 +420,7 @@ export function RedeemProtectAccountView({
         });
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
-          setError(r.errMessage?.trim() || `Binding failed (${code})`);
+          setError(translateGatewayError(code, r.errMessage, `Binding failed (${code})`));
           setBusy(false);
           return;
         }
@@ -473,7 +475,7 @@ export function RedeemProtectAccountView({
     e.preventDefault();
     const code = smsAnswer.trim();
     if (!code) {
-      setError("Enter the verification code.");
+      setError(getWord(106));
       return;
     }
     void submitBinding(code);
@@ -511,14 +513,14 @@ export function RedeemProtectAccountView({
           className={pi}
           name="addressLine1"
           autoComplete="address-line1"
-          placeholder="Address line 1*"
+          placeholder={w(510457)}
           value={address1}
           onChange={(e) => setAddress1(e.target.value)}
           disabled={busy}
         />
       </label>
       <p className="redeem-protect__addr-hint">
-        Please do not enter a PO box address. Use a valid address.
+        {w(510458)}
       </p>
       <label className="shop-checkout__field" htmlFor={`${idPrefix}-addr2`}>
         <input
@@ -526,7 +528,7 @@ export function RedeemProtectAccountView({
           className={pi}
           name="addressLine2"
           autoComplete="address-line2"
-          placeholder="Address line 2 (optional)"
+          placeholder={w(510459)}
           value={address2}
           onChange={(e) => setAddress2(e.target.value)}
           disabled={busy}
@@ -536,7 +538,7 @@ export function RedeemProtectAccountView({
         <span
           className="shop-checkout__field-heading"
           id={`${idPrefix}-country-legend`}>
-          Country:
+          {w(510460)}
         </span>
         <div
           className="redeem-protect__row2"
@@ -552,7 +554,7 @@ export function RedeemProtectAccountView({
             disabled={busy}>
             {ADDRESS_COUNTRIES.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {w(510461)}
               </option>
             ))}
           </select>
@@ -561,7 +563,7 @@ export function RedeemProtectAccountView({
             className={pi}
             name="city"
             autoComplete="address-level2"
-            placeholder="City*"
+            placeholder={w(510462)}
             value={city}
             onChange={(e) => setCity(e.target.value)}
             disabled={busy}
@@ -572,7 +574,7 @@ export function RedeemProtectAccountView({
         <span
           className="shop-checkout__field-heading"
           id={`${idPrefix}-state-legend`}>
-          State:
+          {w(510463)}
         </span>
         <div
           className="redeem-protect__row2"
@@ -586,7 +588,7 @@ export function RedeemProtectAccountView({
             value={state}
             onChange={(e) => setState(e.target.value)}
             disabled={busy}>
-            <option value="">Select state</option>
+            <option value="">{w(510464)}</option>
             {US_STATE_CODES.map((code) => (
               <option key={code} value={code}>
                 {code}
@@ -598,7 +600,7 @@ export function RedeemProtectAccountView({
             className={pi}
             name="zip"
             autoComplete="postal-code"
-            placeholder="Zip*"
+            placeholder={w(510465)}
             value={zip}
             onChange={(e) => setZip(e.target.value)}
             disabled={busy}
@@ -615,8 +617,7 @@ export function RedeemProtectAccountView({
       noValidate>
       <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
         <p className="shop-checkout__protect-lead">
-          Let us help you redeem your winnings faster. Please ensure your
-          details are correct.
+          {w(510454)}
         </p>
         <div className="shop-checkout__fields shop-checkout__fields--protect">
           {mode === "full" ? (
@@ -628,7 +629,7 @@ export function RedeemProtectAccountView({
                     className={pi}
                     name="firstName"
                     autoComplete="given-name"
-                    placeholder="FirstName"
+                    placeholder={w(510455)}
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                   />
@@ -650,7 +651,7 @@ export function RedeemProtectAccountView({
                     className={pi}
                     name="lastName"
                     autoComplete="family-name"
-                    placeholder="LastName"
+                    placeholder={w(510456)}
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                   />
@@ -671,7 +672,7 @@ export function RedeemProtectAccountView({
                 <span
                   className="shop-checkout__field-heading"
                   id={`${idPrefix}-phone-legend`}>
-                  Phone :
+                  {w(510011)}
                 </span>
                 <div
                   className="shop-checkout__row-phone"
@@ -687,7 +688,7 @@ export function RedeemProtectAccountView({
                     onChange={(e) => setPhoneCountry(e.target.value)}>
                     {PHONE_COUNTRY_CODES.map((c) => (
                       <option key={c} value={c}>
-                        +{c}
+                        {c === "1" ? w(10507) : `+${c}`}
                       </option>
                     ))}
                   </select>
@@ -698,7 +699,7 @@ export function RedeemProtectAccountView({
                     type="tel"
                     inputMode="tel"
                     autoComplete="tel-national"
-                    placeholder="PhoneNumber"
+                    placeholder={w(115)}
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                   />
@@ -708,7 +709,7 @@ export function RedeemProtectAccountView({
                 <span
                   className="shop-checkout__field-heading"
                   id={`${idPrefix}-dob-legend`}>
-                  Date of birth
+                  {w(110)}
                 </span>
                 <div
                   className="shop-checkout__row3"
@@ -721,7 +722,7 @@ export function RedeemProtectAccountView({
                     aria-label="Month"
                     value={dobMonth}
                     onChange={(e) => setDobMonth(e.target.value)}>
-                    <option value="">Month</option>
+                    <option value="">{w(111)}</option>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                       <option key={m} value={String(m).padStart(2, "0")}>
                         {m}
@@ -735,7 +736,7 @@ export function RedeemProtectAccountView({
                     aria-label="Day"
                     value={dobDay}
                     onChange={(e) => setDobDay(e.target.value)}>
-                    <option value="">Day</option>
+                    <option value="">{w(112)}</option>
                     {dobDays.map((d) => (
                       <option key={d} value={String(d).padStart(2, "0")}>
                         {d}
@@ -749,7 +750,7 @@ export function RedeemProtectAccountView({
                     aria-label="Year"
                     value={dobYear}
                     onChange={(e) => setDobYear(e.target.value)}>
-                    <option value="">Year</option>
+                    <option value="">{w(113)}</option>
                     {dobYears.map((y) => (
                       <option key={y} value={y}>
                         {y}
@@ -768,14 +769,13 @@ export function RedeemProtectAccountView({
           </p>
         ) : null}
         <p className="shop-checkout__footer-hint">
-          Please confirm your details. These details should match your official
-          ID document.
+          {w(510466)}
         </p>
         <button
           type="submit"
           className="shop-checkout__submit shop-checkout__submit--blue"
           disabled={busy}>
-          {busy ? "Please wait…" : "Next"}
+          {busy ? "Please wait…" : w(510467)}
         </button>
       </fieldset>
     </form>
@@ -788,8 +788,7 @@ export function RedeemProtectAccountView({
       noValidate>
       <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
         <p className="shop-checkout__protect-lead">
-          Let us help you redeem your winnings faster. Please ensure your
-          details are correct.
+          {w(510454)}
         </p>
         <div className="shop-checkout__fields shop-checkout__fields--protect">
           <div className="redeem-protect__row2">
@@ -826,7 +825,7 @@ export function RedeemProtectAccountView({
           type="submit"
           className="shop-checkout__submit shop-checkout__submit--blue"
           disabled={busy}>
-          {busy ? "Please wait…" : "Submit"}
+          {busy ? "Please wait…" : w(510467)}
         </button>
       </fieldset>
     </form>
@@ -839,7 +838,7 @@ export function RedeemProtectAccountView({
       noValidate>
       <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
         <p className="shop-checkout__protect-lead">
-          Enter the verification code sent to your phone.
+          {w(118)}
         </p>
         <div className="shop-checkout__fields shop-checkout__fields--protect">
           <label className="shop-checkout__field" htmlFor={`${idPrefix}-sms`}>
@@ -868,7 +867,7 @@ export function RedeemProtectAccountView({
           type="submit"
           className="shop-checkout__submit shop-checkout__submit--blue shop-checkout__submit--protect-sms"
           disabled={busy}>
-          {busy ? "Please wait…" : "Submit"}
+          {busy ? "Please wait…" : w(510467)}
         </button>
       </fieldset>
     </form>
@@ -912,7 +911,7 @@ export function RedeemProtectAccountView({
         <h2
           className="app-modal__title--abs-center shop-checkout__title"
           id="redeem-protect-dialog-title">
-          PROTECT YOUR ACCOUNT
+          {w(510453)}
         </h2>
         {step === "sms" || step === "docv" ? (
           <span className="app-modal__head-spacer" aria-hidden />

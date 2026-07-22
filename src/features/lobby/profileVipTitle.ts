@@ -1,5 +1,5 @@
 import { VIP_DATA_BY_VIPLV } from "./vipData";
-import { VIP_TITLE_WORD_DATA } from "./vipWordData";
+import { getWord } from "../../wordData/getWord";
 
 const FALLBACK_TITLE = "—";
 
@@ -13,5 +13,6 @@ export function resolveProfileVipTitle(vipLevel?: number): string {
     return FALLBACK_TITLE;
   }
 
-  return VIP_TITLE_WORD_DATA[row.Name] ?? FALLBACK_TITLE;
+  const title = getWord(row.Name);
+  return title || FALLBACK_TITLE;
 }

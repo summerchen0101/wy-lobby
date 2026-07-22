@@ -5,6 +5,7 @@ import {
   CLIENT_VERSION_REQUIRED_MESSAGE,
   presentClientVersionError,
 } from "../lib/clientVersionUi";
+import { getWord } from "../wordData/getWord";
 import "./ForceUpdateGate.css";
 
 /**
@@ -36,7 +37,7 @@ export function ForceUpdateGate() {
     >
       <div className="force-update-overlay__panel">
         <h2 id="force-update-title" className="force-update-overlay__title">
-          Update required
+          {getWord(2302)}
         </h2>
         <p id="force-update-desc" className="force-update-overlay__message">
           {message}
@@ -48,7 +49,7 @@ export function ForceUpdateGate() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            Open update page
+            {getWord(2303)}
           </a>
         ) : (
           <button

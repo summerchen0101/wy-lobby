@@ -27,10 +27,12 @@ import {
   type RedeemBindingMode,
 } from "./RedeemBindingModal";
 import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
+import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import {
   resolveMinRedeemDisplay,
   resolveMinRedeemRaw,
 } from "./redeemMinAmount";
+import { useWordData } from "../../wordData/useWordData";
 import "./RedeemPage.css";
 import "./SessionPageDecor.css";
 
@@ -76,6 +78,7 @@ function ScInlineIcon() {
 export const MIN_REDEEM_SC = MIN_REDEEM_SC_DISPLAY;
 
 export function RedeemPage() {
+  const w = useWordData();
   const { show } = useAlert();
   const { user } = useAuth();
   const {
@@ -147,7 +150,7 @@ export function RedeemPage() {
         });
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
-          setOrdersError(r.errMessage?.trim() || `Request failed (${code})`);
+          setOrdersError(translateGatewayError(code, r.errMessage));
           setOrdersRows([]);
           setOrdersTotal(0);
           return;
@@ -218,7 +221,7 @@ export function RedeemPage() {
   return (
     <section className="redeem-page page-container session-page session-page--pattern">
       <div className="redeem-page__hero">
-        <h1 className="redeem-page__title">REDEEM</h1>
+        <h1 className="redeem-page__title">{w(136)}</h1>
         <RedeemNotifyPill messages={pillMessages} />
         <p className="redeem-page__sub">SWEEPSTAKES PRIZE REDEMPTION</p>
       </div>
@@ -228,7 +231,7 @@ export function RedeemPage() {
           <Link to="/" className="redeem-page__back" aria-label="Back">
             ‹
           </Link>
-          <h2 className="redeem-page__row-title">Redeemable Balance:</h2>
+          <h2 className="redeem-page__row-title">{w(510469)}</h2>
           <InfoPopover
             align="end"
             panelClassName="redeem-page__info-popover"
@@ -278,11 +281,11 @@ export function RedeemPage() {
         {cannotRedeem && initialOrdersFetched && !ordersLoading ? (
           <div className="redeem-page__insufficient-inline">
             <div className="redeem-page__insufficient-panel">
-              <h3 className="redeem-page__insufficient-title">Insufficient SC</h3>
+              <h3 className="redeem-page__insufficient-title">{w(510470)}</h3>
               <p className="redeem-page__insufficient-text">
-                Win a minimum of {minRedeemDisplay} SC to redeem.
+                {w(510471, minRedeemDisplay)}
               </p>
-              <p className="redeem-page__insufficient-accent">Keep playing!</p>
+              <p className="redeem-page__insufficient-accent">{w(510472)}</p>
             </div>
             {!hasOrderHistory ? (
               <Link to="/" className="redeem-page__to-lobby">
@@ -406,7 +409,7 @@ export function RedeemPage() {
               }
               setMethodModalOpen(true);
             }}>
-            NEW REDEEM
+            {w(510485)}
           </button>
         </div>
       ) : null}

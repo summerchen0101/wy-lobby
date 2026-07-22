@@ -1,0 +1,57 @@
+.delete-account-modal__text {
+  margin: 0 0 1rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.delete-account-modal__label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.delete-account-modal__input {
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #fff 18%, transparent);
+  background: color-mix(in srgb, #000 35%, transparent);
+  color: inherit;
+}
+
+.delete-account-modal__warn {
+  margin: 0 0 1rem;
+  white-space: pre-wrap;
+  opacity: 0.9;
+}
+
+.delete-account-modal__actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.delete-account-modal__cancel,
+.delete-account-modal__submit {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-account-modal__cancel {
+  background: color-mix(in srgb, #fff 12%, transparent);
+  color: inherit;
+}
+
+.delete-account-modal__submit {
+  background: var(--crown-locale-green, #5878ff);
+  color: #fff;
+}
+
+.delete-account-modal__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

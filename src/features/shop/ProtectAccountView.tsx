@@ -7,6 +7,8 @@ import {
   type FormEvent,
 } from "react";
 import { IoChevronBack } from "react-icons/io5";
+import { getWord } from "../../wordData/getWord";
+import { useWordData } from "../../wordData/useWordData";
 import { splitPhoneForBindingForm } from "./splitPhoneForBindingForm";
 import type { ShopBindingFormPayload, ShopBindingPrefill } from "./types";
 
@@ -26,14 +28,14 @@ type FieldKey =
   | "dob"
   | "sms";
 
-const FIELD_LABELS: Record<FieldKey, string> = {
-  firstName: "First name",
-  lastName: "Last name",
-  email: "Email",
-  phoneCountry: "Country code",
-  phoneNumber: "Phone number",
-  dob: "Date of birth",
-  sms: "SMS code",
+const FIELD_LABEL_IDS: Record<FieldKey, number> = {
+  firstName: 510455,
+  lastName: 510456,
+  email: 510010,
+  phoneCountry: 114,
+  phoneNumber: 114,
+  dob: 110,
+  sms: 106,
 };
 
 const SCROLL_ORDER: FieldKey[] = [
@@ -48,9 +50,9 @@ const SCROLL_ORDER: FieldKey[] = [
 
 function formatMissingLabels(keys: Set<FieldKey>): string {
   const labels = SCROLL_ORDER.filter((k) => keys.has(k)).map(
-    (k) => FIELD_LABELS[k],
+    (k) => getWord(FIELD_LABEL_IDS[k]),
   );
-  if (labels.length === 0) return "Please complete the highlighted fields.";
+  if (labels.length === 0) return getWord(106);
   return `Missing: ${labels.join(", ")}`;
 }
 
@@ -79,6 +81,7 @@ export function ProtectAccountView({
   onBackToProtectForm,
   onSubmit,
 }: Props) {
+  const w = useWordData();
   const idPrefix = useId();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -215,7 +218,7 @@ export function ProtectAccountView({
       if (!code) {
         scrollInvalidIntoViewAfterSubmit.current = true;
         setInvalidFields(new Set<FieldKey>(["sms"]));
-        setLocalError("Enter the verification code.");
+        setLocalError(getWord(106));
         return;
       }
       setInvalidFields(new Set());
@@ -253,7 +256,7 @@ export function ProtectAccountView({
         <h2
           className="app-modal__title--abs-center shop-checkout__title"
           id="shop-checkout-dialog-title">
-          PROTECT YOUR ACCOUNT
+          {w(510453)}
         </h2>
         {protectNeedSms ? (
           <span className="app-modal__head-spacer" aria-hidden />
@@ -276,7 +279,7 @@ export function ProtectAccountView({
         {protectNeedSms ? (
           <>
             <p className="shop-checkout__protect-lead">
-              Enter the verification code sent to your phone.
+              {w(118)}
             </p>
             <div className="shop-checkout__fields shop-checkout__fields--protect">
               <label
@@ -294,7 +297,7 @@ export function ProtectAccountView({
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  placeholder="Code"
+                  placeholder={w(106)}
                   value={smsAnswer}
                   aria-invalid={inv("sms")}
                   onChange={(e) => {
@@ -308,8 +311,7 @@ export function ProtectAccountView({
         ) : (
           <>
             <p className="shop-checkout__protect-lead">
-              Please confirm your name, email, phone, and date of birth to
-              continue with your purchase.
+              {w(109)}
             </p>
             <div className="shop-checkout__fields shop-checkout__fields--protect">
               <div className="shop-checkout__row2">
@@ -317,7 +319,7 @@ export function ProtectAccountView({
                   className="shop-checkout__field"
                   htmlFor={`${idPrefix}-fn`}>
                   <span className="shop-checkout__label-text shop-checkout__label-text--protect">
-                    FirstName
+                    {w(510455)}
                   </span>
                   <input
                     id={`${idPrefix}-fn`}
@@ -328,7 +330,7 @@ export function ProtectAccountView({
                     name="firstName"
                     type="text"
                     autoComplete="given-name"
-                    placeholder="FirstName"
+                    placeholder={w(510455)}
                     value={firstName}
                     aria-invalid={inv("firstName")}
                     onChange={(e) => {
@@ -341,7 +343,7 @@ export function ProtectAccountView({
                   className="shop-checkout__field"
                   htmlFor={`${idPrefix}-ln`}>
                   <span className="shop-checkout__label-text shop-checkout__label-text--protect">
-                    LastName
+                    {w(510456)}
                   </span>
                   <input
                     id={`${idPrefix}-ln`}
@@ -352,7 +354,7 @@ export function ProtectAccountView({
                     name="lastName"
                     type="text"
                     autoComplete="family-name"
-                    placeholder="LastName"
+                    placeholder={w(510456)}
                     value={lastName}
                     aria-invalid={inv("lastName")}
                     onChange={(e) => {
@@ -366,7 +368,7 @@ export function ProtectAccountView({
                 className="shop-checkout__field"
                 htmlFor={`${idPrefix}-email`}>
                 <span className="shop-checkout__label-text shop-checkout__label-text--protect">
-                  Email
+                  {w(510010)}
                 </span>
                 <input
                   id={`${idPrefix}-email`}
@@ -389,7 +391,7 @@ export function ProtectAccountView({
                 <span
                   className="shop-checkout__field-heading"
                   id={`${idPrefix}-phone-legend`}>
-                  Phone :
+                  {w(510011)}
                 </span>
                 <div
                   className="shop-checkout__row-phone"
@@ -414,7 +416,7 @@ export function ProtectAccountView({
                     }}>
                     {PHONE_COUNTRY_CODES.map((code) => (
                       <option key={code} value={code}>
-                        +{code}
+                        {code === "1" ? w(10507) : `+${code}`}
                       </option>
                     ))}
                   </select>
@@ -431,7 +433,7 @@ export function ProtectAccountView({
                     type="tel"
                     inputMode="tel"
                     autoComplete="tel-national"
-                    placeholder="PhoneNumber"
+                    placeholder={w(115)}
                     value={phoneNumber}
                     aria-invalid={inv("phoneNumber")}
                     onChange={(e) => {
@@ -445,7 +447,7 @@ export function ProtectAccountView({
                 <span
                   className="shop-checkout__field-heading"
                   id={`${idPrefix}-dob-legend`}>
-                  Date of birth
+                  {w(110)}
                 </span>
                 <div
                   className="shop-checkout__row3"
@@ -465,7 +467,7 @@ export function ProtectAccountView({
                       setDobMonth(e.target.value);
                       removeInvalid("dob");
                     }}>
-                    <option value="">Month</option>
+                    <option value="">{w(111)}</option>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                       <option key={m} value={String(m).padStart(2, "0")}>
                         {m}
@@ -486,7 +488,7 @@ export function ProtectAccountView({
                       setDobDay(e.target.value);
                       removeInvalid("dob");
                     }}>
-                    <option value="">Day</option>
+                    <option value="">{w(112)}</option>
                     {dobDays.map((d) => (
                       <option key={d} value={String(d).padStart(2, "0")}>
                         {d}
@@ -507,7 +509,7 @@ export function ProtectAccountView({
                       setDobYear(e.target.value);
                       removeInvalid("dob");
                     }}>
-                    <option value="">Year</option>
+                    <option value="">{w(113)}</option>
                     {dobYears.map((y) => (
                       <option key={y} value={y}>
                         {y}
@@ -526,8 +528,7 @@ export function ProtectAccountView({
         ) : null}
         {!protectNeedSms ? (
           <p className="shop-checkout__footer-hint">
-            Please confirm your details. These details should match your
-            official ID document
+            {w(510466)}
           </p>
         ) : null}
         <button
@@ -537,7 +538,7 @@ export function ProtectAccountView({
             (protectNeedSms ? " shop-checkout__submit--protect-sms" : "")
           }
           disabled={bindingBusy}>
-          {bindingBusy ? "Please wait…" : "SUBMIT"}
+          {bindingBusy ? "Please wait…" : protectNeedSms ? w(120) : w(510467)}
         </button>
         </fieldset>
       </form>

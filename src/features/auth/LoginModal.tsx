@@ -12,6 +12,7 @@ import { resolvePostLoginRedirect } from "../../auth/loginEntry";
 import { ApiError } from "../../lib/api/client";
 import { ClientVersionError } from "../../lib/api/clientVersionError";
 import { presentClientVersionError } from "../../lib/clientVersionUi";
+import { useWordData } from "../../wordData/useWordData";
 import { AuthClearableInputWrap } from "./AuthClearableInputWrap";
 import { AuthSocialButtons } from "./AuthSocialButtons";
 import "./AuthModals.css";
@@ -59,6 +60,7 @@ export function LoginModal({
   onSwitchRegister,
   onForgotPassword,
 }: Props) {
+  const w = useWordData();
   const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -141,7 +143,7 @@ export function LoginModal({
             ×
           </button>
           <h2 id={titleId} className="app-modal__title">
-            LOG IN
+            {w(3)}
           </h2>
         </div>
         <hr className="app-modal__rule" />
@@ -156,7 +158,7 @@ export function LoginModal({
           ) : null}
 
           <div className="auth-modal__divider" aria-hidden>
-            OR
+            {w(5)}
           </div>
 
           <form onSubmit={onSignIn} noValidate>
@@ -168,7 +170,7 @@ export function LoginModal({
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={emailId}
               >
-                Email:
+                {w(6)}:
               </label>
               <AuthClearableInputWrap
                 variant="modal"
@@ -182,7 +184,7 @@ export function LoginModal({
                   name="account"
                   type="email"
                   autoComplete="username"
-                  placeholder="Please enter email"
+                  placeholder={w(7)}
                   value={account}
                   onChange={(e) => setAccount(e.target.value)}
                   required
@@ -192,7 +194,7 @@ export function LoginModal({
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={passwordId}
               >
-                Password:
+                {w(8)}:
               </label>
               <AuthClearableInputWrap
                 variant="modal"
@@ -220,20 +222,20 @@ export function LoginModal({
                   name="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  placeholder="Please enter password"
+                  placeholder={w(9)}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </AuthClearableInputWrap>
               <p className="auth-modal__forgot-password">
-                Forgot your password?{" "}
+                {w(11)}{" "}
                 <button
                   type="button"
                   className="auth-modal__footer-link"
                   onClick={onForgotPassword}
                 >
-                  CLICK HERE
+                  {w(12)}
                 </button>
               </p>
               {formError ? (
@@ -244,18 +246,18 @@ export function LoginModal({
                 className="auth-modal__submit"
                 disabled={submitting}
               >
-                {submitting ? "…" : "SIGN IN"}
+                {submitting ? "…" : w(3)}
               </button>
             </fieldset>
           </form>
           <p className="auth-modal__footer">
-            Need an account?{" "}
+            {w(31)}{" "}
             <button
               type="button"
               className="auth-modal__footer-link"
               onClick={onSwitchRegister}
             >
-              CREATE ACCOUNT
+              {w(18)}
             </button>
           </p>
         </div>

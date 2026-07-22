@@ -6,10 +6,12 @@ import { MarketingTopBar } from '../../components/MarketingTopBar'
 import { ApiError } from '../../lib/api/client'
 import { ClientVersionError } from '../../lib/api/clientVersionError'
 import { presentClientVersionError } from '../../lib/clientVersionUi'
+import { useWordData } from '../../wordData/useWordData'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
 import './AuthPages.css'
 
 export function LoginPage() {
+  const w = useWordData()
   const { login, user, ready } = useAuth()
   const [search] = useSearchParams()
   const navigate = useNavigate()
@@ -59,13 +61,13 @@ export function LoginPage() {
         secondary={{ to: '/login', label: 'Log in' }}
       />
       <div className="page-container auth-page">
-        <h1 className="auth-page__title">Log in</h1>
-        <p className="auth-page__lede">Enter your account and password to open the lobby.</p>
+        <h1 className="auth-page__title">{w(3)}</h1>
+        <p className="auth-page__lede">{w(29)}</p>
         <form className="auth-form auth-form--card" onSubmit={onSubmit} noValidate>
           <fieldset disabled={submitting} className="auth-form-fieldset-reset">
             <div className="auth-form__field">
               <label className="auth-form__label" htmlFor="login-account">
-                Account
+                {w(6)}
               </label>
               <AuthClearableInputWrap
                 variant="page"
@@ -86,7 +88,7 @@ export function LoginPage() {
             </div>
             <div className="auth-form__field">
               <label className="auth-form__label" htmlFor="login-password">
-                Password
+                {w(8)}
               </label>
               <AuthClearableInputWrap
                 variant="page"
@@ -109,15 +111,15 @@ export function LoginPage() {
             {error ? <p className="auth-form__error">{error}</p> : null}
             <div className="auth-form__actions">
               <button type="submit" className="btn-crown-primary auth-form__submit" disabled={submitting}>
-                {submitting ? 'Signing in…' : 'Log in'}
+                {submitting ? '…' : w(3)}
               </button>
             </div>
           </fieldset>
         </form>
         <p className="auth-page__link">
-          <Link to={forgotPasswordHref}>Forgot password?</Link>
+          <Link to={forgotPasswordHref}>{w(11)}</Link>
           {' · '}
-          No account yet? <Link to="/register">Register</Link>
+          {w(31)} <Link to="/register">{w(32)}</Link>
         </p>
       </div>
     </div>

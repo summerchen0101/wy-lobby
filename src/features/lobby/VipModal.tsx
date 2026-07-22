@@ -21,6 +21,8 @@ import {
   vipRowForLevel,
   vipTitleForLevel,
 } from "./vipHelpers";
+import { useWordData } from "../../wordData/useWordData";
+import { formatScFromRaw } from "../../wallet/formatWalletAmount";
 import "./VipModal.css";
 
 type Props = {
@@ -29,6 +31,7 @@ type Props = {
 };
 
 export function VipModal({ open, onClose }: Props) {
+  const w = useWordData();
   const { user } = useAuth();
   const titleId = useId();
   const playerVipLevel = user?.vipLevel ?? VIP_MIN_LEVEL;
@@ -84,11 +87,19 @@ export function VipModal({ open, onClose }: Props) {
           <InfoPopover
             align="start"
             content={
-              <p className="vip-modal__info-popover-text">
-                {useServerVipBar
-                  ? "Earn VIP points through play to advance tiers and unlock level-up bonuses."
-                  : "VIP tier details will appear when your account is connected to the loyalty system."}
-              </p>
+              useServerVipBar ? (
+                <div className="vip-modal__info-popover-text">
+                  <p>{w(510763)}</p>
+                  <p>{w(510764)}</p>
+                  <p>{w(510765)}</p>
+                  <p>{w(510766)}</p>
+                </div>
+              ) : (
+                <p className="vip-modal__info-popover-text">
+                  VIP tier details will appear when your account is connected to
+                  the loyalty system.
+                </p>
+              )
             }>
             {(p, triggerRef) => (
               <button
@@ -101,7 +112,7 @@ export function VipModal({ open, onClose }: Props) {
             )}
           </InfoPopover>
           <h2 id={titleId} className="app-modal__title">
-            YOUR VIP LEVEL
+            {w(510759)}
           </h2>
           <button
             type="button"
@@ -170,12 +181,12 @@ export function VipModal({ open, onClose }: Props) {
           <p className="vip-modal__level-name">{levelTitle}</p>
           <div className="vip-modal__points">
             <p className="vip-modal__points-text">
-              {formatVipPoints(vipPoints)} VIP POINTS
+              {formatVipPoints(vipPoints)} {w(510760)}
             </p>
             <hr className="vip-modal__points-rule" />
           </div>
 
-          <h3 className="vip-modal__benefits-head">BENEFITS</h3>
+          <h3 className="vip-modal__benefits-head">{w(510761)}</h3>
           <div className="vip-modal__benefits-scroll">
             {benefits.length > 0 ? (
               <ul className="vip-modal__benefits-list">
@@ -207,7 +218,7 @@ export function VipModal({ open, onClose }: Props) {
                 alt="Claimed"
               />
             ) : null}
-            <p className="vip-modal__bonus-title">Level up Bonus</p>
+            <p className="vip-modal__bonus-title">{w(510762)}</p>
             <div className="vip-modal__bonus-row">
               <img
                 className="vip-modal__bonus-coin"
@@ -228,7 +239,7 @@ export function VipModal({ open, onClose }: Props) {
                 height={22}
               />
               <span className="vip-modal__bonus-value">
-                {formatVipRewardCompact(scReward)}
+                {formatScFromRaw(scReward)}
               </span>
             </div>
           </div>

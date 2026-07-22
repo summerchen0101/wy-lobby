@@ -7,14 +7,14 @@ import {
   PRIVACY_POLICY_INTRO,
   PRIVACY_POLICY_LAST_REVISED,
   PRIVACY_POLICY_SECTIONS,
-  PRIVACY_POLICY_TITLE,
 } from './privacyPolicyContent'
+import { getWord } from '../../wordData/getWord'
 import './PrivacyPolicyPage.css'
 
 export function PrivacyPolicyPage() {
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Privacy Policy | LukLok'
+    document.title = `${getWord(209)} | LukLok`
     return () => {
       document.title = previousTitle
     }
@@ -26,7 +26,7 @@ export function PrivacyPolicyPage() {
         <Link className="legal-page__back" to="/">
           ← Back to lobby
         </Link>
-        <h1 className="legal-page__title">{PRIVACY_POLICY_TITLE}</h1>
+        <h1 className="legal-page__title">{getWord(209)}</h1>
         <p className="legal-page__revised">{PRIVACY_POLICY_LAST_REVISED}</p>
       </header>
 

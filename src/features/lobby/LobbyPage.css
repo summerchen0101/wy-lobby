@@ -314,6 +314,7 @@ html.session-lobby-page {
 
 .lobby-game-filter__tab {
   flex-shrink: 0;
+  white-space: nowrap;
   min-height: 2.25rem;
   padding: 0.25rem 0.7rem;
   border: 2px solid transparent;

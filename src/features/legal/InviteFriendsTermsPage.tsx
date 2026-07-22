@@ -7,14 +7,14 @@ import {
   INVITE_FRIENDS_TERMS_EFFECTIVE,
   INVITE_FRIENDS_TERMS_INTRO,
   INVITE_FRIENDS_TERMS_SECTIONS,
-  INVITE_FRIENDS_TERMS_TITLE,
 } from './inviteFriendsTermsContent'
+import { getWord } from '../../wordData/getWord'
 import './PrivacyPolicyPage.css'
 
 export function InviteFriendsTermsPage() {
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Invite Friends Terms of Use | LukLok'
+    document.title = `${getWord(212)} | LukLok`
     return () => {
       document.title = previousTitle
     }
@@ -26,7 +26,7 @@ export function InviteFriendsTermsPage() {
         <Link className="legal-page__back" to="/">
           ← Back to lobby
         </Link>
-        <h1 className="legal-page__title">{INVITE_FRIENDS_TERMS_TITLE}</h1>
+        <h1 className="legal-page__title">{getWord(212)}</h1>
         <p className="legal-page__revised">{INVITE_FRIENDS_TERMS_EFFECTIVE}</p>
       </header>
 

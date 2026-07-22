@@ -26,12 +26,14 @@ import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { mapListProductToShopPack } from "./mapListProductToShopPack";
 import { publicImageUrl } from "../../lib/publicImageUrl";
 import { isPhoneBound } from "./isPhoneBound";
+import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import { ShopCheckoutOverlay, type CheckoutStep } from "./ShopCheckoutOverlay";
 import type {
   ShopBindingFormPayload,
   ShopPack,
   ShopBindingPrefill,
 } from "./types";
+import { useWordData } from "../../wordData/useWordData";
 import "./ShopPage.css";
 import "../lobby/SessionPageDecor.css";
 
@@ -48,6 +50,7 @@ function coinPileSrc(n: 1 | 2 | 3 | 4 | 5) {
 }
 
 export function ShopPage() {
+  const w = useWordData();
   const { show } = useAlert();
   const { token, user, mergeUser } = useAuth();
   const { requestRef, subscribePaymentFinish, refreshLobbyGet } =
@@ -90,7 +93,7 @@ export function ShopPage() {
             if (!isGatewaySuccessCode(code)) {
               if (!cancelled) {
                 setListError(
-                  r.errMessage?.trim() || `List products failed (${code})`,
+                  translateGatewayError(code, r.errMessage, `List products failed (${code})`),
                 );
                 setPacks([]);
               }
@@ -228,7 +231,7 @@ export function ShopPage() {
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
           paymentTab?.close();
-          setBuyError(r.errMessage?.trim() || `Purchase failed (${code})`);
+          setBuyError(translateGatewayError(code, r.errMessage, `Purchase failed (${code})`));
           return;
         }
         const raw = r.data;
@@ -322,7 +325,7 @@ export function ShopPage() {
         });
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
-          setBindingError(r.errMessage?.trim() || `Binding failed (${code})`);
+          setBindingError(translateGatewayError(code, r.errMessage, `Binding failed (${code})`));
           return;
         }
         const raw = r.data;
@@ -371,8 +374,8 @@ export function ShopPage() {
   return (
     <div className="shop-page page-container session-page session-page--pattern">
       <div className="shop-page__inner">
-        <h1 className="shop-page__title">STORE</h1>
-        <p className="shop-page__subtitle">CHOOSE YOUR COINS PACKAGE</p>
+        <h1 className="shop-page__title">{w(100)}</h1>
+        <p className="shop-page__subtitle">{w(102)}</p>
         {listLoading ? (
           <p className="shop-page__status" role="status">
             Loading packages…
@@ -402,7 +405,9 @@ export function ShopPage() {
                           height={24}
                         />
                       </span>
-                      <span className="shop-page__gc-amount">{p.gcLabel}</span>
+                      <span className="shop-page__gc-amount">
+                        {w(104)} {p.gcLabel}
+                      </span>
                     </span>
                   </div>
                   <div className="shop-page__card-art" data-pile={p.coinPile}>
@@ -417,7 +422,7 @@ export function ShopPage() {
                   <p
                     className="shop-page__bonus"
                     aria-label={`Plus free SC ${p.bonusSc}`}>
-                    <span className="shop-page__bonus-free">+FREE</span>
+                    <span className="shop-page__bonus-free">+{w(105)}</span>
                     <span className="shop-page__chip shop-page__chip--sc">
                       <img
                         src={CURRENCY_ICON_SC}

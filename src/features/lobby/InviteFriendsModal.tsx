@@ -11,6 +11,7 @@ import {
 } from '../../realtime/gatewayApi'
 import { isGatewaySuccessCode } from '../../realtime/gatewayWire'
 import { useGatewayLobby } from '../../realtime/useGatewayLobby'
+import { translateGatewayError } from '../../i18n/apiErrorMessage'
 import {
   decodeClaimReferralRewardRespBytes,
   decodeGetReferralInfoRespBytes,
@@ -20,6 +21,7 @@ import {
   referralScDisplayAmount,
   type GetReferralInfoRespDecoded,
 } from '../../realtime/referralLobbyWire'
+import { getWord } from '../../wordData/getWord'
 import './InviteFriendsModal.css'
 
 type Props = {
@@ -80,9 +82,13 @@ export function InviteFriendsModal({ open, onClose }: Props) {
           debugLabel: 'GET_REFERRAL_INFO',
         })
         if (!isGatewaySuccessCode(String(r.code ?? '')) || !(r.data instanceof Uint8Array)) {
-          const errMsg = (r as { errMessage?: string }).errMessage?.trim()
+          const errMsg = translateGatewayError(
+            String(r.code ?? ''),
+            (r as { errMessage?: string }).errMessage,
+            'Could not load referral info',
+          )
           if (!options?.quiet) {
-            show(errMsg || 'Could not load referral info', { variant: 'error' })
+            show(errMsg, { variant: 'error' })
           }
           setReferralInfo(null)
           return false
@@ -196,7 +202,7 @@ export function InviteFriendsModal({ open, onClose }: Props) {
     return navigator.clipboard
       .writeText(url)
       .then(() => {
-        show('Link copied', { variant: 'success' })
+        show(getWord(1503), { variant: 'success' })
       })
       .catch(() => {
         show('Could not copy link', { variant: 'error' })
@@ -232,8 +238,12 @@ export function InviteFriendsModal({ open, onClose }: Props) {
         debugLabel: 'CLAIM_REFERRAL_REWARD',
       })
       if (!isGatewaySuccessCode(String(r.code ?? '')) || !(r.data instanceof Uint8Array)) {
-        const errMsg = (r as { errMessage?: string }).errMessage?.trim()
-        show(errMsg || 'Could not claim rewards', { variant: 'error' })
+        const errMsg = translateGatewayError(
+          String((r as { code?: string }).code ?? ''),
+          (r as { errMessage?: string }).errMessage,
+          'Could not claim rewards',
+        )
+        show(errMsg, { variant: 'error' })
         return
       }
       const { rewards: claimed } = decodeClaimReferralRewardRespBytes(r.data)
@@ -292,7 +302,7 @@ export function InviteFriendsModal({ open, onClose }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Promotion Terms Apply.
+                  {getWord(212)}
                 </a>
               </p>
             }

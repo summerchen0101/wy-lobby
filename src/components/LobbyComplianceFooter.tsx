@@ -1,27 +1,25 @@
 import { publicImageUrl } from '../lib/publicImageUrl'
+import { getWord } from '../wordData/getWord'
 import './LobbyComplianceFooter.css'
 
 const LOGO_SRC = publicImageUrl('/images/compliance/img_logo.png')
 const AGE_SRC = publicImageUrl('/images/compliance/icon_21UP.png')
 
 const LINK_COL_A: { href: string; label: string }[] = [
-  { href: '/terms', label: 'Terms of Service' },
-  { href: '/sweeps', label: 'Sweeps Policy' },
-  { href: '/invite-terms', label: 'Invite Friends Terms of Use' },
-  { href: '#help', label: 'Help Center' },
+  { href: '/terms', label: getWord(208) },
+  { href: '/sweeps', label: getWord(210) },
+  { href: '/invite-terms', label: getWord(212) },
+  { href: '#help', label: getWord(214) },
 ]
 
 const LINK_COL_B: { href: string; label: string }[] = [
-  { href: '/privacy', label: 'Privacy Policy' },
-  { href: '#responsible', label: 'Responsible Social Play' },
-  { href: '#contact', label: 'Contact US' },
+  { href: '/privacy', label: getWord(209) },
+  { href: '#responsible', label: getWord(211) },
+  { href: '#contact', label: getWord(213) },
 ]
 
-const LEGAL_GUEST =
-  'You are aware and understand that you are providing information to LUKLOK. The sole use of this information will be to manage this promotion. NO PURCHASE NECESSARY to participate in Sweepstakes. SWEEPSTAKES ARE VOID WHERE PROHIBITED BY LAW. For more information about sweepstakes rules, please refer to the Sweeps Policy. Copyright LUKLOK. All rights reserved.'
-
-const LEGAL_SESSION =
-  'You are aware and understand that you are providing information to LUKLOK. The sole use of this information will be to manage this promotion. SWEEPSTAKES ARE VOID WHERE PROHIBITED BY LAW. For more information about sweepstakes rules, please refer to the Sweeps Policy. Copyright LUKLOK. All rights reserved.'
+const LEGAL_GUEST = getWord(206)
+const LEGAL_SESSION = getWord(207)
 
 export type LobbyComplianceFooterProps = {
   variant: 'guest' | 'session'
@@ -56,13 +54,10 @@ export function LobbyComplianceFooter({ variant }: LobbyComplianceFooterProps) {
 
         <img className="lobby-comp__logo" src={LOGO_SRC} alt="LukLok" width={340} height={108} decoding="async" />
 
-        <p className="lobby-comp__rsp-text">
-          Responsible gaming is a fundamental priority at LukLok. For more information, visit our
-          Responsible Social Play page.
-        </p>
+        <p className="lobby-comp__rsp-text">{getWord(205)}</p>
 
         <a href="#responsible" className="lobby-comp__rsp-btn">
-          RESPONSIBLE SOCIAL PLAY
+          {getWord(204)}
         </a>
 
         <div className="lobby-comp__divider" aria-hidden />

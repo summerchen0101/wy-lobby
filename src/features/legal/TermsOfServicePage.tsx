@@ -7,14 +7,14 @@ import {
   TERMS_OF_SERVICE_EFFECTIVE,
   TERMS_OF_SERVICE_INTRO,
   TERMS_OF_SERVICE_SECTIONS,
-  TERMS_OF_SERVICE_TITLE,
 } from './termsOfServiceContent'
+import { getWord } from '../../wordData/getWord'
 import './PrivacyPolicyPage.css'
 
 export function TermsOfServicePage() {
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Terms of Service | LukLok'
+    document.title = `${getWord(208)} | LukLok`
     return () => {
       document.title = previousTitle
     }
@@ -26,7 +26,7 @@ export function TermsOfServicePage() {
         <Link className="legal-page__back" to="/">
           ← Back to lobby
         </Link>
-        <h1 className="legal-page__title">{TERMS_OF_SERVICE_TITLE}</h1>
+        <h1 className="legal-page__title">{getWord(208)}</h1>
         <p className="legal-page__revised">{TERMS_OF_SERVICE_EFFECTIVE}</p>
       </header>
 

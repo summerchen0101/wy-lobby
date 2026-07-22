@@ -3,6 +3,7 @@ import { createPortal } from "react-dom"
 import { profileAvatarFrameUrl } from "../../lib/profileAssets"
 import type { HeadIconChoice } from "./profileAvatarChoices"
 import { PROFILE_AVATARS } from "./profileAvatars"
+import { useWordData } from "../../wordData/useWordData"
 import "./ChangeHeadIconModal.css"
 import "../../components/profile/ProfileAvatarFrame.css"
 
@@ -22,6 +23,7 @@ export function ChangeHeadIconModal({
   onConfirm,
   choices,
 }: Props) {
+  const w = useWordData()
   const titleId = useId()
   const [draftId, setDraftId] = useState(currentAvatarId)
 
@@ -81,7 +83,7 @@ export function ChangeHeadIconModal({
       >
         <div className="app-modal__header">
           <h2 id={titleId} className="app-modal__title">
-            Change the head icon
+            {w(510712)}
           </h2>
           <button
             type="button"

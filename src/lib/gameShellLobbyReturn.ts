@@ -1,23 +1,54 @@
+export const PROVIDER_TAB_PREFIX = "provider:" as const;
+
+export type StaticLobbyFilterTab = "all" | "hot" | "providers" | "slots";
+export type LobbyFilterTab =
+  | StaticLobbyFilterTab
+  | `${typeof PROVIDER_TAB_PREFIX}${string}`;
+
 export type GameShellLobbyReturn = {
-  lobbyFilter: "all" | "hot" | "providers" | "slots";
+  lobbyFilter: LobbyFilterTab;
   providerPlatform: string | null;
   scrollY: number;
 };
 
 const STORAGE_KEY = "ffgt:game-shell-lobby-return";
 
-const LOBBY_FILTERS = new Set<GameShellLobbyReturn["lobbyFilter"]>([
-  "all",
-  "hot",
-  "providers",
-  "slots",
-]);
+export function isProviderTabId(
+  id: string,
+): id is `${typeof PROVIDER_TAB_PREFIX}${string}` {
+  return id.startsWith(PROVIDER_TAB_PREFIX) && id.length > PROVIDER_TAB_PREFIX.length;
+}
+
+export function providerTabId(platform: string): LobbyFilterTab {
+  return `${PROVIDER_TAB_PREFIX}${platform}`;
+}
+
+export function providerPlatformFromTabId(id: LobbyFilterTab): string | null {
+  if (!isProviderTabId(id)) return null;
+  return id.slice(PROVIDER_TAB_PREFIX.length);
+}
+
+export function lobbyTabDomId(id: LobbyFilterTab): string {
+  return `lobby-tab-${encodeURIComponent(id)}`;
+}
+
+function isValidLobbyFilter(filter: string): filter is LobbyFilterTab {
+  if (
+    filter === "all" ||
+    filter === "hot" ||
+    filter === "providers" ||
+    filter === "slots"
+  ) {
+    return true;
+  }
+  return isProviderTabId(filter);
+}
 
 function parseStored(raw: string): GameShellLobbyReturn | null {
   try {
     const parsed = JSON.parse(raw) as Partial<GameShellLobbyReturn>;
     const lobbyFilter = parsed.lobbyFilter;
-    if (!lobbyFilter || !LOBBY_FILTERS.has(lobbyFilter)) return null;
+    if (!lobbyFilter || !isValidLobbyFilter(lobbyFilter)) return null;
     const scrollY = parsed.scrollY;
     if (typeof scrollY !== "number" || !Number.isFinite(scrollY) || scrollY < 0) {
       return null;
