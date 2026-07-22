@@ -69,6 +69,16 @@ message WalletUseRequest {
   ActiveWalletMode mode = 1;
 }
 
+// Gateway ApiType 12：取得錢包；對齊 proto/megaman/lobby.proto WalletGetRequest/Response。
+message WalletGetRequest {
+  WalletType walletType = 1;
+}
+
+message WalletGetResponse {
+  Bag bag = 1;
+  int64 subsidyAmount = 2;
+}
+
 // Gateway push（如 SLOT_JACKPOT_INFO_PUSH 14）：累積獎池；jackpot_amounts 前三個元素對應大廳 JP1～JP3。
 message SlotJackPotInfo {
   repeated int64 jackpot_amounts = 1;

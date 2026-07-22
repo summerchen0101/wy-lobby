@@ -14,6 +14,8 @@ export const GATEWAY_API_USER_KICK_BEFORE = 2
 /** 連線後伺服器登入；對應 ApiType ServerLogin / SERVER_LOGIN；`data` 為空 */
 export const GATEWAY_API_SERVER_LOGIN = 4
 export const GATEWAY_API_LOBBY_GET = 11
+/** 取得錢包與乞丐紅包補貼額度；body 為 megaman.WalletGetRequest；回應 megaman.WalletGetResponse */
+export const GATEWAY_API_WALLET_GET = 12
 /** 伺服器主動推播：ApiType SLOT_JACKPOT_INFO_PUSH(14)；body 常以 megaman.ListJackPotResp（與 141 相同），相容舊版 megaman.SlotJackPotInfo */
 export const GATEWAY_API_SLOT_JACKPOT_PUSH = 14
 /** 拉取 JP 資訊；回應常為 megaman.ListJackPotResp（見 web/proto/lobby_wire.proto） */

@@ -13,6 +13,7 @@ import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
 import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
+import { BeggarRedEnvelopeGate } from "./features/lobby/BeggarRedEnvelopeGate";
 import { GeoGate } from "./features/geo/GeoGate";
 import { GeoProvider } from "./features/geo/GeoProvider";
 import { SocureDeviceInit } from "./features/socure/SocureDeviceInit";
@@ -112,6 +113,7 @@ export default function App() {
                       <PwaInstallBanner />
                       <IosInstallGuide />
                       <NewbieTutorialGate />
+                      <BeggarRedEnvelopeGate />
                       <GeoGate />
                       <Suspense fallback={<FullScreenLoadingOverlay />}>
                         <LobbyUiSoundRoot />
