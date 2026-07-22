@@ -22,6 +22,7 @@ import {
   vipTitleForLevel,
 } from "./vipHelpers";
 import { useWordData } from "../../wordData/useWordData";
+import { formatScFromRaw } from "../../wallet/formatWalletAmount";
 import "./VipModal.css";
 
 type Props = {
@@ -238,7 +239,7 @@ export function VipModal({ open, onClose }: Props) {
                 height={22}
               />
               <span className="vip-modal__bonus-value">
-                {formatVipRewardCompact(scReward)}
+                {formatScFromRaw(scReward)}
               </span>
             </div>
           </div>
