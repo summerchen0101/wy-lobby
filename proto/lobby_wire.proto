@@ -573,8 +573,8 @@ message ClaimReferralRewardResp {
 // 欄位對齊 wallet.TradeEvent 數值（TradeEvent 以 int32 傳 enum 值，如 PAYMENT_BUY_GOLD=17）。
 message PurchaseAndPrizeHistory {
   int32 TradeEvent = 1;
-  string gcAmount = 2;
-  string scAmount = 3;
+  int64 gcAmount = 2;
+  int64 scAmount = 3;
   int64 timestamp = 4;
 }
 
