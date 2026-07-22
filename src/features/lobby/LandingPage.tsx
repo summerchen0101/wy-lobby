@@ -122,7 +122,9 @@ function lobbyAllSubsections(
     "slots",
     "hot",
     ...(thirdPartyGamesEnabled
-      ? providerPlatforms.map((p) => providerTabId(p))
+      ? providerPlatforms.map(
+          (p) => providerTabId(p) as LobbyAllSubsectionId,
+        )
       : []),
   ];
 }

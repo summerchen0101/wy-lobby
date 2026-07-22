@@ -1,14 +1,33 @@
 /**
  * Reads WordData/WordData.txt and generates web/src/wordData/wordData.generated.ts
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const root = join(__dirname, "..", "..");
-const inputPath = join(root, "WordData", "WordData.txt");
-const outputPath = join(__dirname, "..", "src", "wordData", "wordData.generated.ts");
+const webRoot = join(__dirname, "..");
+const monorepoRoot = join(webRoot, "..");
+const outputPath = join(webRoot, "src", "wordData", "wordData.generated.ts");
+
+const inputCandidates = [
+  join(webRoot, "WordData", "WordData.txt"),
+  join(monorepoRoot, "WordData", "WordData.txt"),
+];
+
+const inputPath = inputCandidates.find((p) => existsSync(p));
+
+if (!inputPath) {
+  if (existsSync(outputPath)) {
+    console.log(
+      `Skip word data generation: source not found; using existing ${outputPath}`,
+    );
+    process.exit(0);
+  }
+  throw new Error(
+    `WordData source not found. Tried:\n${inputCandidates.map((p) => `  - ${p}`).join("\n")}`,
+  );
+}
 
 const raw = readFileSync(inputPath, "utf8");
 const parsed = JSON.parse(raw);
@@ -32,4 +51,4 @@ ${lines.join("\n")}
 `;
 
 writeFileSync(outputPath, output, "utf8");
-console.log(`Generated ${outputPath} (${entries.length} entries)`);
+console.log(`Generated ${outputPath} from ${inputPath} (${entries.length} entries)`);
