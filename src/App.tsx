@@ -133,6 +133,7 @@ export default function App() {
                           />
                           <Route path="/privacy" element={<PrivacyPolicyPage />} />
                           <Route path="/terms" element={<TermsOfServicePage />} />
+                          <Route path="/term" element={<TermsOfServicePage />} />
                           <Route path="/sweeps" element={<SweepsPolicyPage />} />
                           <Route path="/invite-terms" element={<InviteFriendsTermsPage />} />
                           <Route

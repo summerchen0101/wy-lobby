@@ -1,4 +1,8 @@
 import { publicImageUrl } from '../lib/publicImageUrl'
+import {
+  ZENDESK_CONTACT_REQUEST_URL,
+  ZENDESK_HELP_CENTER_URL,
+} from '../lib/zendeskSupport'
 import { getWord } from '../wordData/getWord'
 import './LobbyComplianceFooter.css'
 
@@ -9,13 +13,13 @@ const LINK_COL_A: { href: string; label: string }[] = [
   { href: '/terms', label: getWord(208) },
   { href: '/sweeps', label: getWord(210) },
   { href: '/invite-terms', label: getWord(212) },
-  { href: '#help', label: getWord(214) },
+  { href: ZENDESK_HELP_CENTER_URL, label: getWord(214) },
 ]
 
 const LINK_COL_B: { href: string; label: string }[] = [
   { href: '/privacy', label: getWord(209) },
-  { href: '#responsible', label: getWord(211) },
-  { href: '#contact', label: getWord(213) },
+  { href: '/term', label: getWord(211) },
+  { href: ZENDESK_CONTACT_REQUEST_URL, label: getWord(213) },
 ]
 
 const LEGAL_GUEST = getWord(206)
@@ -23,6 +27,22 @@ const LEGAL_SESSION = getWord(207)
 
 export type LobbyComplianceFooterProps = {
   variant: 'guest' | 'session'
+}
+
+function FooterLink({ href, label }: { href: string; label: string }) {
+  const external = /^https?:\/\//i.test(href)
+
+  return (
+    <a
+      className="lobby-comp__link"
+      href={href}
+      {...(external
+        ? { target: '_blank', rel: 'noopener noreferrer' }
+        : {})}
+    >
+      {label}
+    </a>
+  )
 }
 
 export function LobbyComplianceFooter({ variant }: LobbyComplianceFooterProps) {
@@ -56,7 +76,7 @@ export function LobbyComplianceFooter({ variant }: LobbyComplianceFooterProps) {
 
         <p className="lobby-comp__rsp-text">{getWord(205)}</p>
 
-        <a href="#responsible" className="lobby-comp__rsp-btn">
+        <a href="/term" className="lobby-comp__rsp-btn">
           {getWord(204)}
         </a>
 
@@ -78,16 +98,12 @@ export function LobbyComplianceFooter({ variant }: LobbyComplianceFooterProps) {
         <nav className="lobby-comp__links" aria-label="Legal and policy links">
           <div className="lobby-comp__links-col">
             {LINK_COL_A.map(({ href, label }) => (
-              <a key={href + label} className="lobby-comp__link" href={href}>
-                {label}
-              </a>
+              <FooterLink key={href + label} href={href} label={label} />
             ))}
           </div>
           <div className="lobby-comp__links-col">
             {LINK_COL_B.map(({ href, label }) => (
-              <a key={href + label} className="lobby-comp__link" href={href}>
-                {label}
-              </a>
+              <FooterLink key={href + label} href={href} label={label} />
             ))}
           </div>
         </nav>
