@@ -1349,11 +1349,11 @@ export default {
               "id": 1
             },
             "gcAmount": {
-              "type": "string",
+              "type": "int64",
               "id": 2
             },
             "scAmount": {
-              "type": "string",
+              "type": "int64",
               "id": 3
             },
             "timestamp": {

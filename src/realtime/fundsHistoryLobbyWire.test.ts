@@ -27,8 +27,8 @@ describe("fundsHistoryLobbyWire", () => {
   it("decodes ListPurchaseAndPrizeHistoriesResponse", () => {
     const history = HistoryType.create({
       TradeEvent: 17,
-      gcAmount: "600000",
-      scAmount: "20000",
+      gcAmount: 600000,
+      scAmount: 20000,
       timestamp: "1781491946824",
     });
     const resp = ResponseType.create({ histories: [history] });
@@ -38,6 +38,20 @@ describe("fundsHistoryLobbyWire", () => {
     expect(histories[0]?.tradeEventLabel).toBe(getWord(510769));
     expect(formatFundsHistoryGcAmount(histories[0]!.gcAmountWire)).toBe("600K");
     expect(formatFundsHistoryScBonus(histories[0]!.scAmountWire)).toBe("2");
+  });
+
+  it("decodes server int64 wire amounts (regression: index out of range)", () => {
+    const history = HistoryType.create({
+      TradeEvent: 17,
+      gcAmount: 255000,
+      scAmount: 20000,
+      timestamp: "1781491946824",
+    });
+    const resp = ResponseType.create({ histories: [history] });
+    const raw = Uint8Array.from(ResponseType.encode(resp).finish());
+    const { histories } = decodeListPurchaseAndPrizeHistoriesResponseBytes(raw);
+    expect(histories).toHaveLength(1);
+    expect(histories[0]?.gcAmountWire).toBe("255000");
   });
 
   it("formats trade event enum name fallback", () => {
