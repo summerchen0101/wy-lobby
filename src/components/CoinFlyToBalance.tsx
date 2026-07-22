@@ -37,7 +37,10 @@ function createCoinMotion(): CoinMotion {
 
 export function CoinFlyToBalance({ active, fromRect, onComplete }: Props) {
   const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     if (!active || !fromRect) return;
