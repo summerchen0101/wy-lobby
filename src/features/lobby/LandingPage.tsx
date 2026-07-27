@@ -45,6 +45,7 @@ import {
   providerTabId,
   type LobbyFilterTab,
 } from "../../lib/gameShellLobbyReturn";
+import { thirdPartyPlatformDisplayName } from "../../lib/thirdPartyPlatformDisplay";
 import { GATEWAY_API_GET_THIRD_PARTY_GAME_INFO } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
@@ -107,7 +108,7 @@ function lobbyFilterTabs(
           { id: "providers" as const, label: "PROVIDERS" },
           ...providerPlatforms.map((p) => ({
             id: providerTabId(p),
-            label: p,
+            label: thirdPartyPlatformDisplayName(p),
           })),
         ]
       : []),
@@ -575,7 +576,7 @@ export function LandingPage() {
     if (!q) return list;
     return list.filter((g) => {
       const hay =
-        `${g.title} ${g.subtitle ?? ""} ${g.id} ${g.provider ?? ""} ${g.thirdPartyLaunch?.gameUID ?? ""}`.toLowerCase();
+        `${g.title} ${g.subtitle ?? ""} ${g.id} ${g.provider ?? ""} ${g.thirdPartyLaunch?.platform ?? ""} ${g.thirdPartyLaunch?.gameUID ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
   }, [thirdPartyGamesEnabled, lobbyGet?.thirdPartyGameInfoList, lobbySearch]);
@@ -770,7 +771,7 @@ export function LandingPage() {
               role="option"
               aria-selected={providerPlatformFilter === p}
               onClick={() => selectProviderPlatform(p)}>
-              {p}
+              {thirdPartyPlatformDisplayName(p)}
             </button>
           </li>
         ))}

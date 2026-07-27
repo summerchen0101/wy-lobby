@@ -2,6 +2,7 @@ import "./ensureProtobufLong";
 import * as protobuf from "protobufjs/light.js";
 import type { Game, LobbyWalletType, User } from "../lib/api/types";
 import { getUnityWebEntryBase } from "../lib/env";
+import { thirdPartyPlatformDisplayName } from "../lib/thirdPartyPlatformDisplay";
 import schema from "../gen/lobby_wire.schema.js";
 
 const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
@@ -248,12 +249,13 @@ export function lobbyThirdPartyRowToApiGame(
   if (!platform || !uid) return null;
   const name =
     thirdPartyRowString(row, "gameName", "GameName") || uid;
+  const displayPlatform = thirdPartyPlatformDisplayName(platform);
   return {
     id: `tp:${encodeURIComponent(platform)}:${encodeURIComponent(uid)}`,
     title: name,
-    subtitle: platform,
+    subtitle: displayPlatform,
     launchUrl: "",
-    provider: platform,
+    provider: displayPlatform,
     thirdPartyLaunch: { platform, gameUID: uid },
   };
 }
