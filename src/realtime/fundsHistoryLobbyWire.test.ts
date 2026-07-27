@@ -54,6 +54,26 @@ describe("fundsHistoryLobbyWire", () => {
     expect(histories[0]?.gcAmountWire).toBe("255000");
   });
 
+  it("decodes DailyMissonAward (TradeEvent 51) as Daily Bonus", () => {
+    const history = HistoryType.create({
+      TradeEvent: 51,
+      gcAmount: 170000,
+      scAmount: 0,
+      timestamp: "1781491946824",
+    });
+    const resp = ResponseType.create({ histories: [history] });
+    const raw = Uint8Array.from(ResponseType.encode(resp).finish());
+    const { histories } = decodeListPurchaseAndPrizeHistoriesResponseBytes(raw);
+    expect(histories).toHaveLength(1);
+    expect(histories[0]?.tradeEventLabel).toBe(getWord(510786));
+    expect(tradeEventToLabel(51)).toBe(getWord(510786));
+  });
+
+  it("formats fractional SC bonus amounts", () => {
+    expect(formatFundsHistoryScBonus("6000")).toBe("0.60");
+    expect(formatFundsHistoryScBonus("0")).toBe("");
+  });
+
   it("formats trade event enum name fallback", () => {
     expect(tradeEventToLabel("PAYMENT_BUY_GOLD")).toBe(getWord(510769));
   });
