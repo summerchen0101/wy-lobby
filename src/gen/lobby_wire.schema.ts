@@ -1523,6 +1523,219 @@ export default {
               "id": 3
             }
           }
+        },
+        "ActivityCategory": {
+          "values": {
+            "UNKNOWN_ACTIVITY_TYPE": 0,
+            "Lottery": 1,
+            "Lucky": 2,
+            "JackPot": 3,
+            "DailyTask": 4,
+            "DailySignIn": 5
+          }
+        },
+        "ListActivitiesRequest": {
+          "fields": {}
+        },
+        "ListActivitiesResponse": {
+          "fields": {
+            "activities": {
+              "rule": "repeated",
+              "type": "ActivityData",
+              "id": 1
+            }
+          }
+        },
+        "GetActivityRequest": {
+          "fields": {
+            "activityID": {
+              "type": "uint64",
+              "id": 1
+            }
+          }
+        },
+        "GetActivityResponse": {
+          "fields": {
+            "activity": {
+              "type": "ActivityData",
+              "id": 1
+            }
+          }
+        },
+        "DailyMissionCreditReward": {
+          "fields": {
+            "requiredCreditAmount": {
+              "type": "int64",
+              "id": 1
+            },
+            "itemID": {
+              "type": "int64",
+              "id": 2
+            },
+            "itemAmount": {
+              "type": "int64",
+              "id": 3
+            },
+            "isCollected": {
+              "type": "bool",
+              "id": 4
+            }
+          }
+        },
+        "UserDailyMission": {
+          "fields": {
+            "activityID": {
+              "type": "uint64",
+              "id": 1
+            },
+            "dailyMissionID": {
+              "type": "uint64",
+              "id": 2
+            },
+            "date": {
+              "type": "int64",
+              "id": 3
+            },
+            "dailyMissionType": {
+              "type": "int32",
+              "id": 4
+            },
+            "gameIDs": {
+              "rule": "repeated",
+              "type": "int64",
+              "id": 5
+            },
+            "minVIPLevel": {
+              "type": "int64",
+              "id": 6
+            },
+            "actionTimes": {
+              "type": "int64",
+              "id": 7
+            },
+            "minBetAmount": {
+              "type": "int64",
+              "id": 8
+            },
+            "minGainAmount": {
+              "type": "int64",
+              "id": 9
+            },
+            "totalBetAmount": {
+              "type": "int64",
+              "id": 10
+            },
+            "totalGainAmount": {
+              "type": "int64",
+              "id": 11
+            },
+            "creditAmount": {
+              "type": "int64",
+              "id": 12
+            },
+            "itemID": {
+              "type": "int64",
+              "id": 13
+            },
+            "itemAmount": {
+              "type": "int64",
+              "id": 14
+            },
+            "achievedActionTimes": {
+              "type": "int64",
+              "id": 15
+            },
+            "achievedBetAmount": {
+              "type": "int64",
+              "id": 16
+            },
+            "achievedGainAmount": {
+              "type": "int64",
+              "id": 17
+            },
+            "isCollected": {
+              "type": "bool",
+              "id": 18
+            },
+            "sort": {
+              "type": "int64",
+              "id": 19
+            }
+          }
+        },
+        "UserDailyMissionsByDate": {
+          "fields": {
+            "date": {
+              "type": "int64",
+              "id": 1
+            },
+            "userDailyMissions": {
+              "rule": "repeated",
+              "type": "UserDailyMission",
+              "id": 2
+            }
+          }
+        },
+        "ActivityData": {
+          "fields": {
+            "activityID": {
+              "type": "uint64",
+              "id": 1
+            },
+            "activityType": {
+              "type": "ActivityCategory",
+              "id": 2
+            },
+            "activityName": {
+              "type": "string",
+              "id": 3
+            },
+            "sort": {
+              "type": "int64",
+              "id": 4
+            },
+            "displayStartTime": {
+              "type": "int64",
+              "id": 5
+            },
+            "displayEndTime": {
+              "type": "int64",
+              "id": 6
+            },
+            "dailyMissionCreditRewards": {
+              "rule": "repeated",
+              "type": "DailyMissionCreditReward",
+              "id": 7
+            },
+            "UserDailyMissionsByDates": {
+              "keyType": "int64",
+              "type": "UserDailyMissionsByDate",
+              "id": 8
+            },
+            "achievedCreditAmount": {
+              "type": "int64",
+              "id": 9
+            }
+          }
+        },
+        "ActivityCollectRewardReq": {
+          "fields": {
+            "activityID": {
+              "type": "uint64",
+              "id": 1
+            },
+            "dailyMissionID": {
+              "type": "uint64",
+              "id": 2
+            },
+            "requiredCreditAmount": {
+              "type": "int64",
+              "id": 3
+            }
+          }
+        },
+        "ActivityCollectRewardResp": {
+          "fields": {}
         }
       }
     }

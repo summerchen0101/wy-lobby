@@ -33,15 +33,36 @@
   filter: brightness(1.02);
 }
 
-.funds-history-modal__info-popover-wrap {
+.info-popover.funds-history-modal__info-popover-wrap {
   max-width: min(18rem, calc(100vw - 2rem));
+  color: #1a1a1a;
+  background: #fff;
+  border-color: rgb(0 0 0 / 12%);
 }
 
 .funds-history-modal__info-popover-text {
   margin: 0;
   font-size: 0.85rem;
   line-height: 1.45;
-  color: var(--color-text, #fff);
+  color: #1a1a1a;
+  white-space: pre-line;
+}
+
+.funds-history-modal__support-link {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: #00a884;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.funds-history-modal__support-link:hover {
+  color: #00c49a;
 }
 
 .funds-history-modal__scroll {

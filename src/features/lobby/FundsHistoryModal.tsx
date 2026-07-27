@@ -14,6 +14,7 @@ import {
 } from "../../realtime/fundsHistoryLobbyWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
+import { openZendeskOrFallback } from "../../lib/zendeskSupport";
 import { useWordData } from "../../wordData/useWordData";
 import "./FundsHistoryModal.css";
 
@@ -112,7 +113,15 @@ export function FundsHistoryModal({ open, onClose }: Props) {
             content={
               <p className="funds-history-modal__info-popover-text">
                 {w(510800)}
-                <a href="#support">{w(510801)}</a>
+                <button
+                  type="button"
+                  className="funds-history-modal__support-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openZendeskOrFallback();
+                  }}>
+                  {w(510801)}
+                </button>
               </p>
             }>
             {(p, triggerRef) => (
@@ -120,13 +129,13 @@ export function FundsHistoryModal({ open, onClose }: Props) {
                 ref={triggerRef}
                 {...p}
                 className="funds-history-modal__info"
-                aria-label="Funds history info">
+                aria-label={w(510767)}>
                 i
               </button>
             )}
           </InfoPopover>
           <h2 id={titleId} className="app-modal__title">
-            {w(510755)}
+            {w(510767)}
           </h2>
           <button
             type="button"

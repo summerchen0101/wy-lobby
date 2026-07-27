@@ -1,9 +1,12 @@
 import { hexPreview } from './bytesHexPreview'
 import {
+  GATEWAY_API_ACTIVITY_COLLECT_REWARD,
   GATEWAY_API_BUY_PRODUCT,
   GATEWAY_API_CLAIM_REFERRAL_REWARD,
   GATEWAY_API_CREATE_WITHDRAW_ORDER,
+  GATEWAY_API_GET_ACTIVITY,
   GATEWAY_API_GET_REFERRAL_INFO,
+  GATEWAY_API_LIST_ACTIVITY,
   GATEWAY_API_LIST_PRODUCTS,
   GATEWAY_API_LIST_PURCHASE_AND_PRIZE_HISTORIES,
   GATEWAY_API_LIST_WITHDRAW_ORDERS,
@@ -25,6 +28,10 @@ import {
   decodeListWithdrawOrdersRequestForDevLog,
 } from './withdrawLobbyWire'
 import { tryDecodeWalletUseRequestForDev } from './walletLobbyWire'
+import {
+  decodeActivityCollectRewardReqForDevLog,
+  decodeGetActivityRequestForDevLog,
+} from './activityLobbyWire'
 
 const HEX_MAX = 48
 
@@ -132,6 +139,27 @@ export function decodeGatewayRequestDataForDevLog(
     // megaman decode：預期 PayPal 時 paymentType === 13（proto/dsk PaymentTypeRec）；若見 2 多為舊前端快取
     try {
       return decodeCreateWithdrawOrderRequestForDevLog(raw)
+    } catch (e) {
+      return fallbackHex(raw, e)
+    }
+  }
+
+  if (apiType === GATEWAY_API_LIST_ACTIVITY) {
+    if (empty) return {}
+    return { note: 'ListActivitiesRequest (empty body)' }
+  }
+
+  if (apiType === GATEWAY_API_GET_ACTIVITY) {
+    try {
+      return decodeGetActivityRequestForDevLog(raw)
+    } catch (e) {
+      return fallbackHex(raw, e)
+    }
+  }
+
+  if (apiType === GATEWAY_API_ACTIVITY_COLLECT_REWARD) {
+    try {
+      return decodeActivityCollectRewardReqForDevLog(raw)
     } catch (e) {
       return fallbackHex(raw, e)
     }

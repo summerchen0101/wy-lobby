@@ -639,3 +639,81 @@ message AmoeInvalidPush {
   string sweepstake_code = 2;
   string exception_codes = 3;
 }
+
+// --- Activity / Daily Sign-In — Gateway LIST_ACTIVITY=470, GET_ACTIVITY=471, ACTIVITY_COLLECT_REWARD=495 ---
+enum ActivityCategory {
+  UNKNOWN_ACTIVITY_TYPE = 0;
+  Lottery = 1;
+  Lucky = 2;
+  JackPot = 3;
+  DailyTask = 4;
+  DailySignIn = 5;
+}
+
+message ListActivitiesRequest {}
+
+message ListActivitiesResponse {
+  repeated ActivityData activities = 1;
+}
+
+message GetActivityRequest {
+  uint64 activityID = 1;
+}
+
+message GetActivityResponse {
+  ActivityData activity = 1;
+}
+
+message DailyMissionCreditReward {
+  int64 requiredCreditAmount = 1;
+  int64 itemID = 2;
+  int64 itemAmount = 3;
+  bool isCollected = 4;
+}
+
+message UserDailyMission {
+  uint64 activityID = 1;
+  uint64 dailyMissionID = 2;
+  int64 date = 3;
+  int32 dailyMissionType = 4;
+  repeated int64 gameIDs = 5;
+  int64 minVIPLevel = 6;
+  int64 actionTimes = 7;
+  int64 minBetAmount = 8;
+  int64 minGainAmount = 9;
+  int64 totalBetAmount = 10;
+  int64 totalGainAmount = 11;
+  int64 creditAmount = 12;
+  int64 itemID = 13;
+  int64 itemAmount = 14;
+  int64 achievedActionTimes = 15;
+  int64 achievedBetAmount = 16;
+  int64 achievedGainAmount = 17;
+  bool isCollected = 18;
+  int64 sort = 19;
+}
+
+message UserDailyMissionsByDate {
+  int64 date = 1;
+  repeated UserDailyMission userDailyMissions = 2;
+}
+
+message ActivityData {
+  uint64 activityID = 1;
+  ActivityCategory activityType = 2;
+  string activityName = 3;
+  int64 sort = 4;
+  int64 displayStartTime = 5;
+  int64 displayEndTime = 6;
+  repeated DailyMissionCreditReward dailyMissionCreditRewards = 7;
+  map<int64, UserDailyMissionsByDate> UserDailyMissionsByDates = 8;
+  int64 achievedCreditAmount = 9;
+}
+
+message ActivityCollectRewardReq {
+  uint64 activityID = 1;
+  uint64 dailyMissionID = 2;
+  int64 requiredCreditAmount = 3;
+}
+
+message ActivityCollectRewardResp {}

@@ -14,6 +14,9 @@ import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
 import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
 import { BeggarRedEnvelopeGate } from "./features/lobby/BeggarRedEnvelopeGate";
+import { DailyLoginGate } from "./features/dailyLogin/DailyLoginGate";
+import { DailyLoginModalHost } from "./features/dailyLogin/DailyLoginModalHost";
+import { DailyLoginProvider } from "./features/dailyLogin/DailyLoginProvider";
 import { GeoGate } from "./features/geo/GeoGate";
 import { GeoProvider } from "./features/geo/GeoProvider";
 import { SocureDeviceInit } from "./features/socure/SocureDeviceInit";
@@ -103,6 +106,7 @@ export default function App() {
             <AlertProvider>
               <OAuthReturnHandler />
               <GatewayLobbyProvider>
+                <DailyLoginProvider>
                 <AuthModalsProvider>
                   <GeoProvider>
                     <SocureDeviceInit />
@@ -114,6 +118,8 @@ export default function App() {
                       <IosInstallGuide />
                       <NewbieTutorialGate />
                       <BeggarRedEnvelopeGate />
+                      <DailyLoginGate />
+                      <DailyLoginModalHost />
                       <GeoGate />
                       <Suspense fallback={<FullScreenLoadingOverlay />}>
                         <LobbyUiSoundRoot />
@@ -187,6 +193,7 @@ export default function App() {
                     </GameShellProvider>
                   </GeoProvider>
                 </AuthModalsProvider>
+                </DailyLoginProvider>
               </GatewayLobbyProvider>
             </AlertProvider>
           </WalletProvider>

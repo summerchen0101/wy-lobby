@@ -329,7 +329,7 @@ export const WORD_DATA: Readonly<Record<number, string>> = {
   510785: "Replenishment",
   510786: "Daily Bonus",
   510787: "Contact Support",
-  510800: "Purchases and Prizes history is saved for 2 weeks. For older information: ",
+  510800: "Purchases and Prizes history is saved for 2 weeks.\nFor older information: ",
   510801: "Contact Support",
   600001: "Pirate",
   600035: "Super 777",
