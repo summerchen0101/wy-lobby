@@ -67,11 +67,14 @@ describe("fundsHistoryLobbyWire", () => {
     expect(histories).toHaveLength(1);
     expect(histories[0]?.tradeEventLabel).toBe(getWord(510786));
     expect(tradeEventToLabel(51)).toBe(getWord(510786));
+    expect(formatFundsHistoryGcAmount(histories[0]!.gcAmountWire)).toBe("170K");
+    expect(formatFundsHistoryScBonus(histories[0]!.scAmountWire)).toBe("0");
   });
 
-  it("formats fractional SC bonus amounts", () => {
+  it("formats zero and fractional SC bonus amounts", () => {
     expect(formatFundsHistoryScBonus("6000")).toBe("0.60");
-    expect(formatFundsHistoryScBonus("0")).toBe("");
+    expect(formatFundsHistoryScBonus("0")).toBe("0");
+    expect(formatFundsHistoryGcAmount("0")).toBe("0");
   });
 
   it("formats trade event enum name fallback", () => {

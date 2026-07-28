@@ -39,9 +39,9 @@ export function formatFundsHistoryGcAmount(gcAmountWire: string): string {
   const t = String(gcAmountWire ?? "")
     .trim()
     .replace(/,/g, "");
-  if (t === "") return "—";
+  if (t === "") return "0";
   const n = Number(t);
-  if (!Number.isFinite(n) || n <= 0) return "—";
+  if (!Number.isFinite(n) || n <= 0) return "0";
   if (n >= 1_000_000) {
     const m = n / 1_000_000;
     const s = m >= 10 ? String(Math.round(m)) : String(Math.round(m * 10) / 10);
@@ -60,9 +60,9 @@ export function formatFundsHistoryScBonus(scAmountWire: string): string {
   const t = String(scAmountWire ?? "")
     .trim()
     .replace(/,/g, "");
-  if (t === "" || t === "0") return "";
+  if (t === "" || t === "0") return "0";
   const formatted = formatScFromRawWireInteger(t);
-  if (formatted === "—" || formatted === "0.00") return "";
+  if (formatted === "—" || formatted === "0.00") return "0";
   return formatted.replace(/\.00$/, "");
 }
 
