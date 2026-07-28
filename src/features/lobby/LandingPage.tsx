@@ -1132,8 +1132,8 @@ export function LandingPage() {
               className="guest-landing__hero-img"
               src={guestHeroSrc}
               alt=""
-              width={1200}
-              height={420}
+              width={1164}
+              height={1080}
               decoding="async"
             />
           </div>

@@ -9,7 +9,8 @@
   box-shadow: none;
   box-sizing: border-box;
   width: 100%;
-  height: min(58vh, 480px);
+  aspect-ratio: 1164 / 1080;
+  height: auto;
   background: #000;
 }
 
@@ -81,6 +82,7 @@
 
 @media (min-width: 48rem) {
   .lobby-hero-banner__art-wrap {
+    aspect-ratio: auto;
     height: clamp(22rem, 42vw, 45rem);
   }
 }
