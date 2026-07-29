@@ -192,19 +192,6 @@ button.promo-page__btn {
   filter: brightness(1.05);
 }
 
-.promo-page__card--daily-pending {
-  cursor: default;
-}
-
-.promo-page__btn--pending {
-  opacity: 0.72;
-  cursor: default;
-}
-
-.promo-page__card--daily-pending:hover .promo-page__btn--pending {
-  filter: none;
-}
-
 .promo-page__btn-label {
   font: inherit;
   font-size: inherit;

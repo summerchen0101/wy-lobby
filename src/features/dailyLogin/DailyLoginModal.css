@@ -1,0 +1,616 @@
+/* Daily login modal — APP-aligned five-section layout */
+
+.daily-login-overlay {
+  --dl-primary: var(--crown-button-primary-bg, #3435e0);
+  --dl-primary-edge: #3d65e4;
+  --dl-card-bg: #101435;
+  --dl-card-border: color-mix(in srgb, var(--dl-primary-edge) 65%, #1d1f51);
+  --dl-claimable: #26ff8b;
+  --dl-claimable-dim: color-mix(in srgb, var(--dl-claimable) 38%, #1a2548);
+  --dl-progress-fill: var(--crown-gold, #ffd700);
+  --dl-date: var(--crown-gold, #ffd700);
+  --dl-cta: color-mix(in srgb, var(--dl-primary-edge) 90%, #ffffff);
+  --dl-head-bg: color-mix(in srgb, var(--dl-primary-edge) 52%, #1d1f51);
+  --dl-head-border: color-mix(in srgb, var(--dl-primary-edge) 45%, transparent);
+  --dl-day-body-pad-top: calc(1.75rem - 10px);
+  --dl-day-body-pad-bottom: max(0.1rem, calc(0.45rem - 15px));
+
+  position: fixed;
+  inset: 0;
+  z-index: var(--modal-z-index);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding: max(var(--page-pad), var(--safe-top)) var(--page-pad-inline)
+    max(var(--page-pad), var(--safe-bottom));
+  background: var(--modal-overlay-scrim);
+  backdrop-filter: blur(var(--modal-overlay-blur));
+}
+
+.daily-login-overlay__close {
+  position: fixed;
+  top: max(0.85rem, var(--safe-top));
+  right: max(0.85rem, var(--page-pad-inline));
+  z-index: calc(var(--modal-z-index) + 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--modal-close-size);
+  height: var(--modal-close-size);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  opacity: 0.92;
+}
+
+.daily-login-overlay__close:hover:not(:disabled) {
+  opacity: 1;
+  background: rgb(255 255 255 / 10%);
+}
+
+.daily-login-overlay__close:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.daily-login-modal {
+  width: 100%;
+  max-width: 26rem;
+  margin: auto;
+  flex-shrink: 0;
+  padding: 0 0 max(1.25rem, var(--safe-bottom));
+  background: transparent;
+  box-shadow: none;
+  color: #fff;
+}
+
+.daily-login-modal__header {
+  margin-bottom: var(--space-3);
+  text-align: center;
+}
+
+.daily-login-modal__title {
+  margin: 0;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.daily-login-modal__range {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--dl-date);
+}
+
+.daily-login-modal__status {
+  margin: var(--space-3) 0;
+  font-size: 0.9rem;
+  text-align: center;
+  color: var(--color-text);
+}
+
+.daily-login-modal__status--error {
+  color: #ffb4b4;
+}
+
+/* Progress */
+.daily-login-modal__progress {
+  position: relative;
+  --dl-track-height: 0.75rem;
+  --dl-thumb-size: 1.5rem;
+  --dl-node-size: 1.45rem;
+  --dl-gift-size: 1rem;
+  --dl-milestone-day-size: 0.62rem;
+  --dl-milestone-gap: 0.35rem;
+  --dl-track-center-from-bottom: calc(var(--dl-thumb-size) / 2);
+  margin-bottom: var(--space-6);
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+  padding-top: calc(
+    var(--dl-milestone-day-size) + var(--dl-milestone-gap) + var(--dl-gift-size) +
+      var(--dl-milestone-gap)
+  );
+  padding-bottom: var(--dl-track-center-from-bottom);
+  min-height: calc(
+    var(--dl-milestone-day-size) + var(--dl-milestone-gap) + var(--dl-gift-size) +
+      var(--dl-milestone-gap) + var(--dl-node-size) +
+      var(--dl-track-center-from-bottom)
+  );
+}
+
+.daily-login-modal__milestones {
+  position: absolute;
+  inset: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.daily-login-modal__milestone {
+  position: absolute;
+  bottom: calc(var(--dl-track-center-from-bottom) - var(--dl-node-size) / 2);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dl-milestone-gap);
+  min-width: 1.5rem;
+  opacity: 1;
+}
+
+.daily-login-modal__progress-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--dl-track-center-from-bottom) - var(--dl-track-height) / 2);
+  height: var(--dl-track-height);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dl-primary) 32%, #050510);
+  border: 2px solid color-mix(in srgb, var(--dl-primary) 48%, #1d1f51);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--dl-primary) 18%, transparent);
+  overflow: visible;
+  z-index: 1;
+}
+
+.daily-login-modal__progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--dl-progress-fill);
+  transition: width 0.25s ease;
+}
+
+.daily-login-modal__progress-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate(0, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #101435;
+  font-size: 0.62rem;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dl-progress-fill) 60%, #000);
+  z-index: 4;
+}
+
+.daily-login-modal__milestone--claimable .daily-login-modal__milestone-node {
+  box-shadow: 0 0 10px var(--dl-claimable);
+}
+
+.daily-login-modal__milestone-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dl-milestone-gap);
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  line-height: 1;
+  min-width: 1.5rem;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.daily-login-modal__milestone-hit:focus {
+  outline: none;
+}
+
+.daily-login-modal__milestone-hit:active {
+  background: transparent;
+}
+
+.daily-login-modal__milestone-lock-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--dl-milestone-day-size);
+  color: #fff;
+}
+
+.daily-login-modal__milestone-gift {
+  color: var(--dl-progress-fill);
+  flex-shrink: 0;
+}
+
+.daily-login-modal__milestone-popover {
+  z-index: calc(var(--modal-z-index) + 10);
+  background: #fff;
+  color: #1a1020;
+  border: none;
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  box-shadow: 0 0.25rem 0.85rem rgb(0 0 0 / 35%);
+  font-weight: 800;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  max-width: none;
+}
+
+.daily-login-modal__milestone-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.daily-login-modal__milestone-hint-empty {
+  color: #101010;
+  opacity: 0.55;
+}
+
+.daily-login-modal__milestone-hint-claim {
+  margin-left: 0.15rem;
+  padding: 0.15rem 0.45rem;
+  border: none;
+  border-radius: 0.3rem;
+  background: var(--dl-claimable);
+  color: #0a2018;
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  tap-highlight-color: transparent;
+}
+
+.daily-login-modal__milestone-hint-claim:active {
+  filter: brightness(0.95);
+}
+
+.daily-login-modal__milestone-hint .daily-login-modal__reward-row {
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: #101010;
+}
+
+.daily-login-modal__milestone-hint .daily-login-modal__reward-plus {
+  color: #101010;
+}
+
+.daily-login-modal__milestone-hint .daily-login-modal__reward-row img {
+  width: 16px;
+  height: 16px;
+}
+
+.daily-login-modal__milestone-node {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fff;
+  background: #2a3a6a;
+}
+
+.daily-login-modal__milestone-node .daily-login-modal__milestone-day {
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+}
+
+.daily-login-modal__milestone--tone-0 .daily-login-modal__milestone-node {
+  background: #1fbf6a;
+}
+
+.daily-login-modal__milestone--tone-1 .daily-login-modal__milestone-node {
+  background: #3498db;
+}
+
+.daily-login-modal__milestone--tone-2 .daily-login-modal__milestone-node {
+  background: #e84393;
+}
+
+.daily-login-modal__milestone--tone-3 .daily-login-modal__milestone-node {
+  background: #9b59b6;
+}
+
+/* Day grid */
+.daily-login-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.daily-login-modal__featured {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+
+.daily-login-modal__day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dl-card-border);
+  background: var(--dl-card-bg);
+  overflow: hidden;
+}
+
+.daily-login-modal__day--locked {
+  border: 1px solid var(--dl-card-border);
+  background: var(--dl-card-bg);
+  box-shadow: none;
+}
+
+.daily-login-modal__day--locked .daily-login-modal__day-head {
+  background: var(--dl-head-bg);
+  color: #fff;
+}
+
+.daily-login-modal__day--claimable {
+  border: 2px solid var(--dl-claimable);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--dl-claimable) 45%, transparent);
+  opacity: 1;
+}
+
+.daily-login-modal__day--clickable {
+  cursor: pointer;
+}
+
+.daily-login-modal__day--clickable:focus-visible {
+  outline: 2px solid var(--dl-claimable);
+  outline-offset: 2px;
+}
+
+.daily-login-modal__day--claiming {
+  opacity: 0.88;
+  pointer-events: none;
+}
+
+.daily-login-modal__day--featured.daily-login-modal__day--locked {
+  border-width: 1px;
+}
+
+.daily-login-modal__day--featured.daily-login-modal__day--claimable {
+  border-width: 2px;
+}
+
+.daily-login-modal__day--featured {
+  border-width: 1px;
+}
+
+.daily-login-modal__day-head {
+  padding: 0.22rem 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: #fff;
+  background: var(--dl-head-bg);
+  border-bottom: 1px solid var(--dl-head-border);
+}
+
+.daily-login-modal__day--claimable .daily-login-modal__day-head {
+  background: color-mix(in srgb, var(--dl-claimable) 35%, #0a3020);
+  color: #fff;
+}
+
+.daily-login-modal__day-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 1;
+  gap: 0.15rem;
+  min-height: 7.5rem;
+  padding: var(--dl-day-body-pad-top) 0.25rem var(--dl-day-body-pad-bottom);
+}
+
+.daily-login-modal__day-body--featured {
+  flex-direction: row;
+  justify-content: center;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-height: 8.5rem;
+  padding: var(--dl-day-body-pad-top) 0.5rem var(--dl-day-body-pad-bottom);
+}
+
+.daily-login-modal__featured-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.daily-login-modal__featured-plus {
+  font-size: 1.25rem;
+  font-weight: 300;
+  color: #fff;
+  line-height: 1;
+  align-self: center;
+}
+
+.daily-login-modal__day-rewards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.daily-login-modal__day-rewards--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.daily-login-modal__reward-plus {
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+}
+
+.daily-login-modal__day-art-wrap {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  min-height: 5.625rem;
+}
+
+.daily-login-modal__reward-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.daily-login-modal__day-art {
+  width: 6.25rem;
+  max-width: 100%;
+  height: auto;
+  max-height: 5.625rem;
+  object-fit: contain;
+  object-position: bottom;
+  display: block;
+}
+
+.daily-login-modal__day--featured .daily-login-modal__day-art {
+  width: 7.5rem;
+  max-height: 6.875rem;
+}
+
+.daily-login-modal__day-body--claimed-only {
+  justify-content: center;
+  align-items: center;
+  padding: max(0.1rem, calc(0.45rem - 15px)) 0.25rem;
+}
+
+.daily-login-modal__day-body--featured.daily-login-modal__day-body--claimed-only {
+  padding: max(0.1rem, calc(0.45rem - 15px)) 0.5rem;
+}
+
+.daily-login-modal__day-check-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dl-claimable);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--dl-claimable) 55%, transparent));
+}
+
+.daily-login-modal__day-check-mark--pop svg {
+  animation: daily-login-check-icon-pop 0.45s ease-out;
+}
+
+@keyframes daily-login-check-icon-pop {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.daily-login-modal__day-check-mark svg {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.daily-login-modal__day--featured .daily-login-modal__day-check-mark svg {
+  width: 3.25rem;
+  height: 3.25rem;
+}
+
+/* Footer */
+.daily-login-modal__footer {
+  margin-top: var(--space-2);
+  padding-bottom: 0.35rem;
+  text-align: center;
+}
+
+.daily-login-modal__cta {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dl-cta);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--dl-primary-edge) 45%, transparent);
+}
+
+.daily-login-modal__claim {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #1a1020;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--crown-gold, #ffd700) 95%, #fff) 0%,
+    var(--crown-gold, #ffd700) 100%
+  );
+  cursor: pointer;
+}
+
+.daily-login-modal__claim:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 22rem) {
+  .daily-login-modal__day-art {
+    width: 5rem;
+    max-height: 4.5rem;
+  }
+
+  .daily-login-modal__milestones {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

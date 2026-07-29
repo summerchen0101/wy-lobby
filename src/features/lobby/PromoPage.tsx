@@ -1,7 +1,7 @@
 import { useCallback, useState, type KeyboardEvent } from 'react'
-import { useAlert } from '../../components/alert/alertContext'
-import { publicImageUrl } from '../../lib/publicImageUrl'
+import { useDailyLoginActivity } from '../dailyLogin/dailyLoginContext'
 import { InviteFriendsModal } from './InviteFriendsModal'
+import { publicImageUrl } from '../../lib/publicImageUrl'
 import './PromoPage.css'
 import './SessionPageDecor.css'
 
@@ -25,18 +25,17 @@ const PROMO_CARDS = [
 type PromoCardId = (typeof PROMO_CARDS)[number]['id']
 
 export function PromoPage() {
-  const { show } = useAlert()
+  const { openModal } = useDailyLoginActivity()
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
-
   const onCardAction = useCallback(
     (id: PromoCardId) => {
       if (id === 'invite') {
         setInviteModalOpen(true)
         return
       }
-      show('Daily Bonus coming soon', { variant: 'info' })
+      openModal()
     },
-    [show],
+    [openModal],
   )
 
   const onCardKeyDown = useCallback(
@@ -54,19 +53,13 @@ export function PromoPage() {
       <div className="promo-page__inner">
         <h1 className="promo-page__title">PROMOTIONS</h1>
         <ul className="promo-page__list">
-          {PROMO_CARDS.map(({ id, title, bg, cta }) => {
-            const isDaily = id === 'daily'
-            return (
+          {PROMO_CARDS.map(({ id, title, bg, cta }) => (
               <li key={id} className="promo-page__card-slot">
                 <div
-                  className={
-                    'promo-page__card' +
-                    (isDaily ? ' promo-page__card--daily-pending' : '')
-                  }
+                  className="promo-page__card"
                   role="button"
                   tabIndex={0}
                   aria-label={title}
-                  aria-disabled={isDaily || undefined}
                   onClick={() => onCardAction(id)}
                   onKeyDown={(e) => onCardKeyDown(e, id)}
                 >
@@ -83,11 +76,7 @@ export function PromoPage() {
                     <div className="promo-page__actions">
                       <button
                         type="button"
-                        className={
-                          'promo-page__btn promo-page__btn--light' +
-                          (isDaily ? ' promo-page__btn--pending' : '')
-                        }
-                        aria-disabled={isDaily || undefined}
+                        className="promo-page__btn promo-page__btn--light"
                         onClick={(e) => {
                           e.stopPropagation()
                           onCardAction(id)
@@ -99,8 +88,7 @@ export function PromoPage() {
                   </div>
                 </div>
               </li>
-            )
-          })}
+          ))}
         </ul>
       </div>
 

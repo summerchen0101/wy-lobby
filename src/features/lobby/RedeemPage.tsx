@@ -7,6 +7,7 @@ import { CURRENCY_ICON_SC } from "../../lib/currencyIcons";
 import {
   formatScFromRaw,
   formatScFromRawWireInteger,
+  formatScFromTruncatedHundredths,
   formatWithdrawHistoryFiatAmount,
   MIN_REDEEM_SC_DISPLAY,
 } from "../../wallet/formatWalletAmount";
@@ -111,7 +112,7 @@ export function RedeemPage() {
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [initialOrdersFetched, setInitialOrdersFetched] = useState(false);
 
-  const { amount: scAmount, redeemableAmount, unplayed } =
+  const { amount: scAmount, redeemableAmount, unplayedHundredths } =
     redeemScBalancesFromLobby({
       lobbyGet,
       sweepstakesFallback: user?.sweepstakesBalance,
@@ -247,7 +248,7 @@ export function RedeemPage() {
                 </p>
                 <p>
                   <strong>Unplayed Sweeps Coins Balance:</strong>{" "}
-                  {formatScFromRaw(unplayed)} <ScInlineIcon />
+                  {formatScFromTruncatedHundredths(unplayedHundredths)} <ScInlineIcon />
                 </p>
                 <p>
                   <ScInlineIcon /> 1 Sweeps Coin = $1

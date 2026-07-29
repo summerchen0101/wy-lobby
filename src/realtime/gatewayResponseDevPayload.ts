@@ -1,15 +1,18 @@
 import {
+  GATEWAY_API_ACTIVITY_COLLECT_REWARD,
   GATEWAY_API_BUY_PRODUCT,
   GATEWAY_API_CLAIM_REFERRAL_REWARD,
   GATEWAY_API_CREATE_WITHDRAW_ORDER,
   GATEWAY_API_AMOE_CREDITED_PUSH,
   GATEWAY_API_AMOE_INVALID_PUSH,
   GATEWAY_API_GENERATE_AMOE_CODE,
+  GATEWAY_API_GET_ACTIVITY,
   GATEWAY_API_GET_REFERRAL_INFO,
   GATEWAY_API_GET_THIRD_PARTY_GAME_INFO,
   GATEWAY_API_GET_JACKPOT_INFO,
   GATEWAY_API_JACKPOT_INFO_PUSH,
   GATEWAY_API_LIST_PLAYER_AVATARS,
+  GATEWAY_API_LIST_ACTIVITY,
   GATEWAY_API_LIST_PRODUCTS,
   GATEWAY_API_LIST_PURCHASE_AND_PRIZE_HISTORIES,
   GATEWAY_API_LIST_WITHDRAW_ORDERS,
@@ -58,6 +61,11 @@ import {
 } from "./withdrawLobbyWire";
 import { decodeListPurchaseAndPrizeHistoriesResponseBytes } from "./fundsHistoryLobbyWire";
 import { decodeUserKickBeforeReasonBytes } from "./userKickWire";
+import {
+  decodeActivityCollectRewardRespBytes,
+  decodeGetActivityResponseBytes,
+  decodeListActivitiesResponseBytes,
+} from "./activityLobbyWire";
 
 const HEX_MAX = 48;
 
@@ -308,6 +316,45 @@ export function decodeGatewayResponseDataForDevLog(
           };
         }
         return fallbackHex(raw, new Error("WithdrawSuccessPush decode failed"));
+      } catch (e) {
+        return fallbackHex(raw, e);
+      }
+    }
+    if (type === GATEWAY_API_LIST_ACTIVITY) {
+      try {
+        const { activities } = decodeListActivitiesResponseBytes(raw);
+        return {
+          kind: "LIST_ACTIVITY",
+          activityCount: activities?.length ?? 0,
+          activityTypesPreview: (activities ?? [])
+            .slice(0, 6)
+            .map((a) => a.activityType),
+        };
+      } catch (e) {
+        return fallbackHex(raw, e);
+      }
+    }
+    if (type === GATEWAY_API_GET_ACTIVITY) {
+      try {
+        const { activity } = decodeGetActivityResponseBytes(raw);
+        return {
+          kind: "GET_ACTIVITY",
+          activityID: activity?.activityID,
+          activityType: activity?.activityType,
+          missionDateCount: Object.keys(
+            activity?.UserDailyMissionsByDates ?? {},
+          ).length,
+          creditRewardCount: activity?.dailyMissionCreditRewards?.length ?? 0,
+          activity,
+        };
+      } catch (e) {
+        return fallbackHex(raw, e);
+      }
+    }
+    if (type === GATEWAY_API_ACTIVITY_COLLECT_REWARD) {
+      try {
+        decodeActivityCollectRewardRespBytes(raw);
+        return { kind: "ACTIVITY_COLLECT_REWARD", note: "empty body" };
       } catch (e) {
         return fallbackHex(raw, e);
       }

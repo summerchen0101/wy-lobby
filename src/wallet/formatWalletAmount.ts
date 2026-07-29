@@ -38,10 +38,33 @@ export function scRawToDisplay(raw: number): number {
   return raw / SC_POINT_SCALE;
 }
 
+/** 與 {@link formatScFromRaw} 相同：raw → 向零截斷至小數第二位（以「顯示值×100」整數表示，避免浮點誤差）。 */
+export function scTruncatedHundredthsFromRaw(raw: number): number {
+  return Math.trunc(raw / 100);
+}
+
+/** 與 {@link formatScFromRaw} 相同：raw → 向零截斷至小數第二位之顯示數值。 */
+export function scTruncatedDisplayFromRaw(raw: number): number {
+  return scTruncatedHundredthsFromRaw(raw) / 100;
+}
+
 /** 後端原始值 → 顯示字串（向零捨去至小數二位，與 header SC 一致）。 */
 export function formatScFromRaw(raw: number | undefined): string {
   if (raw === undefined) return "—";
   return formatWalletScAmountForDisplay(scRawToDisplay(raw));
+}
+
+/** 已截斷至小數二位的 SC 顯示值（×100 整數）→ 顯示字串；避免大額 raw 相減後 `formatScFromRaw` 浮點誤差。 */
+export function formatScFromTruncatedHundredths(hundredths: number): string {
+  const h = Math.trunc(hundredths);
+  if (!Number.isFinite(h)) return "—";
+  const neg = h < 0;
+  const abs = Math.abs(h);
+  const intPart = Math.trunc(abs / 100);
+  const frac = abs % 100;
+  const intFmt = intPart.toLocaleString(getActiveLocale());
+  const fracFmt = String(frac).padStart(2, "0");
+  return `${neg ? "-" : ""}${intFmt}.${fracFmt}`;
 }
 
 /** 對齊 {@link formatScFromRaw}：後端 raw 已為 SC×10000；整數部千分位、小數部固定二位（非負數 raw）。 */

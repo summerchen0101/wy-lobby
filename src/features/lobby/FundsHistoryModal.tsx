@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { HiCheckCircle } from "react-icons/hi2";
+import { HiOutlineCheckCircle } from "react-icons/hi2";
 import { InfoPopover } from "../../components/InfoPopover";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
 import { GATEWAY_API_LIST_PURCHASE_AND_PRIZE_HISTORIES } from "../../realtime/gatewayApi";
@@ -14,6 +14,7 @@ import {
 } from "../../realtime/fundsHistoryLobbyWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
+import { openZendeskOrFallback } from "../../lib/zendeskSupport";
 import { useWordData } from "../../wordData/useWordData";
 import "./FundsHistoryModal.css";
 
@@ -112,7 +113,15 @@ export function FundsHistoryModal({ open, onClose }: Props) {
             content={
               <p className="funds-history-modal__info-popover-text">
                 {w(510800)}
-                <a href="#support">{w(510801)}</a>
+                <button
+                  type="button"
+                  className="funds-history-modal__support-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openZendeskOrFallback();
+                  }}>
+                  {w(510801)}
+                </button>
               </p>
             }>
             {(p, triggerRef) => (
@@ -120,13 +129,13 @@ export function FundsHistoryModal({ open, onClose }: Props) {
                 ref={triggerRef}
                 {...p}
                 className="funds-history-modal__info"
-                aria-label="Funds history info">
+                aria-label={w(510767)}>
                 i
               </button>
             )}
           </InfoPopover>
           <h2 id={titleId} className="app-modal__title">
-            {w(510755)}
+            {w(510767)}
           </h2>
           <button
             type="button"
@@ -164,36 +173,30 @@ export function FundsHistoryModal({ open, onClose }: Props) {
                       </span>
                     </div>
                     <div className="funds-history-modal__amounts">
-                      {gcLabel !== "—" ? (
-                        <span className="funds-history-modal__coin-group">
-                          <img
-                            className="funds-history-modal__coin"
-                            src={CURRENCY_ICON_GC}
-                            alt=""
-                            aria-hidden
-                          />
-                          <span className="funds-history-modal__coin-value">
-                            {gcLabel}
-                          </span>
+                      <span className="funds-history-modal__coin-group">
+                        <img
+                          className="funds-history-modal__coin"
+                          src={CURRENCY_ICON_GC}
+                          alt=""
+                          aria-hidden
+                        />
+                        <span className="funds-history-modal__coin-value">
+                          {gcLabel}
                         </span>
-                      ) : null}
-                      {scBonus ? (
-                        <>
-                          <span className="funds-history-modal__free">{w(105)}</span>
-                          <span className="funds-history-modal__coin-group">
-                            <img
-                              className="funds-history-modal__coin"
-                              src={CURRENCY_ICON_SC}
-                              alt=""
-                              aria-hidden
-                            />
-                            <span className="funds-history-modal__coin-value">
-                              {scBonus}
-                            </span>
-                          </span>
-                        </>
-                      ) : null}
-                      <HiCheckCircle
+                      </span>
+                      <span className="funds-history-modal__free">+{w(105)}</span>
+                      <span className="funds-history-modal__coin-group">
+                        <img
+                          className="funds-history-modal__coin"
+                          src={CURRENCY_ICON_SC}
+                          alt=""
+                          aria-hidden
+                        />
+                        <span className="funds-history-modal__coin-value">
+                          {scBonus}
+                        </span>
+                      </span>
+                      <HiOutlineCheckCircle
                         className="funds-history-modal__status"
                         aria-hidden
                       />

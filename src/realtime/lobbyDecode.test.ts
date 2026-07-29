@@ -101,4 +101,18 @@ describe("lobbyThirdPartyListToApiGames", () => {
     expect(items).toHaveLength(1);
     expect(items[0]?.thirdPartyLaunch?.gameUID).toBe("ok");
   });
+
+  it("maps MICROGAMING platform to M2PLAY for display", () => {
+    const items = lobbyThirdPartyListToApiGames([
+      {
+        platform: "MICROGAMING",
+        gameUID: "mg-1",
+        gameName: "Test Game",
+        status: "ACTIVE",
+      },
+    ] as unknown as LobbyGetDecoded["thirdPartyGameInfoList"]);
+    expect(items[0]?.subtitle).toBe("M2PLAY");
+    expect(items[0]?.provider).toBe("M2PLAY");
+    expect(items[0]?.thirdPartyLaunch?.platform).toBe("MICROGAMING");
+  });
 });

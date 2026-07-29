@@ -63,6 +63,13 @@ export const GATEWAY_API_GET_REFERRAL_INFO = 540
 /** 領取推廣獎勵；body 空；回應 megaman.ClaimReferralRewardResp */
 export const GATEWAY_API_CLAIM_REFERRAL_REWARD = 541
 
+/** 活動列表；body 為 megaman.ListActivitiesRequest；回應 megaman.ListActivitiesResponse */
+export const GATEWAY_API_LIST_ACTIVITY = 470
+/** 活動詳情；body 為 megaman.GetActivityRequest；回應 megaman.GetActivityResponse */
+export const GATEWAY_API_GET_ACTIVITY = 471
+/** 領取活動獎勵；body 為 megaman.ActivityCollectRewardReq；回應 megaman.ActivityCollectRewardResp */
+export const GATEWAY_API_ACTIVITY_COLLECT_REWARD = 495
+
 /** 產生 AMOE 明信片抽獎代碼；body 空；回應 megaman.GenerateAmoeCodeResponse */
 export const GATEWAY_API_GENERATE_AMOE_CODE = 560
 /** 查詢自己的 AMOE 申請進度；body 為 megaman.ListUserAmoeEntriesReq */
