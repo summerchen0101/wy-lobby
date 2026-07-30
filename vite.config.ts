@@ -8,21 +8,22 @@ import { joinPublicImageUrl } from "./src/lib/publicImageUrlCore.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function facebookPixelHtmlPlugin(env: Record<string, string>): Plugin {
-  const pixelId = (env.VITE_FB_PIXEL_ID ?? "").trim();
+function gtmHtmlPlugin(env: Record<string, string>): Plugin {
+  const containerId = (env.VITE_GTM_ID ?? "").trim();
 
   return {
-    name: "facebook-pixel-html",
+    name: "google-tag-manager-html",
     transformIndexHtml(html: string) {
-      if (!pixelId) return html;
+      if (!containerId) return html;
       const noscript = [
-        "<!-- Facebook Pixel Code (noscript) -->",
+        "<!-- Google Tag Manager (noscript) -->",
         "<noscript>",
-        `  <img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1" />`,
+        `<iframe src="https://www.googletagmanager.com/ns.html?id=${containerId}"`,
+        'height="0" width="0" style="display:none;visibility:hidden"></iframe>',
         "</noscript>",
-        "<!-- End Facebook Pixel Code (noscript) -->",
+        "<!-- End Google Tag Manager (noscript) -->",
       ].join("\n    ");
-      return html.replace("</head>", `    ${noscript}\n  </head>`);
+      return html.replace("<body>", `<body>\n    ${noscript}`);
     },
   };
 }
@@ -85,7 +86,7 @@ export default defineConfig(({ mode }) => {
         ),
       },
     },
-    plugins: [react(), publicImageCdnBuildPlugin(env), facebookPixelHtmlPlugin(env)],
+    plugins: [react(), publicImageCdnBuildPlugin(env), gtmHtmlPlugin(env)],
     test: {
       environment: "node",
       include: ["src/**/*.test.ts"],

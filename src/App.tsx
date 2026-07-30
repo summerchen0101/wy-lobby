@@ -21,7 +21,7 @@ import { GeoGate } from "./features/geo/GeoGate";
 import { GeoProvider } from "./features/geo/GeoProvider";
 import { SocureDeviceInit } from "./features/socure/SocureDeviceInit";
 import { PwaInstallBanner } from "./components/PwaInstallBanner";
-import { FacebookPixelLoader } from "./components/FacebookPixelLoader";
+import { GtmLoader } from "./components/GtmLoader";
 import { ZendeskLoader } from "./components/ZendeskLoader";
 import { AuthModalsProvider } from "./features/auth/AuthModalsProvider";
 import {
@@ -99,7 +99,7 @@ const InviteFriendsTermsPage = lazy(() =>
 export default function App() {
   return (
     <BrowserRouter>
-      <FacebookPixelLoader />
+      <GtmLoader />
       <LocaleHtmlSync />
       <AuthProvider>
         <ForceUpdateGate />
