@@ -35,6 +35,7 @@ import {
   kickstartLobbyWelcomeVoiceFromUserGesture,
   stopLobbyWelcomeVoice,
 } from "../lib/lobbySound";
+import { clearDailyLoginAutoPopupSession } from "../features/dailyLogin/dailyLoginSession";
 import { markFreshLoginWelcomeVoicePending } from "../lib/lobbyWelcomeVoiceGate";
 
 function getInitialToken(): string | null {
@@ -83,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    clearDailyLoginAutoPopupSession();
     clearStoredSession();
     setToken(null);
     setUser(null);
