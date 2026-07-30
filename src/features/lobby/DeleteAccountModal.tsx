@@ -71,7 +71,7 @@ export function DeleteAccountModal({ open, onClose }: Props) {
                 <WordDataText id={4086} />
               </p>
               <label className="delete-account-modal__label" htmlFor={inputId}>
-                {w(4087)}
+                <WordDataText id={4087} />
               </label>
               <input
                 id={inputId}

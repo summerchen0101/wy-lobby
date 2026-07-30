@@ -1,9 +1,11 @@
 import type { PlayerAvatarRowDecoded } from '../../realtime/playerAvatarWire'
-import { profileAvatarUrl } from '../../lib/profileAssets'
+import { profileAvatarIconUrl } from '../../lib/profileAssets'
 import {
-  PROFILE_AVATAR_HEAD_INDEX,
+  PROFILE_AVATAR_ICONS,
   PROFILE_AVATAR_ITEM_ORDER,
   getProfileAvatarById,
+  itemIdFromAvatarUrlField,
+  itemIdFromAvatarWireId,
 } from './profileAvatars'
 
 export type HeadIconChoice = {
@@ -16,15 +18,45 @@ const ORDER_INDEX = new Map(
   PROFILE_AVATAR_ITEM_ORDER.map((id, i) => [id, i]),
 )
 
+function resolveRowItemId(row: PlayerAvatarRowDecoded): number | undefined {
+  const rawId =
+    row.avatarID != null && String(row.avatarID).trim() !== ''
+      ? String(row.avatarID).trim()
+      : ''
+  // avatarID 0 = no item; avatarUrl may still carry item ref (e.g. "406@@")
+  if (rawId && rawId !== '0') {
+    const fromId = itemIdFromAvatarWireId(rawId)
+    if (fromId !== undefined) return fromId
+  }
+  return itemIdFromAvatarUrlField(row.avatarUrl)
+}
+
+function mergeChoice(
+  existing: HeadIconChoice,
+  next: HeadIconChoice,
+): HeadIconChoice {
+  if (existing.disabled && !next.disabled) return next
+  if (!existing.imageSrc && next.imageSrc) {
+    return { ...existing, imageSrc: next.imageSrc }
+  }
+  return existing
+}
+
 export function headIconChoicesFromServerRows(
   rows: PlayerAvatarRowDecoded[] | undefined | null,
 ): HeadIconChoice[] {
   if (!rows?.length) return []
-  const mapped = rows.map((row) => {
-    const id =
-      row.avatarID != null && String(row.avatarID) !== ''
+  const byItemId = new Map<string, HeadIconChoice>()
+  for (const row of rows) {
+    const rawAvatarId =
+      row.avatarID != null && String(row.avatarID).trim() !== ''
         ? String(row.avatarID).trim()
         : ''
+    if (rawAvatarId === '0') continue
+
+    const itemId = resolveRowItemId(row)
+    const id = itemId !== undefined ? String(itemId) : ''
+    if (!id || id === '0') continue
     const url = typeof row.avatarUrl === 'string' ? row.avatarUrl.trim() : ''
     let imageSrc = ''
     if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -33,14 +65,16 @@ export function headIconChoicesFromServerRows(
       imageSrc = getProfileAvatarById(id)?.imageSrc ?? ''
     }
     if (!imageSrc && id) {
-      imageSrc = profileAvatarUrl(PROFILE_AVATAR_HEAD_INDEX[0] ?? 1)
+      const fallbackIcon = PROFILE_AVATAR_ICONS[0] ?? 'head_1'
+      imageSrc = profileAvatarIconUrl(fallbackIcon)
     }
     const st = row.goodState
-    const disabled =
-      st === 'UNUSABLE' || st === '3'
-    return { id: id || '0', imageSrc, disabled }
-  })
-  const out = mapped.filter((c) => c.id && c.id !== '0')
+    const disabled = st === 'UNUSABLE' || st === '3'
+    const choice: HeadIconChoice = { id, imageSrc, disabled }
+    const prev = byItemId.get(id)
+    byItemId.set(id, prev ? mergeChoice(prev, choice) : choice)
+  }
+  const out = [...byItemId.values()]
   out.sort((a, b) => {
     const na = Number(a.id)
     const nb = Number(b.id)

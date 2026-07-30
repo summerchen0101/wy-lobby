@@ -186,6 +186,26 @@ export function parseWireInt64(v: string | number | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Wire int64 timestamps may arrive as seconds or milliseconds. */
+export function normalizeWireTimestampToMs(
+  v: string | number | undefined,
+): number | null {
+  const n = parseWireInt64(v);
+  if (n === null || n <= 0) return null;
+  if (n < 1_000_000_000_000) return n * 1000;
+  return n;
+}
+
+/** Activity display window fields are documented as Unix seconds. */
+export function normalizeWireTimestampToSec(
+  v: string | number | undefined,
+): number | null {
+  const n = parseWireInt64(v);
+  if (n === null || n <= 0) return null;
+  if (n >= 1_000_000_000_000) return Math.floor(n / 1000);
+  return n;
+}
+
 export function itemIdToWalletLabel(itemID: number): "GC" | "SC" {
   return itemID === 2 ? "SC" : "GC";
 }

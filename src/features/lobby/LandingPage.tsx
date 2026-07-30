@@ -45,7 +45,10 @@ import {
   providerTabId,
   type LobbyFilterTab,
 } from "../../lib/gameShellLobbyReturn";
-import { thirdPartyPlatformDisplayName } from "../../lib/thirdPartyPlatformDisplay";
+import {
+  sortThirdPartyPlatforms,
+  thirdPartyPlatformDisplayName,
+} from "../../lib/thirdPartyPlatformDisplay";
 import { GATEWAY_API_GET_THIRD_PARTY_GAME_INFO } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
@@ -79,6 +82,7 @@ import {
   UNITY_DEMO_LOBBY_GAME,
   unityDemoGameUrl,
 } from "./landingContent";
+import { useHorizontalScrollContainer } from "../../hooks/useHorizontalScrollContainer";
 import { LobbyGamesScroller } from "./LobbyGamesScroller";
 import "./LobbyPage.css";
 
@@ -101,7 +105,7 @@ function lobbyFilterTabs(
 ): LobbyFilterTabEntry[] {
   return [
     { id: "all", label: getWord(510670) },
-    { id: "slots", label: getWord(510673) },
+    { id: "slots", label: LOBBY_SLOTS_ALL_SUBSECTION_LABEL },
     { id: "hot", label: getWord(510672) },
     ...(thirdPartyGamesEnabled
       ? [
@@ -460,6 +464,16 @@ export function LandingPage() {
   const [lobbySearchExpanded, setLobbySearchExpanded] = useState(false);
   const lobbySearchInputRef = useRef<HTMLInputElement | null>(null);
   const lobbyGameFilterRef = useRef<HTMLDivElement | null>(null);
+  const {
+    setContainerRef: setLobbyGameFilterContainerRef,
+    onPointerDown: onLobbyGameFilterPointerDown,
+    onPointerMove: onLobbyGameFilterPointerMove,
+    onPointerUp: onLobbyGameFilterPointerUp,
+    onPointerCancel: onLobbyGameFilterPointerCancel,
+    onLostPointerCapture: onLobbyGameFilterLostPointerCapture,
+  } = useHorizontalScrollContainer({
+    externalRef: lobbyGameFilterRef,
+  });
   const providerTabBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useLayoutEffect(() => {
@@ -590,7 +604,7 @@ export function LandingPage() {
       seen.add(p);
       out.push(p);
     }
-    return out;
+    return sortThirdPartyPlatforms(out);
   }, [providerGamesFiltered]);
 
   const lobbyFilterTabsList = useMemo(
@@ -1299,10 +1313,15 @@ export function LandingPage() {
                   </div>
                 </div>
                 <div
-                  ref={lobbyGameFilterRef}
+                  ref={setLobbyGameFilterContainerRef}
                   className="lobby-game-filter"
                   role="tablist"
-                  aria-label="Game categories">
+                  aria-label="Game categories"
+                  onPointerDown={onLobbyGameFilterPointerDown}
+                  onPointerMove={onLobbyGameFilterPointerMove}
+                  onPointerUp={onLobbyGameFilterPointerUp}
+                  onPointerCancel={onLobbyGameFilterPointerCancel}
+                  onLostPointerCapture={onLobbyGameFilterLostPointerCapture}>
                   {lobbyFilterTabsList.map(({ id, label }) =>
                     id === "providers" && thirdPartyGamesEnabled ? (
                       <div key={id} className="lobby-provider-tab">

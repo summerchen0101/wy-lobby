@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { thirdPartyPlatformDisplayName } from "./thirdPartyPlatformDisplay";
+import {
+  sortThirdPartyPlatforms,
+  thirdPartyPlatformDisplayName,
+} from "./thirdPartyPlatformDisplay";
 
 describe("thirdPartyPlatformDisplayName", () => {
   it("maps MICROGAMING to M2PLAY", () => {
@@ -9,5 +12,27 @@ describe("thirdPartyPlatformDisplayName", () => {
 
   it("returns unknown platforms unchanged", () => {
     expect(thirdPartyPlatformDisplayName("BGAMING")).toBe("BGAMING");
+  });
+});
+
+describe("sortThirdPartyPlatforms", () => {
+  it("sorts by display name: digits 0-9 before letters A-Z", () => {
+    expect(
+      sortThirdPartyPlatforms([
+        "ZETA",
+        "1GAME",
+        "BGAMING",
+        "9LUCK",
+        "AMATIC",
+      ]),
+    ).toEqual(["1GAME", "9LUCK", "AMATIC", "BGAMING", "ZETA"]);
+  });
+
+  it("uses display name mapping when sorting", () => {
+    expect(sortThirdPartyPlatforms(["ZETA", "MICROGAMING", "AMATIC"])).toEqual([
+      "AMATIC",
+      "MICROGAMING",
+      "ZETA",
+    ]);
   });
 });

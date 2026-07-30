@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useId, useState } from "react";
-import { Copy, Crown, Info, Volume2 } from "lucide-react";
-import { HiPencil } from "react-icons/hi2";
+import { Copy, Info, Pencil, Volume2 } from "lucide-react";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
@@ -11,6 +10,7 @@ import {
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
   decodeListPlayerAvatarsResponseBytes,
+  decodePlayerAvatarsInfoBytes,
   encodeUpdatePlayerCurrentAvatarRequest,
 } from "../../realtime/playerAvatarWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
@@ -22,21 +22,28 @@ import { DeleteAccountModal } from "./DeleteAccountModal";
 import {
   effectiveAvatarId,
   getProfileAvatarById,
+  itemIdFromAvatarUrlField,
+  itemIdFromAvatarWireId,
 } from "./profileAvatars";
 import {
   headIconChoicesFromServerRows,
   type HeadIconChoice,
 } from "./profileAvatarChoices";
 import { openZendeskOrFallback } from "../../lib/zendeskSupport";
-import { profileAvatarFrameUrl } from "../../lib/profileAssets";
+import {
+  profileAvatarFrameUrl,
+  profileVipBadgeUrl,
+} from "../../lib/profileAssets";
 import { useProfileAvatarId } from "./profileAvatarStorage";
 import {
+  isLobbySoundEnabled,
   LOBBY_SOUND_PREF_STORAGE_KEY,
   notifyLobbySoundPreferenceChanged,
 } from "../../lib/lobbySound";
 import { profileVipProgress } from "./profileVipProgress";
 import { resolveProfileVipTitle } from "./profileVipTitle";
 import { useWordData } from "../../wordData/useWordData";
+import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import "./ProfilePage.css";
 import "./SessionPageDecor.css";
 import "../../components/profile/ProfileAvatarFrame.css";
@@ -45,7 +52,8 @@ export function ProfilePage() {
   const w = useWordData();
   const { show } = useAlert();
   const { user, mergeUser, refreshUser, logout } = useAuth();
-  const { requestRef, lobbyLoading } = useGatewayLobby();
+  const { requestRef, gatewayRequestReady, refreshLobbyGet, lobbyLoading } =
+    useGatewayLobby();
   const { avatarId, setAvatarId } = useProfileAvatarId();
   const [headIconOpen, setHeadIconOpen] = useState(false);
   const [headIconChoices, setHeadIconChoices] = useState<
@@ -56,7 +64,7 @@ export function ProfilePage() {
   const [fundsHistoryOpen, setFundsHistoryOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [avatarImgFailed, setAvatarImgFailed] = useState(false);
-  const [soundOn, setSoundOn] = useState(true);
+  const [soundOn, setSoundOn] = useState(() => isLobbySoundEnabled());
   const soundLabelId = useId();
 
   const {
@@ -64,7 +72,8 @@ export function ProfilePage() {
     required: vipProgressRequired,
     fillPct: vipProgressFillPct,
   } = profileVipProgress(user);
-  const vipTitle = resolveProfileVipTitle(user?.vipLevel);
+  const vipLevel = user?.vipLevel ?? 0;
+  const vipTitle = resolveProfileVipTitle(vipLevel);
 
   const onRefresh = useCallback(async () => {
     try {
@@ -73,16 +82,6 @@ export function ProfilePage() {
       /* ignore */
     }
   }, [refreshUser]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const v = window.localStorage.getItem(LOBBY_SOUND_PREF_STORAGE_KEY);
-    if (v === "0") {
-      setSoundOn(false);
-    } else if (v === "1") {
-      setSoundOn(true);
-    }
-  }, []);
 
   useEffect(() => {
     const onVis = () => {
@@ -115,9 +114,7 @@ export function ProfilePage() {
 
   const displayAvatarId = effectiveAvatarId(user?.avatarId, avatarId);
   const pickedAvatar = getProfileAvatarById(displayAvatarId);
-  const showAvatarImage = Boolean(
-    pickedAvatar && !avatarImgFailed,
-  );
+  const showAvatarImage = Boolean(pickedAvatar && !avatarImgFailed);
 
   useEffect(() => {
     setAvatarImgFailed(false);
@@ -126,7 +123,7 @@ export function ProfilePage() {
   useEffect(() => {
     if (!headIconOpen) return;
     setHeadIconChoices(null);
-    if (!isWsLobbyGamesEnabled()) return;
+    if (!isWsLobbyGamesEnabled() || !gatewayRequestReady) return;
     const req = requestRef.current;
     if (!req) return;
     let cancelled = false;
@@ -138,7 +135,10 @@ export function ProfilePage() {
           debugLabel: "LIST_PLAYER_AVATARS",
         });
         if (cancelled) return;
-        if (isGatewaySuccessCode(String(r.code)) && r.data instanceof Uint8Array) {
+        if (
+          isGatewaySuccessCode(String(r.code)) &&
+          r.data instanceof Uint8Array
+        ) {
           if (r.data.byteLength === 0) {
             setHeadIconChoices(null);
             return;
@@ -154,18 +154,26 @@ export function ProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [headIconOpen, requestRef]);
+  }, [headIconOpen, gatewayRequestReady, requestRef]);
 
   const confirmHeadIcon = useCallback(
     async (selectedId: string) => {
-      setAvatarId(selectedId);
-      const n = Number.parseInt(selectedId, 10);
-      if (!user || !Number.isFinite(n) || n < 1) return;
+      const itemId = itemIdFromAvatarWireId(selectedId);
+      if (itemId === undefined) {
+        show("Could not update avatar", { variant: "error" });
+        return;
+      }
+      if (!user) return;
+
       const wsOk = isWsLobbyGamesEnabled();
-      if (wsOk && requestRef.current) {
+      if (wsOk) {
+        if (!gatewayRequestReady || !requestRef.current) {
+          show("Could not update avatar", { variant: "error" });
+          return;
+        }
         try {
           const body = encodeUpdatePlayerCurrentAvatarRequest({
-            avatarID: selectedId,
+            avatarID: itemId,
             avatarURL: "",
             isFBAvatar: false,
           });
@@ -174,18 +182,54 @@ export function ProfilePage() {
             data: body,
             debugLabel: "UPDATE_PLAYER_AVATAR",
           });
-          if (!isGatewaySuccessCode(String(r.code))) {
-            show("Could not update avatar", { variant: "error" });
+          if (!isGatewaySuccessCode(String(r.code ?? ""))) {
+            show(
+              translateGatewayError(
+                String(r.code ?? ""),
+                r.errMessage,
+                "Could not update avatar",
+              ),
+              { variant: "error" },
+            );
             return;
+          }
+          let mergedId = itemId;
+          if (r.data instanceof Uint8Array && r.data.byteLength > 0) {
+            try {
+              const row = decodePlayerAvatarsInfoBytes(r.data);
+              const fromResp =
+                itemIdFromAvatarWireId(row.avatarID) ??
+                itemIdFromAvatarUrlField(row.avatarUrl);
+              if (fromResp !== undefined) mergedId = fromResp;
+            } catch {
+              /* keep request item id */
+            }
+          }
+          setAvatarId(String(mergedId));
+          mergeUser({ avatarId: mergedId });
+          try {
+            await refreshLobbyGet();
+          } catch {
+            /* local state already updated */
           }
         } catch {
           show("Could not update avatar", { variant: "error" });
-          return;
         }
+        return;
       }
-      mergeUser({ avatarId: n });
+
+      setAvatarId(String(itemId));
+      mergeUser({ avatarId: itemId });
     },
-    [mergeUser, requestRef, setAvatarId, show, user],
+    [
+      gatewayRequestReady,
+      mergeUser,
+      refreshLobbyGet,
+      requestRef,
+      setAvatarId,
+      show,
+      user,
+    ],
   );
 
   const displayHandle = user?.displayName?.trim() || user?.id?.trim() || "—";
@@ -228,7 +272,7 @@ export function ProfilePage() {
     <section
       className="profile-page page-container session-page session-page--pattern"
       aria-labelledby="profile-heading">
-      <h1 id="profile-heading" className="profile-page__sr-only">
+      <h1 id="profile-heading" className="profile-page__title">
         {w(510750)}
       </h1>
       <div className="profile-page__card">
@@ -253,7 +297,9 @@ export function ProfilePage() {
                       onError={() => setAvatarImgFailed(true)}
                     />
                   ) : (
-                    <span className="profile-page__avatar-initial">{initial}</span>
+                    <span className="profile-page__avatar-initial">
+                      {initial}
+                    </span>
                   )}
                 </span>
                 <img
@@ -269,7 +315,7 @@ export function ProfilePage() {
                 onClick={onEditAvatar}
                 aria-label="Change head icon"
                 title="Change head icon">
-                <HiPencil className="profile-page__edit-icon" aria-hidden />
+                <Pencil className="profile-page__edit-icon" aria-hidden />
               </button>
             </div>
           </div>
@@ -325,9 +371,10 @@ export function ProfilePage() {
                 {vipProgressCurrent}/{vipProgressRequired}
               </span>
               <div className="profile-page__bar-cap" aria-hidden>
-                <Crown
-                  className="profile-page__bar-crown-icon"
-                  strokeWidth={2.5}
+                <img
+                  className="profile-page__bar-badge-img"
+                  src={profileVipBadgeUrl(vipLevel)}
+                  alt=""
                 />
               </div>
             </div>

@@ -4,6 +4,7 @@ import {
   CREDIT_MILESTONE_THRESHOLDS,
   buildDailyLoginViewModel,
   buildMockDailyLoginActivity,
+  shouldAutoPopupDailyLogin,
   computeSevenDayWindow,
   enforceSequentialDayStatuses,
   findClaimableCreditRewards,
@@ -72,12 +73,19 @@ describe("dailyLoginLogic", () => {
     ).toBe("claimed");
   });
 
-  it("isActivityInDisplayWindow respects seconds", () => {
+  it("isActivityInDisplayWindow respects seconds and normalizes milliseconds", () => {
     const now = Date.UTC(2026, 6, 15, 12, 0, 0);
     expect(
       isActivityInDisplayWindow(
         Math.floor(Date.UTC(2026, 0, 1) / 1000),
         Math.floor(Date.UTC(2026, 11, 31) / 1000),
+        now,
+      ),
+    ).toBe(true);
+    expect(
+      isActivityInDisplayWindow(
+        Date.UTC(2026, 0, 1),
+        Date.UTC(2026, 11, 31),
         now,
       ),
     ).toBe(true);
@@ -204,7 +212,8 @@ describe("dailyLoginLogic", () => {
       UserDailyMissionsByDates: missions,
     });
     const flat = flattenDailyMissions(activity);
-    const { days } = computeSevenDayWindow(flat);
+    const claimableDayMs = base + 4 * dayMs;
+    const { days } = computeSevenDayWindow(flat, claimableDayMs);
     expect(days).toHaveLength(7);
     expect(days[0].dayNumber).toBe(1);
     expect(days[0].rewards).toHaveLength(2);
@@ -310,11 +319,10 @@ describe("dailyLoginLogic", () => {
     );
   });
 
-  it("canClaimTodayUtc only allows claim when mission date is today", () => {
+  it("canClaimTodayUtc only allows claim when mission date is today in ET", () => {
     const now = Date.UTC(2026, 6, 15, 12, 0, 0);
     const dayMs = 86400000;
     const todayMs = now;
-    const yesterdayMs = now - dayMs;
 
     const todayMissions = buildMissionsByDate(7, todayMs - 3 * dayMs, (i) => ({
       collected: i < 3,
@@ -325,7 +333,7 @@ describe("dailyLoginLogic", () => {
     );
     expect(canClaimTodayUtc(flatToday, now)).toBe(true);
 
-    const pastMissions = buildMissionsByDate(7, yesterdayMs - 3 * dayMs, (i) => ({
+    const pastMissions = buildMissionsByDate(7, now - 7 * dayMs, (i) => ({
       collected: i < 3,
       claimable: i === 3,
     }));
@@ -333,6 +341,34 @@ describe("dailyLoginLogic", () => {
       buildMockDailyLoginActivity({ UserDailyMissionsByDates: pastMissions }),
     );
     expect(canClaimTodayUtc(flatPast, now)).toBe(false);
+  });
+
+  it("treats today's daily login as claimable when actionTimes has not synced yet", () => {
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    const dayMs = 86400000;
+    const missions = buildMissionsByDate(7, now - 3 * dayMs, (i) => ({
+      collected: i < 3,
+      claimable: false,
+    }));
+    const key = String(now - 0 * dayMs);
+    missions![key]!.userDailyMissions = [
+      {
+        dailyMissionID: "7001",
+        date: String(now),
+        actionTimes: 1,
+        achievedActionTimes: 0,
+        isCollected: false,
+        itemID: 1,
+        itemAmount: 1000,
+        sort: "0",
+      },
+    ];
+    const vm = buildDailyLoginViewModel(
+      buildMockDailyLoginActivity({ UserDailyMissionsByDates: missions }),
+      now,
+    );
+    expect(vm?.hasClaimableDaily).toBe(true);
+    expect(vm?.days.some((day) => day.status === "claimable")).toBe(true);
   });
 
   it("buildDailyLoginViewModel still renders when nothing is claimable today", () => {
@@ -372,5 +408,93 @@ describe("dailyLoginLogic", () => {
     expect(vm!.claimable).toBe(true);
     expect(vm!.dateRangeLabel).toContain("(ET)");
     expect(vm!.creditRewards).toHaveLength(4);
+  });
+
+  it("shouldAutoPopupDailyLogin is true only when today daily is claimable", () => {
+    const claimableVm = buildDailyLoginViewModel(buildMockDailyLoginActivity());
+    expect(shouldAutoPopupDailyLogin(claimableVm)).toBe(true);
+
+    const base = Date.UTC(2026, 5, 1);
+    const dayMs = 86400000;
+    const claimedToday = buildMissionsByDate(14, base, (i) => ({
+      collected: i <= 6,
+      claimable: false,
+    }));
+    const claimedVm = buildDailyLoginViewModel(
+      buildMockDailyLoginActivity({ UserDailyMissionsByDates: claimedToday }),
+      base + 6 * dayMs,
+    );
+    expect(shouldAutoPopupDailyLogin(claimedVm)).toBe(false);
+    expect(shouldAutoPopupDailyLogin(null)).toBe(false);
+  });
+
+  it("marks today claimable when past days are uncollected (production payload shape)", () => {
+    const now = Date.UTC(2026, 6, 30, 12, 0, 0);
+    const july28 = 1785211200000;
+    const july29 = 1785297600000;
+    const july30 = 1785384000000;
+    const activity = buildMockDailyLoginActivity({
+      displayStartTime: "1785297600",
+      displayEndTime: "1788321599",
+      achievedCreditAmount: "0",
+      UserDailyMissionsByDates: {
+        [String(july28)]: {
+          date: String(july28),
+          userDailyMissions: [
+            {
+              dailyMissionID: "1",
+              date: String(july28),
+              actionTimes: 1,
+              achievedActionTimes: 1,
+              isCollected: false,
+              itemID: 1,
+              itemAmount: 100000,
+              sort: "1",
+            },
+          ],
+        },
+        [String(july29)]: {
+          date: String(july29),
+          userDailyMissions: [
+            {
+              dailyMissionID: "2",
+              date: String(july29),
+              actionTimes: 1,
+              achievedActionTimes: 0,
+              isCollected: false,
+              itemID: 1,
+              itemAmount: 100000,
+              sort: "2",
+            },
+          ],
+        },
+        [String(july30)]: {
+          date: String(july30),
+          userDailyMissions: [
+            {
+              dailyMissionID: "3",
+              date: String(july30),
+              actionTimes: 1,
+              achievedActionTimes: 0,
+              isCollected: false,
+              itemID: 1,
+              itemAmount: 150000,
+              sort: "3",
+            },
+          ],
+        },
+      },
+    });
+
+    const vm = buildDailyLoginViewModel(activity, now);
+    expect(vm?.hasClaimableDaily).toBe(true);
+    expect(
+      vm?.days.some(
+        (day) =>
+          day.status === "claimable" &&
+          day.dateMs === july30 &&
+          day.claimableMissionIds.includes("3"),
+      ),
+    ).toBe(true);
   });
 });

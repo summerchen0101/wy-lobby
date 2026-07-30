@@ -8,6 +8,26 @@ import { joinPublicImageUrl } from "./src/lib/publicImageUrlCore.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function gtmHtmlPlugin(env: Record<string, string>): Plugin {
+  const containerId = (env.VITE_GTM_ID ?? "").trim();
+
+  return {
+    name: "google-tag-manager-html",
+    transformIndexHtml(html: string) {
+      if (!containerId) return html;
+      const noscript = [
+        "<!-- Google Tag Manager (noscript) -->",
+        "<noscript>",
+        `<iframe src="https://www.googletagmanager.com/ns.html?id=${containerId}"`,
+        'height="0" width="0" style="display:none;visibility:hidden"></iframe>',
+        "</noscript>",
+        "<!-- End Google Tag Manager (noscript) -->",
+      ].join("\n    ");
+      return html.replace("<body>", `<body>\n    ${noscript}`);
+    },
+  };
+}
+
 function publicImageCdnBuildPlugin(env: Record<string, string>): Plugin {
   const rawBase = (env.VITE_PUBLIC_IMAGE_CDN_BASE ?? "").trim();
   const cdnBase = rawBase.replace(/\/+$/, "");
@@ -66,7 +86,7 @@ export default defineConfig(({ mode }) => {
         ),
       },
     },
-    plugins: [react(), publicImageCdnBuildPlugin(env)],
+    plugins: [react(), publicImageCdnBuildPlugin(env), gtmHtmlPlugin(env)],
     test: {
       environment: "node",
       include: ["src/**/*.test.ts"],

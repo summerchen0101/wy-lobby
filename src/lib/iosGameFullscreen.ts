@@ -37,52 +37,30 @@ export function isBrowserFullscreenCapable(): boolean {
   return d.webkitFullscreenEnabled === true
 }
 
-/** 典型電腦瀏覽器：有 hover 能力 + 精細指標（滑鼠） */
-export function isDesktopLikeBrowser(): boolean {
-  if (typeof window.matchMedia !== 'function') return false
-  return window.matchMedia('(hover: hover) and (pointer: fine)').matches
+const MOBILE_UA_RE =
+  /Android|Mobi|webOS|iPhone|iPad|iPod|Tablet|Silk|BlackBerry|IEMobile|Opera Mini/i
+
+function hasMobileUserAgentToken(): boolean {
+  return MOBILE_UA_RE.test(navigator.userAgent)
 }
 
-function hasTapFullscreenDeviceSignals(): boolean {
-  const ua = navigator.userAgent
-  if (/Android/i.test(ua)) return true
-  if (/iPad/i.test(ua)) return true
+/** 手機／平板瀏覽器（非桌面 PC）；僅依 UA，不依 `(pointer: coarse)`。 */
+export function isMobileBrowser(): boolean {
+  if (hasMobileUserAgentToken() && !('MSStream' in window)) return true
   if (isIPadDesktopSiteUa()) return true
-  if (/Mobi|webOS|Tablet|Silk|BlackBerry|IEMobile|Opera Mini/i.test(ua))
-    return true
-  if (
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(pointer: coarse)').matches
-  )
-    return true
   return false
 }
 
-/**
- * 典型鼠標桌面：無行動／平板 UA、非 iPad 桌面偽裝、非粗指標。
- * 與 `hasTapFullscreenDeviceSignals` 並用：避免在 PC 上自動進全螢流程。
- */
-function isLikelyDesktopMouseOnly(): boolean {
+/** 典型電腦瀏覽器：有 hover 能力 + 精細指標（滑鼠），或無行動 UA 的桌面 OS。 */
+export function isDesktopLikeBrowser(): boolean {
+  if (typeof window.matchMedia === 'function') {
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      return true
+    }
+  }
   const ua = navigator.userAgent
-  const mobileOrTabletUa =
-    /Android|Mobi|webOS|iPhone|iPad|iPod|Tablet|Silk|BlackBerry|IEMobile|Opera Mini/i.test(
-      ua,
-    )
-  if (mobileOrTabletUa || isIPadDesktopSiteUa()) return false
-
-  const coarsePointer =
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(pointer: coarse)').matches
-  if (coarsePointer) return false
-
-  const finePointer =
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(pointer: fine)').matches
-
-  return (
-    navigator.maxTouchPoints === 0 ||
-    (finePointer && !coarsePointer)
-  )
+  if (hasMobileUserAgentToken() || isIPadDesktopSiteUa()) return false
+  return /Windows NT|Macintosh|Linux|X11/i.test(ua)
 }
 
 /**
@@ -91,11 +69,10 @@ function isLikelyDesktopMouseOnly(): boolean {
  */
 export function shouldUseTapToBrowserFullscreen(): boolean {
   if (typeof document === 'undefined') return false
-  if (isDesktopLikeBrowser()) return false
+  if (!isMobileBrowser()) return false
   if (shouldUseIosGameViewportWorkarounds()) return false
   if (!isBrowserFullscreenCapable()) return false
-  if (isLikelyDesktopMouseOnly()) return false
-  return hasTapFullscreenDeviceSignals()
+  return true
 }
 
 /** `document.fullscreenElement` 含 WebKit 前綴 */

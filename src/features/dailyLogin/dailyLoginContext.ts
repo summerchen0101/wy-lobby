@@ -8,9 +8,9 @@ export type DailyLoginContextValue = {
   claiming: boolean;
   flying: boolean;
   modalOpen: boolean;
-  openModal: (options?: { refresh?: boolean }) => void;
+  openModal: (options?: { refresh?: boolean; background?: boolean }) => void;
   closeModal: () => void;
-  reload: () => Promise<void>;
+  reload: (options?: { background?: boolean }) => Promise<void>;
   claimDay: (day: DayViewModel, flyFromRect: DOMRect | null) => Promise<void>;
   claimCreditReward: (
     requiredCreditAmount: number,

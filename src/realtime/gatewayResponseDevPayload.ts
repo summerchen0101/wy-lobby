@@ -44,6 +44,7 @@ import { tryDecodeWalletUseRequestForDev } from "./walletLobbyWire";
 import {
   decodeGetThirdPartyGameInfoResponseBytes,
   decodeListPlayerAvatarsResponseBytes,
+  decodePlayerAvatarsInfoBytes,
 } from "./playerAvatarWire";
 import {
   decodeClaimReferralRewardRespBytes,
@@ -237,11 +238,18 @@ export function decodeGatewayResponseDataForDevLog(
       }
     }
     if (type === GATEWAY_API_UPDATE_PLAYER_AVATAR) {
-      return {
-        kind: "UPDATE_PLAYER_AVATAR",
-        note: "response shape varies; body length",
-        byteLength: raw.byteLength,
-      };
+      try {
+        const row =
+          raw.byteLength > 0 ? decodePlayerAvatarsInfoBytes(raw) : undefined;
+        return {
+          kind: "UPDATE_PLAYER_AVATAR",
+          avatarID: row?.avatarID,
+          goodState: row?.goodState,
+          byteLength: raw.byteLength,
+        };
+      } catch (e) {
+        return fallbackHex(raw, e);
+      }
     }
     if (type === GATEWAY_API_GET_THIRD_PARTY_GAME_INFO) {
       try {
@@ -329,6 +337,7 @@ export function decodeGatewayResponseDataForDevLog(
           activityTypesPreview: (activities ?? [])
             .slice(0, 6)
             .map((a) => a.activityType),
+          activities,
         };
       } catch (e) {
         return fallbackHex(raw, e);

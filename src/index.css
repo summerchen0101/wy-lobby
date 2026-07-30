@@ -122,6 +122,12 @@ a:hover {
 button {
   font: inherit;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 滑鼠／觸控點擊後的 focus：拿掉瀏覽器預設淡藍方框；鍵盤 Tab 仍用下方 :focus-visible */
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 :focus-visible {

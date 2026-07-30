@@ -19,6 +19,8 @@ import {
   GATEWAY_API_AMOE_CREDITED_PUSH,
   GATEWAY_API_AMOE_INVALID_PUSH,
   GATEWAY_API_JACKPOT_INFO_PUSH,
+  GATEWAY_API_LIST_PRODUCTS,
+  GATEWAY_API_LIST_WITHDRAW_ORDERS,
   GATEWAY_API_LOBBY_GET,
   GATEWAY_API_SEND_MESSAGE_PUSH,
   GATEWAY_API_SERVER_LOGIN,
@@ -51,12 +53,18 @@ import {
 import {
   tryDecodeSendMessagePushToPaymentPush,
   userPatchFromPaymentPush,
+  encodeListProductsRequestBytes,
+  decodeListProductsResponseBytes,
 } from "./shopLobbyWire";
 import {
   decodeUserKickBeforeReasonBytes,
   messageForUserKickReason,
 } from "./userKickWire";
-import { decodeWithdrawSuccessPushBytes } from "./withdrawLobbyWire";
+import {
+  decodeWithdrawSuccessPushBytes,
+  encodeListWithdrawOrdersRequestBytes,
+  decodeListWithdrawOrdersResponseBytes,
+} from "./withdrawLobbyWire";
 import type { WithdrawSuccessPushListener } from "./gatewayLobbyContext";
 import {
   decodeAmoeCreditedPushBytes,
@@ -70,6 +78,9 @@ import { LobbyHydrationGate } from "./LobbyHydrationGate";
 import { getAlertApi } from "../components/alert/alertImperative";
 import { translateGatewayError } from "../i18n/apiErrorMessage";
 import { getWordPlain } from "../wordData/getWord";
+import { mapListProductToShopPack } from "../features/shop/mapListProductToShopPack";
+import type { ShopPack } from "../features/shop/types";
+import type { RedeemOrdersPrefetch } from "./gatewayLobbyContext";
 
 const LOBBY_WS_TIMEOUT_RETRY_MSG = "Lobby data timed out, retrying…";
 const LOBBY_WS_TIMEOUT_USER_MSG =
@@ -77,6 +88,8 @@ const LOBBY_WS_TIMEOUT_USER_MSG =
 const LOBBY_WS_SOCKET_ERROR_MSG = "WebSocket connection error";
 const LOBBY_GET_TIMEOUT_RETRY_DELAY_MS = 1_500;
 const WS_SOCKET_ERROR_DEBOUNCE_MS = 2_000;
+/** 與 RedeemPage ORDERS_PER_PAGE 對齊 */
+const REDEEM_ORDERS_PREFETCH_PER_PAGE = 4;
 
 function lobbyErrorMessageFromCaught(e: unknown): string {
   if (isGatewayWsRequestTimeoutError(e)) {
@@ -215,6 +228,9 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   >(null);
   const [lobbyGet, setLobbyGet] = useState<LobbyGetDecoded | null>(null);
   const [gatewayRequestReady, setGatewayRequestReady] = useState(false);
+  const [shopPacks, setShopPacks] = useState<ShopPack[] | null>(null);
+  const [redeemOrdersPrefetch, setRedeemOrdersPrefetch] =
+    useState<RedeemOrdersPrefetch | null>(null);
   /** 首轮 onOpen LOBBY_GET 是否已落定（與輪詢 refresh 無關）；無閘門時視為 done */
   const [lobbyWsBootstrapDone, setLobbyWsBootstrapDone] = useState(
     () => !gateActive,
@@ -293,6 +309,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   }, [gateActive, wsAuthScope]);
 
   useEffect(() => {
+    if (!token?.trim()) {
+      setShopPacks(null);
+      setRedeemOrdersPrefetch(null);
+    }
     sessionTokenRef.current = token?.trim() ?? "";
   }, [token]);
 
@@ -500,6 +520,81 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     },
     [handleWsSessionInvalid],
   );
+
+  const prefetchShopPacks = useCallback(async (request: GatewayWsRequestFn) => {
+    if (!sessionTokenRef.current) return;
+    try {
+      const r = await request({
+        type: GATEWAY_API_LIST_PRODUCTS,
+        data: encodeListProductsRequestBytes(),
+        debugLabel: "LIST_PRODUCTS(prefetch)",
+      });
+      const code = String(r.code ?? "");
+      if (!isGatewaySuccessCode(code)) {
+        setShopPacks([]);
+        return;
+      }
+      const raw = r.data;
+      if (!(raw instanceof Uint8Array) || raw.byteLength === 0) {
+        setShopPacks([]);
+        return;
+      }
+      const { products } = decodeListProductsResponseBytes(raw);
+      setShopPacks(products.map(mapListProductToShopPack));
+    } catch (e) {
+      console.warn("[gateway-ws] LIST_PRODUCTS prefetch failed", e);
+      setShopPacks([]);
+    }
+  }, []);
+
+  const prefetchRedeemOrders = useCallback(
+    async (request: GatewayWsRequestFn) => {
+      const uid = user?.id?.trim();
+      if (!sessionTokenRef.current || !uid || uid === "0") return;
+      try {
+        const r = await request({
+          type: GATEWAY_API_LIST_WITHDRAW_ORDERS,
+          data: encodeListWithdrawOrdersRequestBytes(
+            uid,
+            0,
+            REDEEM_ORDERS_PREFETCH_PER_PAGE,
+          ),
+          debugLabel: "LIST_WITHDRAW_ORDERS(prefetch)",
+        });
+        const code = String(r.code ?? "");
+        if (!isGatewaySuccessCode(code)) return;
+        const raw = r.data;
+        if (!(raw instanceof Uint8Array) || raw.byteLength === 0) {
+          setRedeemOrdersPrefetch({ rows: [], total: 0 });
+          return;
+        }
+        const { orders, total } = decodeListWithdrawOrdersResponseBytes(raw);
+        const tn = Number(total);
+        setRedeemOrdersPrefetch({
+          rows: orders,
+          total: Number.isFinite(tn) ? tn : 0,
+        });
+      } catch (e) {
+        console.warn("[gateway-ws] LIST_WITHDRAW_ORDERS prefetch failed", e);
+      }
+    },
+    [user?.id],
+  );
+
+  const prefetchSessionShopAndRedeem = useCallback(
+    async (request: GatewayWsRequestFn) => {
+      if (!sessionTokenRef.current) return;
+      await prefetchShopPacks(request);
+      await prefetchRedeemOrders(request);
+    },
+    [prefetchRedeemOrders, prefetchShopPacks],
+  );
+
+  const refreshShopPacks = useCallback(async () => {
+    const request = requestRef.current;
+    if (!request || !sessionTokenRef.current) return;
+    await prefetchShopPacks(request);
+  }, [prefetchShopPacks]);
 
   /** access token 輪換（refresh）時保持 WS，僅重送 SERVER_LOGIN */
   const prevAccessTokenForWsRef = useRef<string | null>(null);
@@ -811,30 +906,35 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    onOpen: async ({ request }) => {
+    onOpen: ({ request }) => {
       gatewayWsSessionStartAtMsRef.current = Date.now();
       requestRef.current = request;
+      setGatewayRequestReady(true);
 
-      try {
-        if (shouldRunLobbyGetOnOpen) {
-          await runLobbyGetRequest(request, { bootstrap: true });
-        }
-
+      void (async () => {
         try {
-          await request({
-            type: GATEWAY_API_GET_JACKPOT_INFO,
-            data: new Uint8Array(0),
-            debugLabel: "GET_JACKPOT_INFO",
-          });
-        } catch (e) {
-          console.warn("[gateway-ws] GET_JACKPOT_INFO failed", e);
-        }
+          const loginOk = await runServerLoginOnOpen(request);
+          if (loginOk) {
+            void prefetchSessionShopAndRedeem(request);
+          }
 
-        // 後端未實作或無回應時不阻塞大廳；session 失效仍由 runServerLoginOnOpen 非同步處理
-        void runServerLoginOnOpen(request);
-      } finally {
-        setGatewayRequestReady(true);
-      }
+          if (shouldRunLobbyGetOnOpen) {
+            await runLobbyGetRequest(request, { bootstrap: true });
+          }
+
+          try {
+            await request({
+              type: GATEWAY_API_GET_JACKPOT_INFO,
+              data: new Uint8Array(0),
+              debugLabel: "GET_JACKPOT_INFO",
+            });
+          } catch (e) {
+            console.warn("[gateway-ws] GET_JACKPOT_INFO failed", e);
+          }
+        } catch (e) {
+          console.warn("[gateway-ws] onOpen bootstrap failed", e);
+        }
+      })();
     },
     onSocketError: (ev) => {
       console.warn("[gateway-ws] WebSocket error:", ev);
@@ -904,6 +1004,9 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       subscribePaymentFinish,
       subscribeWithdrawSuccessPush,
       needsLobbyHydrationOverlay,
+      shopPacks,
+      refreshShopPacks,
+      redeemOrdersPrefetch,
     }),
     [
       gatewayRequestReady,
@@ -916,6 +1019,9 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       subscribePaymentFinish,
       subscribeWithdrawSuccessPush,
       needsLobbyHydrationOverlay,
+      shopPacks,
+      refreshShopPacks,
+      redeemOrdersPrefetch,
     ],
   );
 
