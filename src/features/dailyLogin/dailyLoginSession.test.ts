@@ -1,38 +1,26 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
+  clearDailyLoginAutoPopupSession,
   markDailyLoginAutoPopupShown,
   wasDailyLoginAutoPopupShown,
 } from "./dailyLoginSession";
 
-function installSessionStorageMock(): void {
-  const store = new Map<string, string>();
-  vi.stubGlobal("sessionStorage", {
-    getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => {
-      store.set(k, v);
-    },
-    removeItem: (k: string) => {
-      store.delete(k);
-    },
-    clear: () => {
-      store.clear();
-    },
-  });
-}
-
 describe("dailyLoginSession", () => {
-  beforeEach(() => {
-    installSessionStorageMock();
-  });
-
   afterEach(() => {
-    vi.unstubAllGlobals();
+    clearDailyLoginAutoPopupSession();
   });
 
-  it("tracks auto-popup per user within the browser tab session", () => {
+  it("tracks auto-popup per login session for the current user", () => {
     expect(wasDailyLoginAutoPopupShown("42")).toBe(false);
     markDailyLoginAutoPopupShown("42");
     expect(wasDailyLoginAutoPopupShown("42")).toBe(true);
     expect(wasDailyLoginAutoPopupShown("99")).toBe(false);
+  });
+
+  it("clears on logout so re-login can auto-popup again", () => {
+    markDailyLoginAutoPopupShown("42");
+    expect(wasDailyLoginAutoPopupShown("42")).toBe(true);
+    clearDailyLoginAutoPopupSession();
+    expect(wasDailyLoginAutoPopupShown("42")).toBe(false);
   });
 });

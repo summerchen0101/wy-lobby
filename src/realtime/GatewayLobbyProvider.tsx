@@ -6,7 +6,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
+import { isGatewayWsSuppressedRoute } from "../lib/gatewayWsRoute";
+import { usePrimaryAppTab } from "../lib/primaryAppTab";
 import type { Game } from "../lib/api/types";
 import { useWallet } from "../wallet/walletContext";
 import {
@@ -170,6 +173,8 @@ function wsLobbyGetPollMsFromEnv(requestTimeoutMs: number): number {
 }
 
 export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  const isPrimaryAppTab = usePrimaryAppTab();
   const {
     token,
     user,
@@ -180,18 +185,27 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     invalidateSessionToLogin,
   } = useAuth();
   const { activeWallet } = useWallet();
+  const wsRouteSuppressed = isGatewayWsSuppressedRoute(pathname);
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const gatewayWsEnabled =
     devGatewayWsProbeEnabled() || wsLobbyEnabled;
   /** 等 Auth bootstrap（startup refresh）完成再連 WS，避免舊 token → 新 token 連兩次 */
-  const gatewayWsConnectEnabled = gatewayWsEnabled && authReady;
+  const gatewayWsConnectEnabled =
+    gatewayWsEnabled &&
+    authReady &&
+    !wsRouteSuppressed &&
+    isPrimaryAppTab;
   const wsAuthScope = Boolean(token?.trim());
   const shouldRunLobbyGetOnOpen =
     (import.meta.env.DEV && import.meta.env.VITE_DEV_LOBBY_GET !== "false") ||
     wsLobbyEnabled;
 
-  /** 會經 Gateway WS 發送首轮 LOBBY_GET 的情境（含訪客、dev LOBBY_GET probe） */
-  const gateActive = gatewayWsEnabled && shouldRunLobbyGetOnOpen;
+  /** 本 tab 是否應跑 Gateway WS 大廳流程（法律頁、另開分頁不連線）。 */
+  const gateActive =
+    gatewayWsEnabled &&
+    shouldRunLobbyGetOnOpen &&
+    !wsRouteSuppressed &&
+    isPrimaryAppTab;
 
   const wsMaxReconnectAttempts = useMemo(
     () => wsMaxHandshakeReconnectAttemptsFromEnv(),

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
+import { isGatewayWsSuppressedRoute } from "../../lib/gatewayWsRoute";
+import { usePrimaryAppTab } from "../../lib/primaryAppTab";
 import {
   isWelcomeVoiceGateOpen,
   LOBBY_WELCOME_VOICE_GATE_EVENT,
@@ -15,12 +17,17 @@ import {
 } from "./dailyLoginSession";
 
 function isDailyLoginAutoPopupBlockedRoute(pathname: string): boolean {
-  return pathname === "/play" || pathname === "/game-popout";
+  return (
+    pathname === "/play" ||
+    pathname === "/game-popout" ||
+    isGatewayWsSuppressedRoute(pathname)
+  );
 }
 
 export function DailyLoginGate() {
   const { ready, user } = useAuth();
   const location = useLocation();
+  const isPrimaryAppTab = usePrimaryAppTab();
   const { gatewayRequestReady, needsLobbyHydrationOverlay } = useGatewayLobby();
   const { viewModel, loading, openModal } = useDailyLoginActivity();
   const [welcomeVoiceGateVersion, setWelcomeVoiceGateVersion] = useState(0);
@@ -35,6 +42,7 @@ export function DailyLoginGate() {
   useEffect(() => {
     const userId = user?.id?.trim() ?? "";
     if (!ready || !userId || userId === "0") return;
+    if (!isPrimaryAppTab) return;
     if (isDailyLoginAutoPopupBlockedRoute(location.pathname)) return;
     if (!isWsLobbyGamesEnabled()) return;
     if (!gatewayRequestReady || needsLobbyHydrationOverlay) return;
@@ -47,6 +55,7 @@ export function DailyLoginGate() {
   }, [
     ready,
     user,
+    isPrimaryAppTab,
     location.pathname,
     gatewayRequestReady,
     needsLobbyHydrationOverlay,
