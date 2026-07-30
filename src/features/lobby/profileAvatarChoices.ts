@@ -48,6 +48,12 @@ export function headIconChoicesFromServerRows(
   if (!rows?.length) return []
   const byItemId = new Map<string, HeadIconChoice>()
   for (const row of rows) {
+    const rawAvatarId =
+      row.avatarID != null && String(row.avatarID).trim() !== ''
+        ? String(row.avatarID).trim()
+        : ''
+    if (rawAvatarId === '0') continue
+
     const itemId = resolveRowItemId(row)
     const id = itemId !== undefined ? String(itemId) : ''
     if (!id || id === '0') continue

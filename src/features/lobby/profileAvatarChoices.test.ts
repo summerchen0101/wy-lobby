@@ -13,6 +13,13 @@ describe('headIconChoicesFromServerRows', () => {
     expect(choices[0]?.disabled).toBe(false)
   })
 
+  it('skips rows with avatarID 0 even when avatarUrl has an item ref', () => {
+    const choices = headIconChoicesFromServerRows([
+      { avatarID: '0', avatarUrl: '406@@', goodState: 'IN_USE' },
+    ])
+    expect(choices).toHaveLength(0)
+  })
+
   it('keeps distinct item ids from server', () => {
     const rows = [
       { avatarID: '401', avatarUrl: '' },
