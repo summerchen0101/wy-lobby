@@ -8,6 +8,25 @@ import { joinPublicImageUrl } from "./src/lib/publicImageUrlCore.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function facebookPixelHtmlPlugin(env: Record<string, string>): Plugin {
+  const pixelId = (env.VITE_FB_PIXEL_ID ?? "").trim();
+
+  return {
+    name: "facebook-pixel-html",
+    transformIndexHtml(html: string) {
+      if (!pixelId) return html;
+      const noscript = [
+        "<!-- Facebook Pixel Code (noscript) -->",
+        "<noscript>",
+        `  <img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1" />`,
+        "</noscript>",
+        "<!-- End Facebook Pixel Code (noscript) -->",
+      ].join("\n    ");
+      return html.replace("</head>", `    ${noscript}\n  </head>`);
+    },
+  };
+}
+
 function publicImageCdnBuildPlugin(env: Record<string, string>): Plugin {
   const rawBase = (env.VITE_PUBLIC_IMAGE_CDN_BASE ?? "").trim();
   const cdnBase = rawBase.replace(/\/+$/, "");
@@ -66,7 +85,7 @@ export default defineConfig(({ mode }) => {
         ),
       },
     },
-    plugins: [react(), publicImageCdnBuildPlugin(env)],
+    plugins: [react(), publicImageCdnBuildPlugin(env), facebookPixelHtmlPlugin(env)],
     test: {
       environment: "node",
       include: ["src/**/*.test.ts"],
