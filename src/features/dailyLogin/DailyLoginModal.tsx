@@ -10,7 +10,7 @@ import { formatWalletScAmountForDisplay } from "../../wallet/formatWalletAmount"
 import { dailyBonusDayArtSrc } from "./dailyLoginAssets";
 import { useDailyLoginActivity } from "./dailyLoginContext";
 import type { CreditRewardViewModel, DayViewModel } from "./dailyLoginLogic";
-import { CREDIT_MILESTONE_MAX } from "./dailyLoginLogic";
+import { CREDIT_MILESTONE_MAX, isDayClaimableToday } from "./dailyLoginLogic";
 import "./DailyLoginModal.css";
 
 type Props = {
@@ -82,20 +82,18 @@ function DayCell({
   featured = false,
   claiming,
   disabled,
-  canClaimToday = false,
   onClaim,
 }: {
   day: DayViewModel;
   featured?: boolean;
   claiming?: boolean;
   disabled?: boolean;
-  canClaimToday?: boolean;
   onClaim?: (day: DayViewModel, rect: DOMRect) => void;
 }) {
   const gcReward = day.rewards.find((r) => r.wallet === "GC");
   const scReward = day.rewards.find((r) => r.wallet === "SC");
   const inlineRewardPlus = !featured && gcReward && scReward;
-  const showClaimable = day.status === "claimable" && canClaimToday;
+  const showClaimable = isDayClaimableToday(day);
   const clickable = showClaimable && !disabled && !claiming;
   const visualStatus: DayViewModel["status"] = showClaimable ? "claimable" : "locked";
 
@@ -409,12 +407,12 @@ export function DailyLoginModal({ open }: Props) {
 
   const handleClaimDay = useCallback(
     (day: DayViewModel, rect: DOMRect) => {
-      if (claiming || flying || !viewModel?.hasClaimableDaily) return;
+      if (claiming || flying || !isDayClaimableToday(day)) return;
       setClaimingDayNumber(day.dayNumber);
       setFlyFromRect(rect);
       void claimDay(day, rect).finally(() => setClaimingDayNumber(null));
     },
-    [claimDay, claiming, flying, viewModel?.hasClaimableDaily],
+    [claimDay, claiming, flying],
   );
 
   const handleClaimCredit = useCallback(
@@ -447,7 +445,6 @@ export function DailyLoginModal({ open }: Props) {
       )
     : 0;
   const interactionDisabled = claiming || flying;
-  const canClaimToday = viewModel?.hasClaimableDaily ?? false;
 
   return createPortal(
     <>
@@ -532,7 +529,6 @@ export function DailyLoginModal({ open }: Props) {
                     day={day}
                     claiming={claimingDayNumber === day.dayNumber}
                     disabled={interactionDisabled}
-                    canClaimToday={canClaimToday}
                     onClaim={handleClaimDay}
                   />
                 ))}
@@ -545,7 +541,6 @@ export function DailyLoginModal({ open }: Props) {
                     featured
                     claiming={claimingDayNumber === day7.dayNumber}
                     disabled={interactionDisabled}
-                    canClaimToday={canClaimToday}
                     onClaim={handleClaimDay}
                   />
                 ) : null}

@@ -29,13 +29,24 @@ import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import {
   buildDailyLoginViewModel,
+  isDayClaimableToday,
   type DayViewModel,
 } from "./dailyLoginLogic";
 import { DailyLoginContext } from "./dailyLoginContext";
+import {
+  clearCachedDailyLoginActivity,
+  readCachedDailyLoginActivity,
+  readCachedDailyLoginActivityId,
+  writeCachedDailyLoginActivity,
+} from "./dailyLoginCache";
 
 type GatewayRequestFn = NonNullable<
   ReturnType<typeof useGatewayLobby>["requestRef"]["current"]
 >;
+
+type ReloadOptions = {
+  background?: boolean;
+};
 
 async function fetchDailySignInActivity(
   request: GatewayRequestFn,
@@ -43,49 +54,58 @@ async function fetchDailySignInActivity(
 ): Promise<ActivityDataDecoded | null> {
   let activityId = String(knownActivityId ?? "").trim();
 
-  if (!activityId) {
-    const listRes = await request({
-      type: GATEWAY_API_LIST_ACTIVITY,
-      data: encodeListActivitiesRequestBytes(),
-      debugLabel: "LIST_ACTIVITY",
+  const fetchDetail = async (
+    id: string,
+  ): Promise<ActivityDataDecoded | null> => {
+    const detailRes = await request({
+      type: GATEWAY_API_GET_ACTIVITY,
+      data: encodeGetActivityRequestBytes(id),
+      debugLabel: "GET_ACTIVITY",
     });
-    const listCode = String(listRes.code ?? "");
-    if (!isGatewaySuccessCode(listCode)) {
-      throw new Error(
-        translateGatewayError(
-          listCode,
-          listRes.errMessage,
-          `List activity failed (${listCode})`,
-        ),
-      );
+    const detailCode = String(detailRes.code ?? "");
+    if (!isGatewaySuccessCode(detailCode)) {
+      return null;
     }
-    if (!(listRes.data instanceof Uint8Array)) return null;
-    const { activities } = decodeListActivitiesResponseBytes(listRes.data);
-    const summary = (activities ?? []).find((a) =>
-      isDailySignInActivityType(a.activityType),
-    );
-    if (!summary?.activityID) return null;
-    activityId = String(summary.activityID).trim();
+    if (!(detailRes.data instanceof Uint8Array)) return null;
+    const { activity } = decodeGetActivityResponseBytes(detailRes.data);
+    return activity ?? null;
+  };
+
+  if (activityId) {
+    const cached = await fetchDetail(activityId);
+    if (cached) return cached;
+    clearCachedDailyLoginActivity();
+    activityId = "";
   }
 
-  const detailRes = await request({
-    type: GATEWAY_API_GET_ACTIVITY,
-    data: encodeGetActivityRequestBytes(activityId),
-    debugLabel: "GET_ACTIVITY",
+  const listRes = await request({
+    type: GATEWAY_API_LIST_ACTIVITY,
+    data: encodeListActivitiesRequestBytes(),
+    debugLabel: "LIST_ACTIVITY",
   });
-  const detailCode = String(detailRes.code ?? "");
-  if (!isGatewaySuccessCode(detailCode)) {
+  const listCode = String(listRes.code ?? "");
+  if (!isGatewaySuccessCode(listCode)) {
     throw new Error(
       translateGatewayError(
-        detailCode,
-        detailRes.errMessage,
-        `Get activity failed (${detailCode})`,
+        listCode,
+        listRes.errMessage,
+        `List activity failed (${listCode})`,
       ),
     );
   }
-  if (!(detailRes.data instanceof Uint8Array)) return null;
-  const { activity } = decodeGetActivityResponseBytes(detailRes.data);
-  return activity ?? null;
+  if (!(listRes.data instanceof Uint8Array)) return null;
+  const { activities } = decodeListActivitiesResponseBytes(listRes.data);
+  const summary = (activities ?? []).find((a) =>
+    isDailySignInActivityType(a.activityType),
+  );
+  if (!summary?.activityID) return null;
+  activityId = String(summary.activityID).trim();
+
+  const detail = await fetchDetail(activityId);
+  if (!detail) {
+    throw new Error("Get activity failed");
+  }
+  return detail;
 }
 
 export function DailyLoginProvider({ children }: { children: ReactNode }) {
@@ -93,7 +113,9 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   const { requestRef, gatewayRequestReady, refreshLobbyGet } =
     useGatewayLobby();
 
-  const [activity, setActivity] = useState<ActivityDataDecoded | null>(null);
+  const [activity, setActivity] = useState<ActivityDataDecoded | null>(() =>
+    readCachedDailyLoginActivity(),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [claiming, setClaiming] = useState(false);
@@ -101,49 +123,72 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   const [modalOpen, setModalOpen] = useState(false);
   const claimSummaryRef = useRef("");
   const flyCompleteRef = useRef<() => void>(() => {});
-  const lastActivityIdRef = useRef<string | null>(null);
+  const lastActivityIdRef = useRef<string | null>(readCachedDailyLoginActivityId());
+  const activityRef = useRef(activity);
+  const reloadInFlightRef = useRef<Promise<void> | null>(null);
+
+  activityRef.current = activity;
 
   const viewModel = useMemo(
     () => (activity ? buildDailyLoginViewModel(activity) : null),
     [activity],
   );
 
-  const reload = useCallback(async () => {
-    if (!isWsLobbyGamesEnabled()) return;
-    const req = requestRef.current;
-    if (!req) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const next = await fetchDailySignInActivity(
-        req,
-        lastActivityIdRef.current,
-      );
-      setActivity((prev) => {
-        if (next?.activityID) {
-          lastActivityIdRef.current = String(next.activityID);
-          return next;
-        }
-        return prev;
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load daily login");
-    } finally {
-      setLoading(false);
+  const reload = useCallback(async (options?: ReloadOptions) => {
+    if (reloadInFlightRef.current) {
+      return reloadInFlightRef.current;
     }
+
+    const run = async () => {
+      if (!isWsLobbyGamesEnabled()) return;
+      const req = requestRef.current;
+      if (!req) return;
+
+      const background = options?.background === true;
+      if (!background || !activityRef.current) {
+        setLoading(true);
+      }
+      setError(null);
+      try {
+        const next = await fetchDailySignInActivity(
+          req,
+          lastActivityIdRef.current,
+        );
+        setActivity((prev) => {
+          if (next?.activityID) {
+            const id = String(next.activityID);
+            lastActivityIdRef.current = id;
+            writeCachedDailyLoginActivity(next);
+            return next;
+          }
+          return prev;
+        });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not load daily login");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const promise = run().finally(() => {
+      reloadInFlightRef.current = null;
+    });
+    reloadInFlightRef.current = promise;
+    return promise;
   }, [requestRef]);
 
   useEffect(() => {
     if (!gatewayRequestReady) return;
-    void reload();
+    void reload({ background: activityRef.current != null });
   }, [gatewayRequestReady, reload]);
 
   const openModal = useCallback(
-    (options?: { refresh?: boolean }) => {
+    (options?: { refresh?: boolean; background?: boolean }) => {
       setModalOpen(true);
-      if (options?.refresh ?? true) {
-        void reload();
-      }
+      if (options?.refresh === false) return;
+      void reload({
+        background: options?.background ?? false,
+      });
     },
     [reload],
   );
@@ -259,7 +304,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
 
   const claimDay = useCallback(
     async (day: DayViewModel, flyFromRect: DOMRect | null) => {
-      if (!viewModel?.hasClaimableDaily) return;
+      if (!isDayClaimableToday(day)) return;
       if (day.status !== "claimable") return;
       const dailyIds = day.claimableMissionIds;
       if (dailyIds.length === 0) return;
@@ -284,7 +329,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
         flyFromRect,
       });
     },
-    [viewModel, executeClaim],
+    [executeClaim],
   );
 
   const claimCreditReward = useCallback(

@@ -329,6 +329,7 @@ export function decodeGatewayResponseDataForDevLog(
           activityTypesPreview: (activities ?? [])
             .slice(0, 6)
             .map((a) => a.activityType),
+          activities,
         };
       } catch (e) {
         return fallbackHex(raw, e);
