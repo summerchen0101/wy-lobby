@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useId, useState } from "react";
-import { Copy, Crown, Info, Volume2 } from "lucide-react";
-import { HiPencil } from "react-icons/hi2";
+import { Copy, Crown, Info, Pencil, Volume2 } from "lucide-react";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
@@ -228,7 +227,7 @@ export function ProfilePage() {
     <section
       className="profile-page page-container session-page session-page--pattern"
       aria-labelledby="profile-heading">
-      <h1 id="profile-heading" className="profile-page__sr-only">
+      <h1 id="profile-heading" className="profile-page__title">
         {w(510750)}
       </h1>
       <div className="profile-page__card">
@@ -269,7 +268,7 @@ export function ProfilePage() {
                 onClick={onEditAvatar}
                 aria-label="Change head icon"
                 title="Change head icon">
-                <HiPencil className="profile-page__edit-icon" aria-hidden />
+                <Pencil className="profile-page__edit-icon" aria-hidden />
               </button>
             </div>
           </div>
