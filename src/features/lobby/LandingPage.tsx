@@ -45,7 +45,10 @@ import {
   providerTabId,
   type LobbyFilterTab,
 } from "../../lib/gameShellLobbyReturn";
-import { thirdPartyPlatformDisplayName } from "../../lib/thirdPartyPlatformDisplay";
+import {
+  sortThirdPartyPlatforms,
+  thirdPartyPlatformDisplayName,
+} from "../../lib/thirdPartyPlatformDisplay";
 import { GATEWAY_API_GET_THIRD_PARTY_GAME_INFO } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
@@ -601,7 +604,7 @@ export function LandingPage() {
       seen.add(p);
       out.push(p);
     }
-    return out;
+    return sortThirdPartyPlatforms(out);
   }, [providerGamesFiltered]);
 
   const lobbyFilterTabsList = useMemo(
