@@ -110,8 +110,12 @@ async function fetchDailySignInActivity(
 
 export function DailyLoginProvider({ children }: { children: ReactNode }) {
   const { show } = useAlert();
-  const { requestRef, gatewayRequestReady, refreshLobbyGet } =
-    useGatewayLobby();
+  const {
+    requestRef,
+    gatewayRequestReady,
+    needsLobbyHydrationOverlay,
+    refreshLobbyGet,
+  } = useGatewayLobby();
 
   const [activity, setActivity] = useState<ActivityDataDecoded | null>(() =>
     readCachedDailyLoginActivity(),
@@ -180,9 +184,9 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   }, [requestRef]);
 
   useEffect(() => {
-    if (!gatewayRequestReady) return;
+    if (!gatewayRequestReady || needsLobbyHydrationOverlay) return;
     void reload({ background: activityRef.current != null });
-  }, [gatewayRequestReady, reload]);
+  }, [gatewayRequestReady, needsLobbyHydrationOverlay, reload]);
 
   const openModal = useCallback(
     (options?: { refresh?: boolean; background?: boolean }) => {

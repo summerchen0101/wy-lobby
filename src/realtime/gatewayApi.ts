@@ -11,7 +11,7 @@ export const GATEWAY_API_PING_PONG = 0
  * 收到後應清空本機會話並導向登入（被踢端提示）。
  */
 export const GATEWAY_API_USER_KICK_BEFORE = 2
-/** 連線後伺服器登入；對應 ApiType ServerLogin / SERVER_LOGIN；`data` 為空 */
+/** 連線後伺服器登入；對應 ApiType ServerLogin / SERVER_LOGIN；`data` 為空；後端不回 response，前端以 `fireAndForget` 送出 */
 export const GATEWAY_API_SERVER_LOGIN = 4
 export const GATEWAY_API_LOBBY_GET = 11
 /** 取得錢包與乞丐紅包補貼額度；body 為 megaman.WalletGetRequest；回應 megaman.WalletGetResponse */
