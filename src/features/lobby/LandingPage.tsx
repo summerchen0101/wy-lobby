@@ -79,6 +79,7 @@ import {
   UNITY_DEMO_LOBBY_GAME,
   unityDemoGameUrl,
 } from "./landingContent";
+import { useHorizontalScrollContainer } from "../../hooks/useHorizontalScrollContainer";
 import { LobbyGamesScroller } from "./LobbyGamesScroller";
 import "./LobbyPage.css";
 
@@ -460,6 +461,9 @@ export function LandingPage() {
   const [lobbySearchExpanded, setLobbySearchExpanded] = useState(false);
   const lobbySearchInputRef = useRef<HTMLInputElement | null>(null);
   const lobbyGameFilterRef = useRef<HTMLDivElement | null>(null);
+  const lobbyGameFilterScroll = useHorizontalScrollContainer({
+    externalRef: lobbyGameFilterRef,
+  });
   const providerTabBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useLayoutEffect(() => {
@@ -1299,10 +1303,17 @@ export function LandingPage() {
                   </div>
                 </div>
                 <div
-                  ref={lobbyGameFilterRef}
+                  ref={lobbyGameFilterScroll.ref}
                   className="lobby-game-filter"
                   role="tablist"
-                  aria-label="Game categories">
+                  aria-label="Game categories"
+                  onPointerDown={lobbyGameFilterScroll.onPointerDown}
+                  onPointerMove={lobbyGameFilterScroll.onPointerMove}
+                  onPointerUp={lobbyGameFilterScroll.onPointerUp}
+                  onPointerCancel={lobbyGameFilterScroll.onPointerCancel}
+                  onLostPointerCapture={
+                    lobbyGameFilterScroll.onLostPointerCapture
+                  }>
                   {lobbyFilterTabsList.map(({ id, label }) =>
                     id === "providers" && thirdPartyGamesEnabled ? (
                       <div key={id} className="lobby-provider-tab">

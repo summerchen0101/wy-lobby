@@ -299,6 +299,7 @@ html.session-lobby-page {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  touch-action: pan-x pan-y;
   background: transparent;
   border-radius: 0;
   border: none;
@@ -306,6 +307,21 @@ html.session-lobby-page {
   transition:
     flex-basis 0.22s ease,
     max-width 0.22s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lobby-game-filter {
+    cursor: grab;
+  }
+
+  .lobby-game-filter.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+  }
+
+  .lobby-game-filter.is-dragging .lobby-game-filter__tab {
+    pointer-events: none;
+  }
 }
 
 .lobby-game-filter::-webkit-scrollbar {
