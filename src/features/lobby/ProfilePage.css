@@ -5,7 +5,6 @@
   --profile-hairline-soft: color-mix(in srgb, #000000 24%, var(--crown-surface-card-bg) 76%);
   --profile-bar-track: #0a0a0a;
   --profile-switch-off: color-mix(in srgb, #121620 88%, var(--crown-surface-card-bg) 12%);
-  --profile-bar-cap-bg: color-mix(in srgb, var(--crown-gold) 55%, #fff6a0 45%);
   --profile-pill-fg: #242a45;
   padding-top: var(--space-4);
   padding-bottom: var(--space-8);
@@ -152,11 +151,6 @@
   height: var(--icon-rwd-md);
 }
 
-.profile-page__bar-crown-icon {
-  flex-shrink: 0;
-  width: var(--icon-rwd-xs);
-  height: var(--icon-rwd-xs);
-}
 
 .profile-page__display-name {
   margin: 0 0 var(--space-2);
@@ -302,9 +296,10 @@
 }
 
 .profile-page__progress {
+  --profile-bar-badge-size: 2.25rem;
   margin-bottom: var(--space-4);
-  /* Room for crown circle half past the bar end */
-  padding-right: 0.85rem;
+  /* Room for VIP badge half past the bar end */
+  padding-right: calc(var(--profile-bar-badge-size) * 0.5);
 }
 
 .profile-page__bar-row {
@@ -345,7 +340,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: 0 calc(1.85rem * 0.45) 0 0.5rem;
+  padding: 0 calc(var(--profile-bar-badge-size, 2.25rem) * 0.45) 0 0.5rem;
   font-size: 0.72rem;
   font-weight: 800;
   color: var(--color-text);
@@ -358,18 +353,20 @@
   left: 100%;
   top: 50%;
   z-index: 2;
-  width: 1.85rem;
-  height: 1.85rem;
-  border-radius: 50%;
+  width: var(--profile-bar-badge-size, 2.25rem);
+  height: var(--profile-bar-badge-size, 2.25rem);
   transform: translate(-50%, -50%);
-  background: var(--profile-bar-cap-bg);
-  border: 2px solid color-mix(in srgb, var(--crown-gold) 35%, #fff 20%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1a1a0a;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
   pointer-events: none;
+}
+
+.profile-page__bar-badge-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .profile-page__settings {

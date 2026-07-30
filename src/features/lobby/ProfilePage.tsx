@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useState } from "react";
-import { Copy, Crown, Info, Pencil, Volume2 } from "lucide-react";
+import { Copy, Info, Pencil, Volume2 } from "lucide-react";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
@@ -27,7 +27,10 @@ import {
   type HeadIconChoice,
 } from "./profileAvatarChoices";
 import { openZendeskOrFallback } from "../../lib/zendeskSupport";
-import { profileAvatarFrameUrl } from "../../lib/profileAssets";
+import {
+  profileAvatarFrameUrl,
+  profileVipBadgeUrl,
+} from "../../lib/profileAssets";
 import { useProfileAvatarId } from "./profileAvatarStorage";
 import {
   LOBBY_SOUND_PREF_STORAGE_KEY,
@@ -63,7 +66,8 @@ export function ProfilePage() {
     required: vipProgressRequired,
     fillPct: vipProgressFillPct,
   } = profileVipProgress(user);
-  const vipTitle = resolveProfileVipTitle(user?.vipLevel);
+  const vipLevel = user?.vipLevel ?? 0;
+  const vipTitle = resolveProfileVipTitle(vipLevel);
 
   const onRefresh = useCallback(async () => {
     try {
@@ -324,9 +328,10 @@ export function ProfilePage() {
                 {vipProgressCurrent}/{vipProgressRequired}
               </span>
               <div className="profile-page__bar-cap" aria-hidden>
-                <Crown
-                  className="profile-page__bar-crown-icon"
-                  strokeWidth={2.5}
+                <img
+                  className="profile-page__bar-badge-img"
+                  src={profileVipBadgeUrl(vipLevel)}
+                  alt=""
                 />
               </div>
             </div>
