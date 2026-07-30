@@ -33,6 +33,7 @@ import {
 } from "../../lib/profileAssets";
 import { useProfileAvatarId } from "./profileAvatarStorage";
 import {
+  isLobbySoundEnabled,
   LOBBY_SOUND_PREF_STORAGE_KEY,
   notifyLobbySoundPreferenceChanged,
 } from "../../lib/lobbySound";
@@ -58,7 +59,7 @@ export function ProfilePage() {
   const [fundsHistoryOpen, setFundsHistoryOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [avatarImgFailed, setAvatarImgFailed] = useState(false);
-  const [soundOn, setSoundOn] = useState(true);
+  const [soundOn, setSoundOn] = useState(() => isLobbySoundEnabled());
   const soundLabelId = useId();
 
   const {
@@ -76,16 +77,6 @@ export function ProfilePage() {
       /* ignore */
     }
   }, [refreshUser]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const v = window.localStorage.getItem(LOBBY_SOUND_PREF_STORAGE_KEY);
-    if (v === "0") {
-      setSoundOn(false);
-    } else if (v === "1") {
-      setSoundOn(true);
-    }
-  }, []);
 
   useEffect(() => {
     const onVis = () => {
