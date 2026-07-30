@@ -46,6 +46,11 @@ export type GatewayWsRequestPayload = {
    * 僅診斷用：`isDevConsoleEnabled()` 時經 WS trace／dev log 辨識用途（如 `LOBBY_GET`）；production 預設不輸出。
    */
   debugLabel?: string;
+  /**
+   * 送出後不註冊 pending、不等待回應（如 `SERVER_LOGIN` 無 response 時）。
+   * 在 `serializeRequests` 模式下仍會排入序列，但會在 send 後立即 resolve 以讓後續請求繼續。
+   */
+  fireAndForget?: boolean;
 };
 
 export type GatewayWsRequestFn = (
@@ -521,6 +526,29 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
       type: req.type,
       data: req.data ?? new Uint8Array(0),
     });
+    const dataForLen = req.data ?? new Uint8Array(0);
+
+    if (req.fireAndForget) {
+      try {
+        logGatewayRequestOut({
+          apiType: req.type,
+          requestID,
+          debugLabel: req.debugLabel,
+          basic: basicPlain,
+          data: dataForLen,
+        });
+        ws!.send(asWsBinaryPayload(payload));
+        return Promise.resolve({
+          code: "200",
+          type: req.type,
+          data: new Uint8Array(0),
+        } as GatewayWsResponseObject);
+      } catch (e) {
+        return Promise.reject(
+          e instanceof Error ? e : new Error("[gateway-ws] send failed"),
+        );
+      }
+    }
 
     return new Promise((resolve, reject) => {
       let timer: ReturnType<typeof setTimeout> | null = null;
@@ -537,7 +565,6 @@ export function createGatewayWs(options: GatewayWsOptions = {}) {
           reject(new Error(`[gateway-ws] request timeout: ${requestID}`));
         }, requestTimeoutMs);
       }
-      const dataForLen = req.data ?? new Uint8Array(0);
       pending.set(requestID, {
         resolve,
         reject,

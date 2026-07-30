@@ -15,7 +15,7 @@ export type WithdrawSuccessPushListener = (
   push: WithdrawSuccessPushWire,
 ) => void;
 
-/** 登入後預取的 redeem 第一頁（與 RedeemPage ORDERS_PER_PAGE 對齊）。 */
+/** Redeem 第一頁快取（與 RedeemPage ORDERS_PER_PAGE 對齊）；進入 /redeem 時載入。 */
 export type RedeemOrdersPrefetch = {
   rows: WithdrawOrderWireRow[];
   total: number;
@@ -39,11 +39,11 @@ export type GatewayLobbyContextValue = {
   ) => () => void;
   /** 首轮 WebSocket LOBBY_GET bootstrap 未定前為 true（全屏閘門用） */
   needsLobbyHydrationOverlay: boolean;
-  /** 登入 bootstrap 後預取的商店品項；null 表示尚未載入 */
+  /** 商店品項；進入 /shop 時載入，null 表示尚未載入 */
   shopPacks: ShopPack[] | null;
-  /** 預取或手動刷新商店品項 */
+  /** 載入或刷新商店品項 */
   refreshShopPacks: () => Promise<void>;
-  /** 登入 bootstrap 後預取的第一頁提領紀錄 */
+  /** 第一頁提領紀錄快取；進入 /redeem 時載入，null 表示尚未載入 */
   redeemOrdersPrefetch: RedeemOrdersPrefetch | null;
 };
 

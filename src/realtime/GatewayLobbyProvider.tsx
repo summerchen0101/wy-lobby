@@ -20,7 +20,6 @@ import {
   GATEWAY_API_AMOE_INVALID_PUSH,
   GATEWAY_API_JACKPOT_INFO_PUSH,
   GATEWAY_API_LIST_PRODUCTS,
-  GATEWAY_API_LIST_WITHDRAW_ORDERS,
   GATEWAY_API_LOBBY_GET,
   GATEWAY_API_SEND_MESSAGE_PUSH,
   GATEWAY_API_SERVER_LOGIN,
@@ -37,7 +36,6 @@ import {
 } from "./gatewayWs";
 import { isGatewaySuccessCode } from "./gatewayWire";
 import { agentDebugPostJson } from "../debug/agentDebugIngest";
-import { hexPreview } from "./bytesHexPreview";
 import {
   decodeLobbyGetResponseBytes,
   type LobbyGetDecoded,
@@ -60,11 +58,7 @@ import {
   decodeUserKickBeforeReasonBytes,
   messageForUserKickReason,
 } from "./userKickWire";
-import {
-  decodeWithdrawSuccessPushBytes,
-  encodeListWithdrawOrdersRequestBytes,
-  decodeListWithdrawOrdersResponseBytes,
-} from "./withdrawLobbyWire";
+import { decodeWithdrawSuccessPushBytes } from "./withdrawLobbyWire";
 import type { WithdrawSuccessPushListener } from "./gatewayLobbyContext";
 import {
   decodeAmoeCreditedPushBytes,
@@ -88,8 +82,6 @@ const LOBBY_WS_TIMEOUT_USER_MSG =
 const LOBBY_WS_SOCKET_ERROR_MSG = "WebSocket connection error";
 const LOBBY_GET_TIMEOUT_RETRY_DELAY_MS = 1_500;
 const WS_SOCKET_ERROR_DEBOUNCE_MS = 2_000;
-/** 與 RedeemPage ORDERS_PER_PAGE 對齊 */
-const REDEEM_ORDERS_PREFETCH_PER_PAGE = 4;
 
 function lobbyErrorMessageFromCaught(e: unknown): string {
   if (isGatewayWsRequestTimeoutError(e)) {
@@ -475,51 +467,19 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     [handleWsSessionInvalid, mergeUser, wsLobbyEnabled],
   );
 
-  /** WS `open` 後有 access token 時背景送出；訪客跳過。回傳 false 表示 session 失效（不阻塞大廳 bootstrap）。 */
-  const runServerLoginOnOpen = useCallback(
-    async (request: GatewayWsRequestFn): Promise<boolean> => {
-      const wsAccessToken = sessionTokenRef.current;
-      if (!wsAccessToken) return true;
+  /** WS `open` 後有 access token 時送出；訪客跳過。後端不回 response，不阻塞 bootstrap。 */
+  const runServerLoginOnOpen = useCallback((request: GatewayWsRequestFn) => {
+    if (!sessionTokenRef.current) return;
 
-      try {
-        const loginRes = await request({
-          type: GATEWAY_API_SERVER_LOGIN,
-          data: new Uint8Array(0),
-          debugLabel: "SERVER_LOGIN",
-        });
-        const loginRaw = loginRes.data;
-        const loginLen =
-          loginRaw instanceof Uint8Array ? loginRaw.byteLength : 0;
-        if (isDevConsoleEnabled()) {
-          console.info("[gateway-ws][dev] SERVER_LOGIN", {
-            code: loginRes.code,
-            type: loginRes.type,
-            errMessage: loginRes.errMessage,
-            dataLength: loginLen,
-            dataHexPreview24:
-              loginLen > 0 && loginRaw instanceof Uint8Array
-                ? hexPreview(loginRaw, 24)
-                : "",
-          });
-        }
-        const loginCode = String(loginRes.code ?? "");
-        if (!isGatewaySuccessCode(loginCode)) {
-          if (isGatewaySessionInvalidCode(loginRes.code)) {
-            void handleWsSessionInvalid();
-            return false;
-          }
-          console.warn("[gateway-ws] SERVER_LOGIN non-success", {
-            code: loginRes.code,
-            errMessage: loginRes.errMessage,
-          });
-        }
-      } catch (e) {
-        console.warn("[gateway-ws] SERVER_LOGIN failed", e);
-      }
-      return true;
-    },
-    [handleWsSessionInvalid],
-  );
+    void request({
+      type: GATEWAY_API_SERVER_LOGIN,
+      data: new Uint8Array(0),
+      debugLabel: "SERVER_LOGIN",
+      fireAndForget: true,
+    }).catch((e) => {
+      console.warn("[gateway-ws] SERVER_LOGIN send failed", e);
+    });
+  }, []);
 
   const prefetchShopPacks = useCallback(async (request: GatewayWsRequestFn) => {
     if (!sessionTokenRef.current) return;
@@ -546,49 +506,6 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       setShopPacks([]);
     }
   }, []);
-
-  const prefetchRedeemOrders = useCallback(
-    async (request: GatewayWsRequestFn) => {
-      const uid = user?.id?.trim();
-      if (!sessionTokenRef.current || !uid || uid === "0") return;
-      try {
-        const r = await request({
-          type: GATEWAY_API_LIST_WITHDRAW_ORDERS,
-          data: encodeListWithdrawOrdersRequestBytes(
-            uid,
-            0,
-            REDEEM_ORDERS_PREFETCH_PER_PAGE,
-          ),
-          debugLabel: "LIST_WITHDRAW_ORDERS(prefetch)",
-        });
-        const code = String(r.code ?? "");
-        if (!isGatewaySuccessCode(code)) return;
-        const raw = r.data;
-        if (!(raw instanceof Uint8Array) || raw.byteLength === 0) {
-          setRedeemOrdersPrefetch({ rows: [], total: 0 });
-          return;
-        }
-        const { orders, total } = decodeListWithdrawOrdersResponseBytes(raw);
-        const tn = Number(total);
-        setRedeemOrdersPrefetch({
-          rows: orders,
-          total: Number.isFinite(tn) ? tn : 0,
-        });
-      } catch (e) {
-        console.warn("[gateway-ws] LIST_WITHDRAW_ORDERS prefetch failed", e);
-      }
-    },
-    [user?.id],
-  );
-
-  const prefetchSessionShopAndRedeem = useCallback(
-    async (request: GatewayWsRequestFn) => {
-      if (!sessionTokenRef.current) return;
-      await prefetchShopPacks(request);
-      await prefetchRedeemOrders(request);
-    },
-    [prefetchRedeemOrders, prefetchShopPacks],
-  );
 
   const refreshShopPacks = useCallback(async () => {
     const request = requestRef.current;
@@ -913,24 +830,19 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
       void (async () => {
         try {
-          const loginOk = await runServerLoginOnOpen(request);
-          if (loginOk) {
-            void prefetchSessionShopAndRedeem(request);
-          }
+          runServerLoginOnOpen(request);
 
           if (shouldRunLobbyGetOnOpen) {
             await runLobbyGetRequest(request, { bootstrap: true });
           }
 
-          try {
-            await request({
-              type: GATEWAY_API_GET_JACKPOT_INFO,
-              data: new Uint8Array(0),
-              debugLabel: "GET_JACKPOT_INFO",
-            });
-          } catch (e) {
+          void request({
+            type: GATEWAY_API_GET_JACKPOT_INFO,
+            data: new Uint8Array(0),
+            debugLabel: "GET_JACKPOT_INFO",
+          }).catch((e) => {
             console.warn("[gateway-ws] GET_JACKPOT_INFO failed", e);
-          }
+          });
         } catch (e) {
           console.warn("[gateway-ws] onOpen bootstrap failed", e);
         }
