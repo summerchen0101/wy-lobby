@@ -7,6 +7,7 @@ import {
 } from '../lib/sessionChromeAssets'
 import { formatScFromRaw, formatWalletPillAmount } from '../wallet/formatWalletAmount'
 import type { ActiveWallet } from '../wallet/walletContext'
+import '@fontsource-variable/oswald/wght.css'
 import './LobbyJackpotStrip.css'
 
 function formatJackpotDisplayAmount(wallet: ActiveWallet, raw: number): string {
