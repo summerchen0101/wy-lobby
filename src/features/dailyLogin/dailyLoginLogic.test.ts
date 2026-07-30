@@ -323,7 +323,6 @@ describe("dailyLoginLogic", () => {
     const now = Date.UTC(2026, 6, 15, 12, 0, 0);
     const dayMs = 86400000;
     const todayMs = now;
-    const yesterdayMs = now - dayMs;
 
     const todayMissions = buildMissionsByDate(7, todayMs - 3 * dayMs, (i) => ({
       collected: i < 3,

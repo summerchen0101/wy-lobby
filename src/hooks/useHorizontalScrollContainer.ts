@@ -168,7 +168,7 @@ export function useHorizontalScrollContainer({
   );
 
   return {
-    ref: setRef,
+    setContainerRef: setRef,
     onPointerDown,
     onPointerMove,
     onPointerUp: endDrag,

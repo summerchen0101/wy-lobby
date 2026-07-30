@@ -127,7 +127,9 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   const activityRef = useRef(activity);
   const reloadInFlightRef = useRef<Promise<void> | null>(null);
 
-  activityRef.current = activity;
+  useEffect(() => {
+    activityRef.current = activity;
+  }, [activity]);
 
   const viewModel = useMemo(
     () => (activity ? buildDailyLoginViewModel(activity) : null),

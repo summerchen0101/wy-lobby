@@ -461,7 +461,14 @@ export function LandingPage() {
   const [lobbySearchExpanded, setLobbySearchExpanded] = useState(false);
   const lobbySearchInputRef = useRef<HTMLInputElement | null>(null);
   const lobbyGameFilterRef = useRef<HTMLDivElement | null>(null);
-  const lobbyGameFilterScroll = useHorizontalScrollContainer({
+  const {
+    setContainerRef: setLobbyGameFilterContainerRef,
+    onPointerDown: onLobbyGameFilterPointerDown,
+    onPointerMove: onLobbyGameFilterPointerMove,
+    onPointerUp: onLobbyGameFilterPointerUp,
+    onPointerCancel: onLobbyGameFilterPointerCancel,
+    onLostPointerCapture: onLobbyGameFilterLostPointerCapture,
+  } = useHorizontalScrollContainer({
     externalRef: lobbyGameFilterRef,
   });
   const providerTabBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -1303,17 +1310,15 @@ export function LandingPage() {
                   </div>
                 </div>
                 <div
-                  ref={lobbyGameFilterScroll.ref}
+                  ref={setLobbyGameFilterContainerRef}
                   className="lobby-game-filter"
                   role="tablist"
                   aria-label="Game categories"
-                  onPointerDown={lobbyGameFilterScroll.onPointerDown}
-                  onPointerMove={lobbyGameFilterScroll.onPointerMove}
-                  onPointerUp={lobbyGameFilterScroll.onPointerUp}
-                  onPointerCancel={lobbyGameFilterScroll.onPointerCancel}
-                  onLostPointerCapture={
-                    lobbyGameFilterScroll.onLostPointerCapture
-                  }>
+                  onPointerDown={onLobbyGameFilterPointerDown}
+                  onPointerMove={onLobbyGameFilterPointerMove}
+                  onPointerUp={onLobbyGameFilterPointerUp}
+                  onPointerCancel={onLobbyGameFilterPointerCancel}
+                  onLostPointerCapture={onLobbyGameFilterLostPointerCapture}>
                   {lobbyFilterTabsList.map(({ id, label }) =>
                     id === "providers" && thirdPartyGamesEnabled ? (
                       <div key={id} className="lobby-provider-tab">
