@@ -35,6 +35,15 @@
   cursor: not-allowed;
 }
 
+.change-head-icon-modal__tile:not(.change-head-icon-modal__tile--selected)
+  .change-head-icon-modal__img {
+  filter: grayscale(1);
+}
+
+.change-head-icon-modal__tile--selected .change-head-icon-modal__img {
+  filter: none;
+}
+
 .change-head-icon-modal__img {
   position: absolute;
   inset: 0;

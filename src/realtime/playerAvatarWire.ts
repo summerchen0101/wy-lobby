@@ -14,6 +14,7 @@ function mustLookup(name: string): protobuf.Type {
 const ListPlayerAvatarsResponseType = mustLookup(
   "megaman.ListPlayerAvatarsResponse",
 );
+const PlayerAvatarsInfoType = mustLookup("megaman.PlayerAvatarsInfo");
 const UpdatePlayerCurrentAvatarRequestType = mustLookup(
   "megaman.UpdatePlayerCurrentAvatarRequest",
 );
@@ -39,6 +40,16 @@ export function decodeListPlayerAvatarsResponseBytes(data: Uint8Array) {
   }) as { avatarsInfo?: PlayerAvatarRowDecoded[] };
 }
 
+/** UPDATE_PLAYER_AVATAR(23) response body — `PlayerAvatarsInfo`. */
+export function decodePlayerAvatarsInfoBytes(data: Uint8Array) {
+  const msg = PlayerAvatarsInfoType.decode(data);
+  return PlayerAvatarsInfoType.toObject(msg, {
+    longs: String,
+    defaults: true,
+    enums: String,
+  }) as PlayerAvatarRowDecoded;
+}
+
 export function encodeUpdatePlayerCurrentAvatarRequest(params: {
   avatarID: number | string;
   avatarURL?: string;
@@ -50,7 +61,7 @@ export function encodeUpdatePlayerCurrentAvatarRequest(params: {
         ? Number(params.avatarID)
         : params.avatarID,
     avatarURL: params.avatarURL ?? "",
-    isFBAvatar: params.isFBAvatar ? "YES" : "NO",
+    isFBAvatar: params.isFBAvatar ? 1 : 0,
   };
   const err = UpdatePlayerCurrentAvatarRequestType.verify(payload);
   if (err) throw new Error(`UpdatePlayerCurrentAvatarRequest: ${err}`);

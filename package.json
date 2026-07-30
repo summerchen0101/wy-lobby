@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "worddata:generate": "node scripts/generate-word-data.mjs",
-    "prebuild": "node scripts/generate-word-data.mjs",
+    "avatardata:generate": "node scripts/generate-profile-avatar-data.mjs",
+    "prebuild": "node scripts/generate-word-data.mjs && node scripts/generate-profile-avatar-data.mjs",
     "build": "npm run lint && tsc -b && vite build",
     "check": "npm run lint && tsc -b && npm run test",
     "test": "vitest run",

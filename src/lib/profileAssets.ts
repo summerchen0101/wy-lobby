@@ -11,6 +11,13 @@ export function profileAvatarUrl(headIndex: number): string {
   return `${AVATARS}/head_${Math.floor(headIndex)}.png`;
 }
 
+/** ItemData.Icon e.g. `head_15` → avatar image URL. */
+export function profileAvatarIconUrl(icon: string): string {
+  const name = icon.trim();
+  if (!name) return profileAvatarUrl(1);
+  return `${AVATARS}/${name}.png`;
+}
+
 export function profileAvatarFrameUrl(selected = false): string {
   return selected
     ? `${AVATARS}/head_frame_sel.png`
