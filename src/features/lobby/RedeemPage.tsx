@@ -88,6 +88,7 @@ export function RedeemPage() {
     gatewayRequestReady,
     refreshLobbyGet,
     subscribeWithdrawSuccessPush,
+    redeemOrdersPrefetch,
   } = useGatewayLobby();
 
   const [pillExtras, setPillExtras] = useState<string[]>([]);
@@ -106,11 +107,19 @@ export function RedeemPage() {
   const [bindingModalOpen, setBindingModalOpen] = useState(false);
   const [bindingMode, setBindingMode] = useState<RedeemBindingMode>("full");
   const [ordersPage, setOrdersPage] = useState(0);
-  const [ordersRows, setOrdersRows] = useState<WithdrawOrderWireRow[]>([]);
-  const [ordersTotal, setOrdersTotal] = useState(0);
-  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ordersRows, setOrdersRows] = useState<WithdrawOrderWireRow[]>(
+    () => redeemOrdersPrefetch?.rows ?? [],
+  );
+  const [ordersTotal, setOrdersTotal] = useState(
+    () => redeemOrdersPrefetch?.total ?? 0,
+  );
+  const [ordersLoading, setOrdersLoading] = useState(
+    () => redeemOrdersPrefetch === null,
+  );
   const [ordersError, setOrdersError] = useState<string | null>(null);
-  const [initialOrdersFetched, setInitialOrdersFetched] = useState(false);
+  const [initialOrdersFetched, setInitialOrdersFetched] = useState(
+    () => redeemOrdersPrefetch !== null,
+  );
 
   const { amount: scAmount, redeemableAmount, unplayedHundredths } =
     redeemScBalancesFromLobby({
@@ -129,7 +138,7 @@ export function RedeemPage() {
       : Math.max(1, Math.ceil(ordersTotal / ORDERS_PER_PAGE));
 
   const fetchOrders = useCallback(
-    async (page: number) => {
+    async (page: number, options?: { background?: boolean }) => {
       const req = requestRef.current;
       const userId = user?.id?.trim();
       if (!req || !userId || userId === "0") {
@@ -137,7 +146,9 @@ export function RedeemPage() {
         setInitialOrdersFetched(true);
         return;
       }
-      setOrdersLoading(true);
+      if (!options?.background) {
+        setOrdersLoading(true);
+      }
       setOrdersError(null);
       try {
         const r = await req({
@@ -180,8 +191,28 @@ export function RedeemPage() {
 
   useEffect(() => {
     if (!gatewayRequestReady) return;
+    if (ordersPage === 0 && redeemOrdersPrefetch !== null) {
+      setOrdersRows(redeemOrdersPrefetch.rows);
+      setOrdersTotal(redeemOrdersPrefetch.total);
+      setOrdersLoading(false);
+      setInitialOrdersFetched(true);
+      void fetchOrders(0, { background: true });
+      return;
+    }
     void fetchOrders(ordersPage);
-  }, [gatewayRequestReady, ordersPage, fetchOrders]);
+  }, [gatewayRequestReady, ordersPage, fetchOrders, redeemOrdersPrefetch]);
+
+  useEffect(() => {
+    if (!redeemOrdersPrefetch || ordersPage !== 0 || initialOrdersFetched) return;
+    setOrdersRows(redeemOrdersPrefetch.rows);
+    setOrdersTotal(redeemOrdersPrefetch.total);
+    setOrdersLoading(false);
+    setInitialOrdersFetched(true);
+  }, [
+    redeemOrdersPrefetch,
+    ordersPage,
+    initialOrdersFetched,
+  ]);
 
   const refetchOrdersAfterWithdraw = useCallback(async () => {
     setOrdersPage(0);

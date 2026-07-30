@@ -6,16 +6,13 @@ import { isThirdPartyPaymentEnabled } from "../../lib/env";
 import { usePaymentCallbackListener } from "../payment/usePaymentCallbackListener";
 import {
   GATEWAY_API_BUY_PRODUCT,
-  GATEWAY_API_LIST_PRODUCTS,
   GATEWAY_API_MEGA_ACCOUNT_BINDING,
 } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
   decodeBuyProductResponseBytes,
-  decodeListProductsResponseBytes,
   decodeMegaAccountBindingResponseBytes,
   encodeBuyProductRequestBytes,
-  encodeListProductsRequestBytes,
   encodeShopMegaAccountBindingRequestBytes,
 } from "../../realtime/shopLobbyWire";
 import {
@@ -23,7 +20,6 @@ import {
   setSocureBindingNavigationContext,
 } from "../../lib/socure/socureDevice";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
-import { mapListProductToShopPack } from "./mapListProductToShopPack";
 import { publicImageUrl } from "../../lib/publicImageUrl";
 import { isPhoneBound } from "./isPhoneBound";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
@@ -53,11 +49,14 @@ export function ShopPage() {
   const w = useWordData();
   const { show } = useAlert();
   const { token, user, mergeUser } = useAuth();
-  const { requestRef, subscribePaymentFinish, refreshLobbyGet } =
-    useGatewayLobby();
-  const [packs, setPacks] = useState<ShopPack[]>([]);
-  const [listLoading, setListLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+  const {
+    requestRef,
+    subscribePaymentFinish,
+    refreshLobbyGet,
+    shopPacks,
+    refreshShopPacks,
+    gatewayRequestReady,
+  } = useGatewayLobby();
   const [checkoutPack, setCheckoutPack] = useState<ShopPack | null>(null);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("loading");
   const [buyBusy, setBuyBusy] = useState(false);
@@ -68,72 +67,12 @@ export function ShopPage() {
   const [bindingError, setBindingError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) {
-      setPacks([]);
-      setListLoading(false);
-      setListError(null);
-      return;
-    }
+    if (!token || !gatewayRequestReady) return;
+    void refreshShopPacks();
+  }, [token, gatewayRequestReady, refreshShopPacks]);
 
-    let cancelled = false;
-
-    const load = async () => {
-      setListLoading(true);
-      setListError(null);
-      for (let i = 0; i < 50 && !cancelled; i++) {
-        const req = requestRef.current;
-        if (req) {
-          try {
-            const r = await req({
-              type: GATEWAY_API_LIST_PRODUCTS,
-              data: encodeListProductsRequestBytes(),
-              debugLabel: "LIST_PRODUCTS",
-            });
-            const code = String(r.code ?? "");
-            if (!isGatewaySuccessCode(code)) {
-              if (!cancelled) {
-                setListError(
-                  translateGatewayError(code, r.errMessage, `List products failed (${code})`),
-                );
-                setPacks([]);
-              }
-              return;
-            }
-            const raw = r.data;
-            if (raw instanceof Uint8Array && raw.byteLength > 0) {
-              const { products } = decodeListProductsResponseBytes(raw);
-              if (!cancelled) {
-                setPacks(products.map(mapListProductToShopPack));
-              }
-            } else if (!cancelled) {
-              setPacks([]);
-            }
-          } catch (e) {
-            if (!cancelled) {
-              setListError(
-                e instanceof Error ? e.message : "Could not load products",
-              );
-              setPacks([]);
-            }
-          } finally {
-            if (!cancelled) setListLoading(false);
-          }
-          return;
-        }
-        await new Promise((res) => setTimeout(res, 100));
-      }
-      if (!cancelled) {
-        setListError("Could not connect to shop");
-        setPacks([]);
-        setListLoading(false);
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, requestRef]);
+  const packs = shopPacks ?? [];
+  const listLoading = Boolean(token) && shopPacks === null;
 
   const closeCheckout = useCallback(() => {
     setCheckoutPack(null);
@@ -379,12 +318,6 @@ export function ShopPage() {
         {listLoading ? (
           <p className="shop-page__status" role="status">
             Loading packages…
-          </p>
-        ) : listError ? (
-          <p
-            className="shop-page__status shop-page__status--error"
-            role="alert">
-            {listError}
           </p>
         ) : packs.length === 0 ? (
           <p className="shop-page__status" role="status">
