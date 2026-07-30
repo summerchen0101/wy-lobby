@@ -102,7 +102,7 @@ function lobbyFilterTabs(
 ): LobbyFilterTabEntry[] {
   return [
     { id: "all", label: getWord(510670) },
-    { id: "slots", label: getWord(510673) },
+    { id: "slots", label: LOBBY_SLOTS_ALL_SUBSECTION_LABEL },
     { id: "hot", label: getWord(510672) },
     ...(thirdPartyGamesEnabled
       ? [
