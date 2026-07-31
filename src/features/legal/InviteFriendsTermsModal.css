@@ -1,0 +1,108 @@
+.invite-friends-terms-modal-overlay {
+  position: fixed;
+  inset: 0;
+  /* Above InfoPopover (6200) and alert toasts (6000) */
+  z-index: 6300;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  background: var(--modal-overlay-scrim);
+  backdrop-filter: blur(var(--modal-overlay-blur));
+}
+
+.app-modal.invite-friends-terms-modal {
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.invite-friends-terms-modal__header {
+  flex-shrink: 0;
+  padding-top: max(0.65rem, var(--safe-top));
+}
+
+.app-modal.invite-friends-terms-modal > .app-modal__rule {
+  flex-shrink: 0;
+}
+
+.invite-friends-terms-modal__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.invite-friends-terms-modal__body {
+  padding: var(--space-4) var(--space-5) max(var(--space-5), var(--safe-bottom));
+  box-sizing: border-box;
+}
+
+.invite-friends-terms-modal__revised {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted, #9aa8b5);
+  font-size: var(--text-small);
+}
+
+.invite-friends-terms-modal__section {
+  margin-top: var(--space-5);
+}
+
+.invite-friends-terms-modal__section-title {
+  margin: 0 0 var(--space-3);
+  font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.05rem);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.invite-friends-terms-modal .legal-page__subheading {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-body);
+  font-weight: 700;
+}
+
+.invite-friends-terms-modal .legal-page__paragraph {
+  margin: 0 0 var(--space-3);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.invite-friends-terms-modal .legal-page__list {
+  margin: 0 0 var(--space-3);
+  padding-left: 1.25rem;
+}
+
+.invite-friends-terms-modal .legal-page__list-item {
+  margin-bottom: var(--space-2);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+@media (min-width: 48rem) {
+  .invite-friends-terms-modal-overlay {
+    align-items: center;
+    justify-content: center;
+    padding-top: max(var(--page-pad), var(--safe-top));
+    padding-bottom: max(var(--page-pad), var(--safe-bottom));
+    padding-left: var(--page-pad-inline);
+    padding-right: var(--page-pad-inline);
+  }
+
+  .app-modal.invite-friends-terms-modal {
+    width: 100%;
+    max-width: min(36rem, calc(100vw - 2 * var(--page-pad-inline)));
+    height: auto;
+    max-height: var(--modal-scroll-max-height);
+    border: var(--modal-panel-border);
+    border-radius: var(--modal-radius);
+    box-shadow: var(--modal-shadow);
+  }
+
+  .invite-friends-terms-modal__header {
+    padding-top: 0.65rem;
+  }
+}
