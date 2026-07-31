@@ -29,7 +29,9 @@ import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import {
   buildDailyLoginViewModel,
-  isDayClaimableToday,
+  findClaimableCreditRewardAmounts,
+  isDayCollectable,
+  isMissionCollectEligible,
   type DayViewModel,
 } from "./dailyLoginLogic";
 import { DailyLoginContext } from "./dailyLoginContext";
@@ -39,6 +41,27 @@ import {
   readCachedDailyLoginActivityId,
   writeCachedDailyLoginActivity,
 } from "./dailyLoginCache";
+import {
+  DAILY_LOGIN_AUTO_CLOSE_MS,
+  computeCanDismissModal,
+} from "./dailyLoginFlow";
+
+function translateDailyLoginClaimError(
+  code: string,
+  errMessage?: string | null,
+): string {
+  const serverMsg = errMessage?.trim();
+  if (serverMsg) return serverMsg;
+  const translated = translateGatewayError(
+    code,
+    errMessage,
+    `Claim failed (${code})`,
+  );
+  if (code === "400001") {
+    return "This reward is not ready to collect yet.";
+  }
+  return translated;
+}
 
 type GatewayRequestFn = NonNullable<
   ReturnType<typeof useGatewayLobby>["requestRef"]["current"]
@@ -125,19 +148,49 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   const [claiming, setClaiming] = useState(false);
   const [flying, setFlying] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [postClaimDismissible, setPostClaimDismissible] = useState(false);
   const claimSummaryRef = useRef("");
   const flyCompleteRef = useRef<() => void>(() => {});
   const lastActivityIdRef = useRef<string | null>(readCachedDailyLoginActivityId());
   const activityRef = useRef(activity);
   const reloadInFlightRef = useRef<Promise<void> | null>(null);
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completeClaimFlowRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     activityRef.current = activity;
   }, [activity]);
 
+  const clearAutoCloseTimer = useCallback(() => {
+    if (autoCloseTimerRef.current != null) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
+
   const viewModel = useMemo(
     () => (activity ? buildDailyLoginViewModel(activity) : null),
     [activity],
+  );
+
+  const canDismissModal = useMemo(
+    () =>
+      computeCanDismissModal({
+        postClaimDismissible,
+        hasClaimableDaily: viewModel?.hasClaimableDaily ?? false,
+        hasClaimableCredit: viewModel?.hasClaimableCredit ?? false,
+        claiming,
+        flying,
+        hasError: Boolean(error),
+      }),
+    [
+      postClaimDismissible,
+      viewModel?.hasClaimableDaily,
+      viewModel?.hasClaimableCredit,
+      claiming,
+      flying,
+      error,
+    ],
   );
 
   const reload = useCallback(async (options?: ReloadOptions) => {
@@ -165,6 +218,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
             const id = String(next.activityID);
             lastActivityIdRef.current = id;
             writeCachedDailyLoginActivity(next);
+            activityRef.current = next;
             return next;
           }
           return prev;
@@ -188,51 +242,75 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
     void reload({ background: activityRef.current != null });
   }, [gatewayRequestReady, needsLobbyHydrationOverlay, reload]);
 
+  const closeModalInternal = useCallback(() => {
+    clearAutoCloseTimer();
+    setPostClaimDismissible(false);
+    setModalOpen(false);
+  }, [clearAutoCloseTimer]);
+
+  const enterDismissible = useCallback(() => {
+    show(claimSummaryRef.current, { variant: "success" });
+    setPostClaimDismissible(true);
+    clearAutoCloseTimer();
+    autoCloseTimerRef.current = setTimeout(() => {
+      closeModalInternal();
+    }, DAILY_LOGIN_AUTO_CLOSE_MS);
+  }, [show, clearAutoCloseTimer, closeModalInternal]);
+
   const openModal = useCallback(
     (options?: { refresh?: boolean; background?: boolean }) => {
+      clearAutoCloseTimer();
+      setPostClaimDismissible(false);
+      setError(null);
       setModalOpen(true);
       if (options?.refresh === false) return;
       void reload({
         background: options?.background ?? false,
       });
     },
-    [reload],
+    [reload, clearAutoCloseTimer],
   );
+
+  const dismissModal = useCallback(() => {
+    if (claiming || flying) return;
+    closeModalInternal();
+  }, [claiming, flying, closeModalInternal]);
+
   const closeModal = useCallback(() => {
     if (claiming || flying) return;
-    setModalOpen(false);
-  }, [claiming, flying]);
+    if (!canDismissModal) return;
+    closeModalInternal();
+  }, [claiming, flying, canDismissModal, closeModalInternal]);
 
   const finishClaimSuccess = useCallback(
     async (flyFromRect: DOMRect | null, hasGcReward: boolean) => {
       if (flyFromRect && hasGcReward) {
         setFlying(true);
         flyCompleteRef.current = () => {
-          show(claimSummaryRef.current, { variant: "success" });
-          setModalOpen(false);
+          void completeClaimFlowRef.current();
         };
-      } else {
-        try {
-          await refreshLobbyGet();
-        } catch {
-          /* balance refresh best-effort */
-        }
-        show(claimSummaryRef.current, { variant: "success" });
-        setModalOpen(false);
+        return;
       }
+
+      try {
+        await refreshLobbyGet();
+      } catch {
+        /* balance refresh best-effort */
+      }
+      await completeClaimFlowRef.current();
     },
-    [show, refreshLobbyGet],
+    [refreshLobbyGet],
   );
 
   const executeClaim = useCallback(
     async ({
-      dailyIds,
+      dailyMissionIds,
       creditAmounts,
       rewardParts,
       hasGcReward,
       flyFromRect,
     }: {
-      dailyIds: string[];
+      dailyMissionIds: string[];
       creditAmounts: number[];
       rewardParts: string[];
       hasGcReward: boolean;
@@ -244,13 +322,13 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
         setError("Not connected");
         return;
       }
-      if (dailyIds.length === 0 && creditAmounts.length === 0) return;
+      if (dailyMissionIds.length === 0 && creditAmounts.length === 0) return;
 
       setClaiming(true);
       setError(null);
 
       try {
-        for (const missionId of dailyIds) {
+        for (const missionId of dailyMissionIds) {
           const r = await req({
             type: GATEWAY_API_ACTIVITY_COLLECT_REWARD,
             data: encodeActivityCollectRewardReqBytes({
@@ -263,7 +341,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
           const code = String(r.code ?? "");
           if (!isGatewaySuccessCode(code)) {
             throw new Error(
-              translateGatewayError(code, r.errMessage, `Claim failed (${code})`),
+              translateDailyLoginClaimError(code, r.errMessage),
             );
           }
         }
@@ -280,7 +358,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
           const code = String(r.code ?? "");
           if (!isGatewaySuccessCode(code)) {
             throw new Error(
-              translateGatewayError(code, r.errMessage, `Claim failed (${code})`),
+              translateDailyLoginClaimError(code, r.errMessage),
             );
           }
         }
@@ -310,10 +388,24 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
 
   const claimDay = useCallback(
     async (day: DayViewModel, flyFromRect: DOMRect | null) => {
-      if (!isDayClaimableToday(day)) return;
-      if (day.status !== "claimable") return;
-      const dailyIds = day.claimableMissionIds;
-      if (dailyIds.length === 0) return;
+      if (!isDayCollectable(day)) {
+        closeModalInternal();
+        return;
+      }
+      if (day.status !== "claimable") {
+        closeModalInternal();
+        return;
+      }
+      const dailyMissionIds = day.claimableMissionIds.filter((id) => {
+        const mission = day.missions.find(
+          (m) => String(m.dailyMissionID ?? "") === id,
+        );
+        return mission != null && isMissionCollectEligible(mission);
+      });
+      if (dailyMissionIds.length === 0) {
+        closeModalInternal();
+        return;
+      }
 
       const rewardParts: string[] = [];
       let hasGcReward = false;
@@ -328,19 +420,22 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       }
 
       await executeClaim({
-        dailyIds,
+        dailyMissionIds,
         creditAmounts: [],
         rewardParts,
         hasGcReward,
         flyFromRect,
       });
     },
-    [executeClaim],
+    [executeClaim, closeModalInternal],
   );
 
   const claimCreditReward = useCallback(
     async (requiredCreditAmount: number, flyFromRect: DOMRect | null) => {
-      const reward = viewModel?.creditRewards.find(
+      const vm = activityRef.current
+        ? buildDailyLoginViewModel(activityRef.current)
+        : viewModel;
+      const reward = vm?.creditRewards.find(
         (r) => r.requiredCreditAmount === requiredCreditAmount,
       );
       if (!reward?.claimable) return;
@@ -356,7 +451,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       }
 
       await executeClaim({
-        dailyIds: [],
+        dailyMissionIds: [],
         creditAmounts: [requiredCreditAmount],
         rewardParts,
         hasGcReward: false,
@@ -365,6 +460,24 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
     },
     [viewModel, executeClaim],
   );
+
+  const completeClaimFlow = useCallback(async () => {
+    const vm = activityRef.current
+      ? buildDailyLoginViewModel(activityRef.current)
+      : null;
+    const [nextCredit] = findClaimableCreditRewardAmounts(
+      vm?.creditRewards ?? [],
+    );
+    if (nextCredit != null) {
+      await claimCreditReward(nextCredit, null);
+      return;
+    }
+    enterDismissible();
+  }, [claimCreditReward, enterDismissible]);
+
+  useEffect(() => {
+    completeClaimFlowRef.current = completeClaimFlow;
+  }, [completeClaimFlow]);
 
   const onFlyComplete = useCallback(() => {
     void (async () => {
@@ -379,6 +492,16 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
     })();
   }, [refreshLobbyGet]);
 
+  const handlePrimaryAction = useCallback(() => {
+    dismissModal();
+  }, [dismissModal]);
+
+  useEffect(() => {
+    return () => {
+      clearAutoCloseTimer();
+    };
+  }, [clearAutoCloseTimer]);
+
   const value = useMemo(
     () => ({
       viewModel,
@@ -387,12 +510,16 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       claiming,
       flying,
       modalOpen,
+      postClaimDismissible,
+      canDismissModal,
       openModal,
       closeModal,
+      dismissModal,
       reload,
       claimDay,
       claimCreditReward,
       onFlyComplete,
+      handlePrimaryAction,
     }),
     [
       viewModel,
@@ -401,12 +528,16 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       claiming,
       flying,
       modalOpen,
+      postClaimDismissible,
+      canDismissModal,
       openModal,
       closeModal,
+      dismissModal,
       reload,
       claimDay,
       claimCreditReward,
       onFlyComplete,
+      handlePrimaryAction,
     ],
   );
 

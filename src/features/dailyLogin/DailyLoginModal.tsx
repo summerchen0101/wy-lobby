@@ -10,7 +10,7 @@ import { formatWalletScAmountForDisplay } from "../../wallet/formatWalletAmount"
 import { dailyBonusDayArtSrc } from "./dailyLoginAssets";
 import { useDailyLoginActivity } from "./dailyLoginContext";
 import type { CreditRewardViewModel, DayViewModel } from "./dailyLoginLogic";
-import { CREDIT_MILESTONE_MAX, isDayClaimableToday } from "./dailyLoginLogic";
+import { CREDIT_MILESTONE_MAX, isDayCollectable } from "./dailyLoginLogic";
 import "./DailyLoginModal.css";
 
 type Props = {
@@ -93,7 +93,7 @@ function DayCell({
   const gcReward = day.rewards.find((r) => r.wallet === "GC");
   const scReward = day.rewards.find((r) => r.wallet === "SC");
   const inlineRewardPlus = !featured && gcReward && scReward;
-  const showClaimable = isDayClaimableToday(day);
+  const showClaimable = isDayCollectable(day);
   const clickable = showClaimable && !disabled && !claiming;
   const visualStatus: DayViewModel["status"] = showClaimable ? "claimable" : "locked";
 
@@ -397,17 +397,16 @@ export function DailyLoginModal({ open }: Props) {
     claimDay,
     claimCreditReward,
     onFlyComplete,
-    closeModal,
+    handlePrimaryAction,
   } = useDailyLoginActivity();
 
   const handleClose = useCallback(() => {
-    if (claiming || flying) return;
-    closeModal();
-  }, [claiming, flying, closeModal]);
+    handlePrimaryAction();
+  }, [handlePrimaryAction]);
 
   const handleClaimDay = useCallback(
     (day: DayViewModel, rect: DOMRect) => {
-      if (claiming || flying || !isDayClaimableToday(day)) return;
+      if (claiming || flying || !isDayCollectable(day)) return;
       setClaimingDayNumber(day.dayNumber);
       setFlyFromRect(rect);
       void claimDay(day, rect).finally(() => setClaimingDayNumber(null));
@@ -445,6 +444,7 @@ export function DailyLoginModal({ open }: Props) {
       )
     : 0;
   const interactionDisabled = claiming || flying;
+  const primaryActionLabel = "Close daily bonus";
 
   return createPortal(
     <>
@@ -455,13 +455,11 @@ export function DailyLoginModal({ open }: Props) {
       >
         <button
           type="button"
-          className="daily-login-overlay__close"
-          aria-label="Close"
-          onClick={handleClose}
-          disabled={claiming || flying}
-        >
-          <X aria-hidden strokeWidth={2.4} />
-        </button>
+          className="daily-login-overlay__tap-zone"
+          aria-label={primaryActionLabel}
+          onClick={() => handlePrimaryAction()}
+          disabled={interactionDisabled}
+        />
 
         <div
           className="daily-login-modal"
@@ -558,6 +556,16 @@ export function DailyLoginModal({ open }: Props) {
             </p>
           ) : null}
         </div>
+
+        <button
+          type="button"
+          className="daily-login-overlay__close"
+          aria-label={primaryActionLabel}
+          onClick={handleClose}
+          disabled={interactionDisabled}
+        >
+          <X aria-hidden strokeWidth={2.4} />
+        </button>
       </div>
 
       <CoinFlyToBalance

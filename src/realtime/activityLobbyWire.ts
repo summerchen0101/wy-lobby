@@ -119,8 +119,10 @@ export function decodeGetActivityResponseBytes(
 
 export type ActivityCollectRewardFields = {
   activityID: bigint | number | string;
-  dailyMissionID: bigint | number | string;
-  requiredCreditAmount: bigint | number | string;
+  /** Daily mission claim: mission id; cumulative claim: 0 per API spec. */
+  dailyMissionID?: bigint | number | string;
+  /** Cumulative credit claim: threshold; daily claim: 0 per API spec. */
+  requiredCreditAmount?: bigint | number | string;
 };
 
 export function encodeActivityCollectRewardReqBytes(
@@ -128,8 +130,8 @@ export function encodeActivityCollectRewardReqBytes(
 ): Uint8Array {
   const msg = ActivityCollectRewardReqType.create({
     activityID: wireUInt64Field(fields.activityID),
-    dailyMissionID: wireUInt64Field(fields.dailyMissionID),
-    requiredCreditAmount: wireUInt64Field(fields.requiredCreditAmount),
+    dailyMissionID: wireUInt64Field(fields.dailyMissionID ?? 0),
+    requiredCreditAmount: wireUInt64Field(fields.requiredCreditAmount ?? 0),
   });
   return Uint8Array.from(ActivityCollectRewardReqType.encode(msg).finish());
 }

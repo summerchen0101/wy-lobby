@@ -60,7 +60,7 @@ function walletFromItemId(itemID: number): "GC" | "SC" {
   return itemID === 2 ? "SC" : "GC";
 }
 
-function missionTargetActionTimes(m: UserDailyMissionDecoded): number {
+function missionRequiredActionTimes(m: UserDailyMissionDecoded): number {
   const parsed = parseWireInt64(m.achievedActionTimes);
   if (parsed === null || parsed <= 0) return 1;
   return parsed;
@@ -72,7 +72,7 @@ export function getMissionProgress(m: UserDailyMissionDecoded): {
 } {
   return {
     progress: parseWireInt64(m.actionTimes) ?? 0,
-    target: missionTargetActionTimes(m),
+    target: missionRequiredActionTimes(m),
   };
 }
 
@@ -85,6 +85,13 @@ export function getMissionStatus(m: UserDailyMissionDecoded): MissionStatus {
 
 export function isMissionClaimable(m: UserDailyMissionDecoded): boolean {
   return getMissionStatus(m) === "claimable";
+}
+
+/** xlsx: actionTimes (progress) >= achievedActionTimes (required) && !isCollected */
+export function isMissionCollectEligible(
+  m: UserDailyMissionDecoded,
+): boolean {
+  return isMissionClaimable(m);
 }
 
 export function calendarDayKeyInTimeZone(
@@ -114,13 +121,46 @@ export function isSameCalendarDayInTimeZone(
   );
 }
 
-export function isDayClaimableToday(
-  day: Pick<DayViewModel, "status" | "dateMs" | "claimableMissionIds">,
-  nowMs: number = Date.now(),
+export function isDayCollectable(
+  day: Pick<DayViewModel, "status" | "claimableMissionIds" | "missions">,
 ): boolean {
   if (day.status !== "claimable") return false;
-  if (day.claimableMissionIds.length === 0) return false;
-  return isSameCalendarDayInTimeZone(day.dateMs, nowMs);
+  return getCollectableMissionIdsForDay(day as DayViewModel).length > 0;
+}
+
+/** @deprecated Cumulative sign-in: mission date is not a claim gate. Use {@link isDayCollectable}. */
+export function isDayClaimableToday(
+  day: Pick<DayViewModel, "status" | "dateMs" | "claimableMissionIds" | "missions">,
+  _nowMs: number = Date.now(),
+): boolean {
+  return isDayCollectable(day);
+}
+
+export function getCollectableMissionIdsForDay(day: DayViewModel): string[] {
+  return day.claimableMissionIds.filter((id) => {
+    const mission = day.missions.find(
+      (m) => String(m.dailyMissionID ?? "") === id,
+    );
+    return mission != null && isMissionCollectEligible(mission);
+  });
+}
+
+export function findCollectableDay(
+  viewModel: DailyLoginViewModel | null,
+): DayViewModel | null {
+  const day = viewModel?.days.find((d) => isDayCollectable(d));
+  if (!day) return null;
+  const claimableMissionIds = getCollectableMissionIdsForDay(day);
+  if (claimableMissionIds.length === 0) return null;
+  return { ...day, claimableMissionIds };
+}
+
+/** @deprecated Use {@link findCollectableDay}. */
+export function findTodayCollectableDay(
+  viewModel: DailyLoginViewModel | null,
+  _nowMs: number = Date.now(),
+): DayViewModel | null {
+  return findCollectableDay(viewModel);
 }
 
 export function isActivityInDisplayWindow(
@@ -181,25 +221,10 @@ function rewardsFromMissions(missions: UserDailyMissionDecoded[]): DayReward[] {
 
 function dayStatusFromMissions(
   missions: UserDailyMissionDecoded[],
-  dateMs: number,
-  nowMs: number = Date.now(),
 ): MissionStatus {
   if (missions.length === 0) return "locked";
   if (missions.every((m) => getMissionStatus(m) === "claimed")) return "claimed";
-
-  const dayKey = calendarDayKeyInTimeZone(dateMs);
-  const todayKey = calendarDayKeyInTimeZone(nowMs);
-  if (dayKey !== todayKey) return "locked";
-
   if (missions.some((m) => isMissionClaimable(m))) return "claimable";
-
-  const readyDespiteZeroTarget = missions.every((m) => {
-    const progress = parseWireInt64(m.actionTimes) ?? 0;
-    const rawTarget = parseWireInt64(m.achievedActionTimes);
-    return !m.isCollected && progress >= 1 && rawTarget !== null && rawTarget <= 0;
-  });
-  if (readyDespiteZeroTarget) return "claimable";
-
   return "locked";
 }
 
@@ -236,7 +261,7 @@ function collectClaimableMissionIds(
 ): string[] {
   if (status !== "claimable") return [];
   return missions
-    .filter((m) => !m.isCollected)
+    .filter((m) => isMissionCollectEligible(m))
     .map((m) => String(m.dailyMissionID ?? ""))
     .filter(Boolean);
 }
@@ -244,9 +269,8 @@ function collectClaimableMissionIds(
 function dayViewModelFromGroup(
   group: DayGroup,
   dayNumber: number,
-  nowMs: number = Date.now(),
 ): DayViewModel {
-  const status = dayStatusFromMissions(group.missions, group.dateMs, nowMs);
+  const status = dayStatusFromMissions(group.missions);
   const claimableMissionIds = collectClaimableMissionIds(
     group.missions,
     status,
@@ -266,37 +290,20 @@ function createPlaceholderDayGroup(dateMs: number): DayGroup {
   return { dateMs, missions: [], indices: [] };
 }
 
-function computeActiveDayIndex(
-  groups: DayGroup[],
-  nowMs: number = Date.now(),
-): number {
-  const todayKey = calendarDayKeyInTimeZone(nowMs);
-  const todayIdx = groups.findIndex(
-    (g) => calendarDayKeyInTimeZone(g.dateMs) === todayKey,
-  );
-  if (todayIdx >= 0) {
-    const todayStatus = dayStatusFromMissions(
-      groups[todayIdx]!.missions,
-      groups[todayIdx]!.dateMs,
-      nowMs,
-    );
-    if (todayStatus === "claimable") return todayIdx;
-  }
-
+function computeActiveDayIndex(groups: DayGroup[]): number {
   const claimableIdx = groups.findIndex(
-    (g) =>
-      dayStatusFromMissions(g.missions, g.dateMs, nowMs) === "claimable",
+    (g) => dayStatusFromMissions(g.missions) === "claimable",
   );
   if (claimableIdx >= 0) return claimableIdx;
 
   const nextPendingIdx = groups.findIndex(
-    (g) => dayStatusFromMissions(g.missions, g.dateMs, nowMs) === "locked",
+    (g) => dayStatusFromMissions(g.missions) === "locked",
   );
   if (nextPendingIdx >= 0) return nextPendingIdx;
 
   const lastClaimedIdx = groups.reduce(
     (acc, g, i) =>
-      dayStatusFromMissions(g.missions, g.dateMs, nowMs) === "claimed" ? i : acc,
+      dayStatusFromMissions(g.missions) === "claimed" ? i : acc,
     -1,
   );
   if (lastClaimedIdx >= 0) {
@@ -308,26 +315,21 @@ function computeActiveDayIndex(
 function isWindowFullyClaimed(
   groups: DayGroup[],
   cycleStart: number,
-  nowMs: number = Date.now(),
 ): boolean {
   const window = groups.slice(cycleStart, cycleStart + 7);
   return (
     window.length === 7 &&
-    window.every(
-      (g) =>
-        dayStatusFromMissions(g.missions, g.dateMs, nowMs) === "claimed",
-    )
+    window.every((g) => dayStatusFromMissions(g.missions) === "claimed")
   );
 }
 
 function firstUnclaimedIndexInWindow(
   groups: DayGroup[],
   windowStart: number,
-  nowMs: number = Date.now(),
 ): number {
   for (let i = windowStart; i < windowStart + 7 && i < groups.length; i++) {
     const group = groups[i]!;
-    if (dayStatusFromMissions(group.missions, group.dateMs, nowMs) !== "claimed") {
+    if (dayStatusFromMissions(group.missions) !== "claimed") {
       return i;
     }
   }
@@ -337,9 +339,8 @@ function firstUnclaimedIndexInWindow(
 function shouldHoldCompletedWindow(
   groups: DayGroup[],
   cycleStart: number,
-  nowMs: number,
 ): boolean {
-  if (!isWindowFullyClaimed(groups, cycleStart, nowMs)) return false;
+  if (!isWindowFullyClaimed(groups, cycleStart)) return false;
 
   const nextWindowStart = cycleStart + 7;
   if (nextWindowStart >= groups.length) return true;
@@ -347,36 +348,28 @@ function shouldHoldCompletedWindow(
   const nextUnclaimedIdx = firstUnclaimedIndexInWindow(
     groups,
     nextWindowStart,
-    nowMs,
   );
   if (nextUnclaimedIdx < 0) return false;
 
   const nextGroup = groups[nextUnclaimedIdx]!;
-  const nextStatus = dayStatusFromMissions(
-    nextGroup.missions,
-    nextGroup.dateMs,
-    nowMs,
-  );
+  const nextStatus = dayStatusFromMissions(nextGroup.missions);
 
   if (nextStatus === "claimable") {
-    return !isSameCalendarDayInTimeZone(nowMs, nextGroup.dateMs);
+    return false;
   }
 
   return true;
 }
 
-function computeCycleStartDayIndex(
-  groups: DayGroup[],
-  nowMs: number = Date.now(),
-): number {
-  const activeIndex = computeActiveDayIndex(groups, nowMs);
+function computeCycleStartDayIndex(groups: DayGroup[]): number {
+  const activeIndex = computeActiveDayIndex(groups);
   const naturalCycle = Math.floor(activeIndex / 7) * 7;
   const prevStart = naturalCycle - 7;
 
   if (
     prevStart >= 0 &&
-    isWindowFullyClaimed(groups, prevStart, nowMs) &&
-    shouldHoldCompletedWindow(groups, prevStart, nowMs)
+    isWindowFullyClaimed(groups, prevStart) &&
+    shouldHoldCompletedWindow(groups, prevStart)
   ) {
     return prevStart;
   }
@@ -434,7 +427,7 @@ export function groupFlatMissionsByDate(
   }
 
   return groups.map((g, i) => {
-    const status = dayStatusFromMissions(g.missions, g.dateMs, nowMs);
+    const status = dayStatusFromMissions(g.missions);
     const claimableMissionIds = collectClaimableMissionIds(g.missions, status);
     return {
       dayNumber: startDayNumber + i,
@@ -460,11 +453,11 @@ export function computeSevenDayWindow(
     const placeholders = padDayGroupsToSeven([], [], 0);
     return {
       startIndex: 0,
-      days: placeholders.map((g, i) => dayViewModelFromGroup(g, i + 1, nowMs)),
+      days: placeholders.map((g, i) => dayViewModelFromGroup(g, i + 1)),
     };
   }
 
-  const cycleStart = computeCycleStartDayIndex(allDayGroups, nowMs);
+  const cycleStart = computeCycleStartDayIndex(allDayGroups);
   const windowGroups = padDayGroupsToSeven(
     allDayGroups.slice(cycleStart, cycleStart + 7),
     allDayGroups,
@@ -474,7 +467,7 @@ export function computeSevenDayWindow(
 
   return {
     startIndex,
-    days: windowGroups.map((g, i) => dayViewModelFromGroup(g, i + 1, nowMs)),
+    days: windowGroups.map((g, i) => dayViewModelFromGroup(g, i + 1)),
   };
 }
 
@@ -501,15 +494,12 @@ export function formatDateRangeEtLabel(
 
 export function enforceSequentialDayStatuses(
   days: DayViewModel[],
-  nowMs: number = Date.now(),
 ): DayViewModel[] {
-  const todayClaimableIdx = days.findIndex((day) =>
-    isDayClaimableToday(day, nowMs),
-  );
-  if (todayClaimableIdx >= 0) {
+  const collectableIdx = days.findIndex((day) => isDayCollectable(day));
+  if (collectableIdx >= 0) {
     return days.map((day, i) => {
       if (day.status === "claimed") return day;
-      if (i === todayClaimableIdx) return day;
+      if (i === collectableIdx) return day;
       return {
         ...day,
         status: "locked" as const,
@@ -580,13 +570,11 @@ export function findClaimableCreditRewards(
 
 export function canClaimTodayUtc(
   flat: FlatMission[],
-  nowMs: number = Date.now(),
+  _nowMs: number = Date.now(),
 ): boolean {
   if (flat.length === 0) return false;
-  const { days } = computeSevenDayWindow(flat, nowMs);
-  return enforceSequentialDayStatuses(days, nowMs).some((day) =>
-    isDayClaimableToday(day, nowMs),
-  );
+  const { days } = computeSevenDayWindow(flat);
+  return enforceSequentialDayStatuses(days).some((day) => isDayCollectable(day));
 }
 
 export function buildDailyLoginViewModel(
@@ -604,10 +592,10 @@ export function buildDailyLoginViewModel(
 
   const flat = flattenDailyMissions(activity);
   const { days: rawDays } = computeSevenDayWindow(flat, nowMs);
-  const days = enforceSequentialDayStatuses(rawDays, nowMs);
+  const days = enforceSequentialDayStatuses(rawDays);
   const creditRewards = findClaimableCreditRewards(activity);
   const hasClaimableDaily =
-    inDisplayWindow && days.some((day) => isDayClaimableToday(day, nowMs));
+    inDisplayWindow && days.some((day) => isDayCollectable(day));
   const hasClaimableCredit =
     inDisplayWindow && creditRewards.some((r) => r.claimable);
 
@@ -653,7 +641,7 @@ export function buildMockDailyLoginActivity(
     missions.push({
       dailyMissionID: String(1000 + i),
       date: String(dateMs),
-      actionTimes: claimable ? 1 : collected ? 1 : 0,
+      actionTimes: claimable || collected ? 1 : 0,
       achievedActionTimes: 1,
       itemID: 1,
       itemAmount: 10000 * (i + 1),

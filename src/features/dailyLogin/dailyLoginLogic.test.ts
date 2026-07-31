@@ -49,7 +49,7 @@ function buildMissionsByDate(
 }
 
 describe("dailyLoginLogic", () => {
-  it("getMissionStatus uses progress vs target from doc", () => {
+  it("getMissionStatus uses actionTimes progress vs achievedActionTimes target", () => {
     expect(
       getMissionStatus({
         actionTimes: 0,
@@ -142,7 +142,7 @@ describe("dailyLoginLogic", () => {
     expect(stillHeld.days.every((d) => d.status === "claimed")).toBe(true);
   });
 
-  it("holds first week when day 8 is claimable but not for today", () => {
+  it("advances to week two when day 8 progress is complete", () => {
     const base = Date.UTC(2026, 5, 1);
     const dayMs = 86400000;
     const missions = buildMissionsByDate(14, base, (i) => ({
@@ -153,9 +153,9 @@ describe("dailyLoginLogic", () => {
       buildMockDailyLoginActivity({ UserDailyMissionsByDates: missions }),
     );
     const later = base + 10 * dayMs;
-    const held = computeSevenDayWindow(flat, later);
-    expect(held.startIndex).toBe(0);
-    expect(held.days.every((d) => d.status === "claimed")).toBe(true);
+    const advanced = computeSevenDayWindow(flat, later);
+    expect(advanced.startIndex).toBe(7);
+    expect(advanced.days[0].status).toBe("claimable");
   });
 
   it("21st claim window starts at cycle index 14", () => {
@@ -319,31 +319,30 @@ describe("dailyLoginLogic", () => {
     );
   });
 
-  it("canClaimTodayUtc only allows claim when mission date is today in ET", () => {
+  it("canClaimTodayUtc is true when cumulative progress has a collectable day", () => {
     const now = Date.UTC(2026, 6, 15, 12, 0, 0);
     const dayMs = 86400000;
-    const todayMs = now;
 
-    const todayMissions = buildMissionsByDate(7, todayMs - 3 * dayMs, (i) => ({
+    const claimableMissions = buildMissionsByDate(7, now - 30 * dayMs, (i) => ({
       collected: i < 3,
       claimable: i === 3,
     }));
-    const flatToday = flattenDailyMissions(
-      buildMockDailyLoginActivity({ UserDailyMissionsByDates: todayMissions }),
+    const flat = flattenDailyMissions(
+      buildMockDailyLoginActivity({ UserDailyMissionsByDates: claimableMissions }),
     );
-    expect(canClaimTodayUtc(flatToday, now)).toBe(true);
+    expect(canClaimTodayUtc(flat, now)).toBe(true);
 
-    const pastMissions = buildMissionsByDate(7, now - 7 * dayMs, (i) => ({
+    const lockedMissions = buildMissionsByDate(7, now - 30 * dayMs, (i) => ({
       collected: i < 3,
-      claimable: i === 3,
+      claimable: false,
     }));
-    const flatPast = flattenDailyMissions(
-      buildMockDailyLoginActivity({ UserDailyMissionsByDates: pastMissions }),
+    const flatLocked = flattenDailyMissions(
+      buildMockDailyLoginActivity({ UserDailyMissionsByDates: lockedMissions }),
     );
-    expect(canClaimTodayUtc(flatPast, now)).toBe(false);
+    expect(canClaimTodayUtc(flatLocked, now)).toBe(false);
   });
 
-  it("treats today's daily login as claimable when actionTimes has not synced yet", () => {
+  it("treats today's daily login as claimable when actionTimes has synced", () => {
     const now = Date.UTC(2026, 6, 15, 12, 0, 0);
     const dayMs = 86400000;
     const missions = buildMissionsByDate(7, now - 3 * dayMs, (i) => ({
@@ -428,7 +427,73 @@ describe("dailyLoginLogic", () => {
     expect(shouldAutoPopupDailyLogin(null)).toBe(false);
   });
 
-  it("marks today claimable when past days are uncollected (production payload shape)", () => {
+  it("collectClaimableMissionIds only includes missions that meet doc eligibility", () => {
+    const now = Date.UTC(2026, 6, 30, 12, 0, 0);
+    const missions = buildMissionsByDate(1, now, () => ({
+      collected: false,
+      claimable: false,
+    }));
+    const key = String(now);
+    missions![key]!.userDailyMissions = [
+      {
+        dailyMissionID: "gc-1",
+        date: String(now),
+        actionTimes: 1,
+        achievedActionTimes: 0,
+        isCollected: false,
+        itemID: 1,
+        itemAmount: 100000,
+        sort: "1",
+      },
+      {
+        dailyMissionID: "sc-1",
+        date: String(now),
+        actionTimes: 0,
+        achievedActionTimes: 1,
+        isCollected: false,
+        itemID: 2,
+        itemAmount: 3000,
+        sort: "2",
+      },
+    ];
+    const vm = buildDailyLoginViewModel(
+      buildMockDailyLoginActivity({ UserDailyMissionsByDates: missions }),
+      now,
+    );
+    const claimableDay = vm?.days.find((day) => day.status === "claimable");
+    expect(claimableDay?.claimableMissionIds).toEqual(["gc-1"]);
+  });
+
+  it("does not treat actionTimes=0 as claimable when achievedActionTimes=0", () => {
+    const now = Date.UTC(2026, 6, 30, 12, 0, 0);
+    const missions = buildMissionsByDate(1, now, () => ({
+      collected: false,
+      claimable: false,
+    }));
+    const key = String(now);
+    missions![key]!.userDailyMissions = [
+      {
+        dailyMissionID: "not-ready",
+        date: String(now),
+        actionTimes: 0,
+        achievedActionTimes: 0,
+        isCollected: false,
+        itemID: 1,
+        itemAmount: 100000,
+        sort: "1",
+      },
+    ];
+    const vm = buildDailyLoginViewModel(
+      buildMockDailyLoginActivity({ UserDailyMissionsByDates: missions }),
+      now,
+    );
+    expect(vm?.hasClaimableDaily).toBe(false);
+    expect(vm?.days.every((day) => day.claimableMissionIds.length === 0)).toBe(
+      true,
+    );
+  });
+
+  it("marks earliest unclaimed completed record claimable (production payload shape)", () => {
     const now = Date.UTC(2026, 6, 30, 12, 0, 0);
     const july28 = 1785211200000;
     const july29 = 1785297600000;
@@ -492,8 +557,8 @@ describe("dailyLoginLogic", () => {
       vm?.days.some(
         (day) =>
           day.status === "claimable" &&
-          day.dateMs === july30 &&
-          day.claimableMissionIds.includes("3"),
+          day.dateMs === july28 &&
+          day.claimableMissionIds.includes("1"),
       ),
     ).toBe(true);
   });
