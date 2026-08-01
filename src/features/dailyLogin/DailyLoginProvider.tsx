@@ -42,6 +42,10 @@ import {
   writeCachedDailyLoginActivity,
 } from "./dailyLoginCache";
 import {
+  hasClaimedDailyToday,
+  markDailyClaimedToday,
+} from "./dailyLoginSession";
+import {
   DAILY_LOGIN_AUTO_CLOSE_MS,
   computeCanDismissModal,
 } from "./dailyLoginFlow";
@@ -168,9 +172,22 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const [claimedDailyToday, setClaimedDailyToday] = useState(() =>
+    hasClaimedDailyToday(),
+  );
+
+  useEffect(() => {
+    setClaimedDailyToday(hasClaimedDailyToday());
+  }, [activity]);
+
   const viewModel = useMemo(
-    () => (activity ? buildDailyLoginViewModel(activity) : null),
-    [activity],
+    () =>
+      activity
+        ? buildDailyLoginViewModel(activity, Date.now(), {
+            claimedDailyToday,
+          })
+        : null,
+    [activity, claimedDailyToday],
   );
 
   const canDismissModal = useMemo(
@@ -368,6 +385,11 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
             ? `Successfully claimed ${rewardParts.join(", ")}!`
             : "Rewards claimed!";
 
+        if (dailyMissionIds.length > 0) {
+          markDailyClaimedToday();
+          setClaimedDailyToday(true);
+        }
+
         await reload();
         await finishClaimSuccess(flyFromRect, hasGcReward);
       } catch (e) {
@@ -433,7 +455,9 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   const claimCreditReward = useCallback(
     async (requiredCreditAmount: number, flyFromRect: DOMRect | null) => {
       const vm = activityRef.current
-        ? buildDailyLoginViewModel(activityRef.current)
+        ? buildDailyLoginViewModel(activityRef.current, Date.now(), {
+            claimedDailyToday,
+          })
         : viewModel;
       const reward = vm?.creditRewards.find(
         (r) => r.requiredCreditAmount === requiredCreditAmount,
@@ -458,12 +482,14 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
         flyFromRect,
       });
     },
-    [viewModel, executeClaim],
+    [viewModel, executeClaim, claimedDailyToday],
   );
 
   const completeClaimFlow = useCallback(async () => {
     const vm = activityRef.current
-      ? buildDailyLoginViewModel(activityRef.current)
+      ? buildDailyLoginViewModel(activityRef.current, Date.now(), {
+          claimedDailyToday,
+        })
       : null;
     const [nextCredit] = findClaimableCreditRewardAmounts(
       vm?.creditRewards ?? [],
@@ -473,7 +499,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       return;
     }
     enterDismissible();
-  }, [claimCreditReward, enterDismissible]);
+  }, [claimCreditReward, enterDismissible, claimedDailyToday]);
 
   useEffect(() => {
     completeClaimFlowRef.current = completeClaimFlow;

@@ -79,8 +79,9 @@ export function getMissionProgress(m: UserDailyMissionDecoded): {
 export function getMissionStatus(m: UserDailyMissionDecoded): MissionStatus {
   const { progress, target } = getMissionProgress(m);
   if (m.isCollected) return "claimed";
-  if (progress >= target) return "claimable";
-  return "locked";
+  // 小強：登入才會把 actionTimes 從 0 改 1；0 表示尚未完成
+  if (progress <= 0 || progress < target) return "locked";
+  return "claimable";
 }
 
 export function isMissionClaimable(m: UserDailyMissionDecoded): boolean {
@@ -492,6 +493,22 @@ export function formatDateRangeEtLabel(
   return `${fmt(startMs)} - ${fmt(endMs)} (ET)`;
 }
 
+/** 每天僅能領一次每日簽到：當日已領後其餘「可領」格改為 locked。 */
+export function applySameDayDailyClaimCap(
+  days: DayViewModel[],
+  claimedDailyToday: boolean,
+): DayViewModel[] {
+  if (!claimedDailyToday) return days;
+  return days.map((day) => {
+    if (day.status !== "claimable") return day;
+    return {
+      ...day,
+      status: "locked" as const,
+      claimableMissionIds: [],
+    };
+  });
+}
+
 export function enforceSequentialDayStatuses(
   days: DayViewModel[],
 ): DayViewModel[] {
@@ -577,9 +594,15 @@ export function canClaimTodayUtc(
   return enforceSequentialDayStatuses(days).some((day) => isDayCollectable(day));
 }
 
+export type BuildDailyLoginViewModelOptions = {
+  /** 當日 ET 是否已成功領取過每日簽到（每天僅能打卡一次）。 */
+  claimedDailyToday?: boolean;
+};
+
 export function buildDailyLoginViewModel(
   activity: ActivityDataDecoded,
   nowMs: number = Date.now(),
+  options?: BuildDailyLoginViewModelOptions,
 ): DailyLoginViewModel | null {
   const activityId = String(activity.activityID ?? "").trim();
   if (!activityId) return null;
@@ -592,7 +615,10 @@ export function buildDailyLoginViewModel(
 
   const flat = flattenDailyMissions(activity);
   const { days: rawDays } = computeSevenDayWindow(flat, nowMs);
-  const days = enforceSequentialDayStatuses(rawDays);
+  const days = applySameDayDailyClaimCap(
+    enforceSequentialDayStatuses(rawDays),
+    options?.claimedDailyToday === true,
+  );
   const creditRewards = findClaimableCreditRewards(activity);
   const hasClaimableDaily =
     inDisplayWindow && days.some((day) => isDayCollectable(day));

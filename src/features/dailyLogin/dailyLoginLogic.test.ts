@@ -4,6 +4,7 @@ import {
   CREDIT_MILESTONE_THRESHOLDS,
   buildDailyLoginViewModel,
   buildMockDailyLoginActivity,
+  applySameDayDailyClaimCap,
   shouldAutoPopupDailyLogin,
   computeSevenDayWindow,
   enforceSequentialDayStatuses,
@@ -491,6 +492,42 @@ describe("dailyLoginLogic", () => {
     expect(vm?.days.every((day) => day.claimableMissionIds.length === 0)).toBe(
       true,
     );
+  });
+
+  it("does not highlight the next day after same-day daily claim cap", () => {
+    const vm = buildDailyLoginViewModel(buildMockDailyLoginActivity(), Date.now(), {
+      claimedDailyToday: true,
+    });
+    expect(vm?.hasClaimableDaily).toBe(false);
+    expect(vm?.days.some((day) => day.status === "claimable")).toBe(false);
+  });
+
+  it("applySameDayDailyClaimCap locks remaining claimable slots", () => {
+    const days = applySameDayDailyClaimCap(
+      [
+        {
+          dayNumber: 1,
+          index: 0,
+          missions: [],
+          dateMs: 0,
+          status: "claimed",
+          rewards: [],
+          claimableMissionIds: [],
+        },
+        {
+          dayNumber: 2,
+          index: 1,
+          missions: [],
+          dateMs: 0,
+          status: "claimable",
+          rewards: [],
+          claimableMissionIds: ["2"],
+        },
+      ],
+      true,
+    );
+    expect(days[1]?.status).toBe("locked");
+    expect(days[1]?.claimableMissionIds).toEqual([]);
   });
 
   it("marks earliest unclaimed completed record claimable (production payload shape)", () => {
