@@ -50,6 +50,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -70,6 +71,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
     setPassword('')
     setPasswordConfirm('')
     setShowPassword(false)
+    setShowPasswordConfirm(false)
     setError(null)
   }, [open])
 
@@ -283,7 +285,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 <input
                   id={pwd2Id}
                   className="auth-modal__input auth-modal__input--register auth-modal__input--password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPasswordConfirm ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder={w(22)}
                   value={passwordConfirm}
@@ -293,11 +295,11 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 <button
                   type="button"
                   className="auth-modal__password-toggle"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  aria-pressed={showPassword}
+                  onClick={() => setShowPasswordConfirm((v) => !v)}
+                  aria-label={showPasswordConfirm ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPasswordConfirm}
                 >
-                  {showPassword ? <IconEyeClosed /> : <IconEyeOpen />}
+                  {showPasswordConfirm ? <IconEyeClosed /> : <IconEyeOpen />}
                 </button>
               </div>
               {error ? <p className="auth-modal__error">{error}</p> : null}

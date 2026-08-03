@@ -89,6 +89,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [referral, setReferral] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [oauthError, setOauthError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -267,11 +268,22 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
               value={passwordConfirm}
               onClear={() => setPasswordConfirm('')}
               clearAriaLabel="Clear confirm password"
+              suffix={
+                <button
+                  type="button"
+                  className="auth-modal__password-toggle"
+                  onClick={() => setShowPasswordConfirm((v) => !v)}
+                  aria-label={showPasswordConfirm ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPasswordConfirm}
+                >
+                  {showPasswordConfirm ? <IconEyeClosed /> : <IconEyeOpen />}
+                </button>
+              }
             >
               <input
                 id={password2Id}
                 className="auth-modal__input auth-modal__input--register auth-modal__input--password"
-                type={showPassword ? 'text' : 'password'}
+                type={showPasswordConfirm ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder={w(22)}
                 value={passwordConfirm}
