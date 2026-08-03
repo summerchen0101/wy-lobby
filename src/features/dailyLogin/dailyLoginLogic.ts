@@ -132,7 +132,6 @@ export function isDayCollectable(
 /** @deprecated Cumulative sign-in: mission date is not a claim gate. Use {@link isDayCollectable}. */
 export function isDayClaimableToday(
   day: Pick<DayViewModel, "status" | "dateMs" | "claimableMissionIds" | "missions">,
-  _nowMs: number = Date.now(),
 ): boolean {
   return isDayCollectable(day);
 }
@@ -159,7 +158,6 @@ export function findCollectableDay(
 /** @deprecated Use {@link findCollectableDay}. */
 export function findTodayCollectableDay(
   viewModel: DailyLoginViewModel | null,
-  _nowMs: number = Date.now(),
 ): DayViewModel | null {
   return findCollectableDay(viewModel);
 }
@@ -404,7 +402,6 @@ function padDayGroupsToSeven(
 export function groupFlatMissionsByDate(
   flat: FlatMission[],
   startDayNumber: number,
-  nowMs: number = Date.now(),
 ): DayViewModel[] {
   const groups: Array<{
     dateMs: number;
@@ -444,7 +441,6 @@ export function groupFlatMissionsByDate(
 
 export function computeSevenDayWindow(
   flat: FlatMission[],
-  nowMs: number = Date.now(),
 ): {
   startIndex: number;
   days: DayViewModel[];
@@ -587,7 +583,6 @@ export function findClaimableCreditRewards(
 
 export function canClaimTodayUtc(
   flat: FlatMission[],
-  _nowMs: number = Date.now(),
 ): boolean {
   if (flat.length === 0) return false;
   const { days } = computeSevenDayWindow(flat);
@@ -614,7 +609,7 @@ export function buildDailyLoginViewModel(
   );
 
   const flat = flattenDailyMissions(activity);
-  const { days: rawDays } = computeSevenDayWindow(flat, nowMs);
+  const { days: rawDays } = computeSevenDayWindow(flat);
   const days = applySameDayDailyClaimCap(
     enforceSequentialDayStatuses(rawDays),
     options?.claimedDailyToday === true,

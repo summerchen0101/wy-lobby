@@ -175,19 +175,24 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   const [claimedDailyToday, setClaimedDailyToday] = useState(() =>
     hasClaimedDailyToday(),
   );
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     setClaimedDailyToday(hasClaimedDailyToday());
   }, [activity]);
 
+  useEffect(() => {
+    setNowMs(Date.now());
+  }, [activity]);
+
   const viewModel = useMemo(
     () =>
       activity
-        ? buildDailyLoginViewModel(activity, Date.now(), {
+        ? buildDailyLoginViewModel(activity, nowMs, {
             claimedDailyToday,
           })
         : null,
-    [activity, claimedDailyToday],
+    [activity, claimedDailyToday, nowMs],
   );
 
   const canDismissModal = useMemo(

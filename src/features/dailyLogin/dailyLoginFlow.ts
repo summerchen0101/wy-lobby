@@ -40,10 +40,9 @@ export function resolveDailyLoginPrimaryAction(
     claiming: boolean;
     flying: boolean;
     hasError?: boolean;
-    nowMs?: number;
   },
 ): DailyLoginPrimaryAction {
-  const { postClaimDismissible, claiming, flying, hasError, nowMs } = options;
+  const { postClaimDismissible, claiming, flying, hasError } = options;
   if (claiming || flying) return { type: "none" };
 
   if (
@@ -60,7 +59,7 @@ export function resolveDailyLoginPrimaryAction(
     return { type: "dismiss" };
   }
 
-  const claimableDay = findTodayCollectableDay(viewModel, nowMs);
+  const claimableDay = findTodayCollectableDay(viewModel);
   if (claimableDay) {
     return { type: "claim-day", day: claimableDay };
   }

@@ -103,7 +103,6 @@ describe("dailyLoginLogic", () => {
 
   it("8th sign-in window starts at cycle index 7 on the next calendar day", () => {
     const base = Date.UTC(2026, 5, 1);
-    const dayMs = 86400000;
     const missions = buildMissionsByDate(14, base, (i) => ({
       collected: i < 7,
       claimable: i === 7,
@@ -111,8 +110,7 @@ describe("dailyLoginLogic", () => {
     const flat = flattenDailyMissions(
       buildMockDailyLoginActivity({ UserDailyMissionsByDates: missions }),
     );
-    const nextDay = base + 7 * dayMs;
-    const { startIndex, days } = computeSevenDayWindow(flat, nextDay);
+    const { startIndex, days } = computeSevenDayWindow(flat);
     expect(startIndex).toBe(7);
     expect(days).toHaveLength(7);
     expect(days[0].status).toBe("claimable");
@@ -124,7 +122,6 @@ describe("dailyLoginLogic", () => {
 
   it("holds first-week window until next day after day 7 is claimed", () => {
     const base = Date.UTC(2026, 5, 1);
-    const dayMs = 86400000;
     const missions = buildMissionsByDate(14, base, (i) => ({
       collected: i < 7,
       claimable: false,
@@ -132,20 +129,17 @@ describe("dailyLoginLogic", () => {
     const flat = flattenDailyMissions(
       buildMockDailyLoginActivity({ UserDailyMissionsByDates: missions }),
     );
-    const day7Ms = base + 6 * dayMs;
-    const held = computeSevenDayWindow(flat, day7Ms);
+    const held = computeSevenDayWindow(flat);
     expect(held.startIndex).toBe(0);
     expect(held.days.every((d) => d.status === "claimed")).toBe(true);
 
-    const nextDay = base + 7 * dayMs;
-    const stillHeld = computeSevenDayWindow(flat, nextDay);
+    const stillHeld = computeSevenDayWindow(flat);
     expect(stillHeld.startIndex).toBe(0);
     expect(stillHeld.days.every((d) => d.status === "claimed")).toBe(true);
   });
 
   it("advances to week two when day 8 progress is complete", () => {
     const base = Date.UTC(2026, 5, 1);
-    const dayMs = 86400000;
     const missions = buildMissionsByDate(14, base, (i) => ({
       collected: i < 7,
       claimable: i === 7,
@@ -153,15 +147,13 @@ describe("dailyLoginLogic", () => {
     const flat = flattenDailyMissions(
       buildMockDailyLoginActivity({ UserDailyMissionsByDates: missions }),
     );
-    const later = base + 10 * dayMs;
-    const advanced = computeSevenDayWindow(flat, later);
+    const advanced = computeSevenDayWindow(flat);
     expect(advanced.startIndex).toBe(7);
     expect(advanced.days[0].status).toBe("claimable");
   });
 
   it("21st claim window starts at cycle index 14", () => {
     const base = Date.UTC(2026, 6, 1);
-    const dayMs = 86400000;
     const missions = buildMissionsByDate(28, base, (i) => ({
       collected: i < 20,
       claimable: i === 20,
@@ -169,8 +161,7 @@ describe("dailyLoginLogic", () => {
     const flat = flattenDailyMissions(
       buildMockDailyLoginActivity({ UserDailyMissionsByDates: missions }),
     );
-    const day21Ms = base + 20 * dayMs;
-    const { startIndex, days } = computeSevenDayWindow(flat, day21Ms);
+    const { startIndex, days } = computeSevenDayWindow(flat);
     expect(startIndex).toBe(14);
     expect(days.length).toBe(7);
     expect(days[6].status).toBe("claimable");
@@ -213,8 +204,7 @@ describe("dailyLoginLogic", () => {
       UserDailyMissionsByDates: missions,
     });
     const flat = flattenDailyMissions(activity);
-    const claimableDayMs = base + 4 * dayMs;
-    const { days } = computeSevenDayWindow(flat, claimableDayMs);
+    const { days } = computeSevenDayWindow(flat);
     expect(days).toHaveLength(7);
     expect(days[0].dayNumber).toBe(1);
     expect(days[0].rewards).toHaveLength(2);
@@ -331,7 +321,7 @@ describe("dailyLoginLogic", () => {
     const flat = flattenDailyMissions(
       buildMockDailyLoginActivity({ UserDailyMissionsByDates: claimableMissions }),
     );
-    expect(canClaimTodayUtc(flat, now)).toBe(true);
+    expect(canClaimTodayUtc(flat)).toBe(true);
 
     const lockedMissions = buildMissionsByDate(7, now - 30 * dayMs, (i) => ({
       collected: i < 3,
@@ -340,7 +330,7 @@ describe("dailyLoginLogic", () => {
     const flatLocked = flattenDailyMissions(
       buildMockDailyLoginActivity({ UserDailyMissionsByDates: lockedMissions }),
     );
-    expect(canClaimTodayUtc(flatLocked, now)).toBe(false);
+    expect(canClaimTodayUtc(flatLocked)).toBe(false);
   });
 
   it("treats today's daily login as claimable when actionTimes has synced", () => {
