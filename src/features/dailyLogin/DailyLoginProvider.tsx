@@ -48,6 +48,7 @@ import {
 import {
   DAILY_LOGIN_AUTO_CLOSE_MS,
   computeCanDismissModal,
+  resolveDailyLoginPrimaryAction,
 } from "./dailyLoginFlow";
 
 function translateDailyLoginClaimError(
@@ -523,9 +524,45 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
     })();
   }, [refreshLobbyGet]);
 
-  const handlePrimaryAction = useCallback(() => {
-    dismissModal();
-  }, [dismissModal]);
+  const handlePrimaryAction = useCallback(
+    (flyFromRect?: DOMRect | null) => {
+      if (claiming || flying) return;
+
+      const action = resolveDailyLoginPrimaryAction(viewModel, {
+        postClaimDismissible,
+        claiming,
+        flying,
+        hasError: Boolean(error),
+      });
+
+      switch (action.type) {
+        case "claim-day":
+          void claimDay(action.day, flyFromRect ?? null);
+          break;
+        case "claim-credit":
+          void claimCreditReward(
+            action.requiredCreditAmount,
+            flyFromRect ?? null,
+          );
+          break;
+        case "dismiss":
+          closeModalInternal();
+          break;
+        case "none":
+          break;
+      }
+    },
+    [
+      claiming,
+      flying,
+      viewModel,
+      postClaimDismissible,
+      error,
+      claimDay,
+      claimCreditReward,
+      closeModalInternal,
+    ],
+  );
 
   useEffect(() => {
     return () => {

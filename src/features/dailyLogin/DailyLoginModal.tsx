@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { Check, Gift, Lock, X } from "lucide-react";
 import { CoinFlyToBalance } from "../../components/CoinFlyToBalance";
@@ -10,7 +10,7 @@ import { formatWalletScAmountForDisplay } from "../../wallet/formatWalletAmount"
 import { dailyBonusDayArtSrc } from "./dailyLoginAssets";
 import { useDailyLoginActivity } from "./dailyLoginContext";
 import type { CreditRewardViewModel, DayViewModel } from "./dailyLoginLogic";
-import { CREDIT_MILESTONE_MAX, isDayCollectable } from "./dailyLoginLogic";
+import { CREDIT_MILESTONE_MAX, findCollectableDay } from "./dailyLoginLogic";
 import "./DailyLoginModal.css";
 
 type Props = {
@@ -82,35 +82,35 @@ function DayCell({
   featured = false,
   claiming,
   disabled,
-  onClaim,
+  onTap,
+  registerCellRef,
 }: {
   day: DayViewModel;
   featured?: boolean;
   claiming?: boolean;
   disabled?: boolean;
-  onClaim?: (day: DayViewModel, rect: DOMRect) => void;
+  onTap?: () => void;
+  registerCellRef?: (dayNumber: number, el: HTMLLIElement | null) => void;
 }) {
   const gcReward = day.rewards.find((r) => r.wallet === "GC");
   const scReward = day.rewards.find((r) => r.wallet === "SC");
   const inlineRewardPlus = !featured && gcReward && scReward;
-  const showClaimable = isDayCollectable(day);
-  const clickable = showClaimable && !disabled && !claiming;
-  const visualStatus: DayViewModel["status"] = showClaimable ? "claimable" : "locked";
+  const clickable = !disabled && !claiming && onTap;
 
   const handleKeyDown = (e: ReactKeyboardEvent<HTMLLIElement>) => {
-    if (!clickable || !onClaim) return;
+    if (!clickable || !onTap) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      const el = e.currentTarget as HTMLElement;
-      onClaim(day, el.getBoundingClientRect());
+      onTap();
     }
   };
 
   return (
     <li
+      ref={(el) => registerCellRef?.(day.dayNumber, el)}
       className={
         "daily-login-modal__day" +
-        dayStatusClass(visualStatus) +
+        dayStatusClass(day.status) +
         (featured ? " daily-login-modal__day--featured" : "") +
         (day.status === "claimed" ? " daily-login-modal__day--checked" : "") +
         (clickable ? " daily-login-modal__day--clickable" : "") +
@@ -120,9 +120,9 @@ function DayCell({
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       aria-disabled={clickable ? undefined : true}
-      onClick={(e) => {
-        if (!clickable || !onClaim) return;
-        onClaim(day, (e.currentTarget as HTMLElement).getBoundingClientRect());
+      onClick={() => {
+        if (!clickable || !onTap) return;
+        onTap();
       }}
       onKeyDown={handleKeyDown}
     >
@@ -385,34 +385,56 @@ function ProgressMilestone({
 export function DailyLoginModal({ open }: Props) {
   const titleId = useId();
   const [flyFromRect, setFlyFromRect] = useState<DOMRect | null>(null);
-  const [claimingDayNumber, setClaimingDayNumber] = useState<number | null>(
-    null,
-  );
+  const dayCellRefs = useRef(new Map<number, HTMLLIElement>());
   const {
     viewModel,
     loading,
     error,
     claiming,
     flying,
-    claimDay,
     claimCreditReward,
     onFlyComplete,
+    canDismissModal,
     handlePrimaryAction,
   } = useDailyLoginActivity();
 
-  const handleClose = useCallback(() => {
-    handlePrimaryAction();
-  }, [handlePrimaryAction]);
-
-  const handleClaimDay = useCallback(
-    (day: DayViewModel, rect: DOMRect) => {
-      if (claiming || flying || !isDayCollectable(day)) return;
-      setClaimingDayNumber(day.dayNumber);
-      setFlyFromRect(rect);
-      void claimDay(day, rect).finally(() => setClaimingDayNumber(null));
+  const registerDayCellRef = useCallback(
+    (dayNumber: number, el: HTMLLIElement | null) => {
+      if (el) dayCellRefs.current.set(dayNumber, el);
+      else dayCellRefs.current.delete(dayNumber);
     },
-    [claimDay, claiming, flying],
+    [],
   );
+
+  const resolveCollectableDayFlyRect = useCallback((): DOMRect | null => {
+    if (!viewModel) return null;
+    const collectable = findCollectableDay(viewModel);
+    if (!collectable) return null;
+    return (
+      dayCellRefs.current.get(collectable.dayNumber)?.getBoundingClientRect() ??
+      null
+    );
+  }, [viewModel]);
+
+  const beginPrimaryAction = useCallback(() => {
+    if (claiming || flying) return;
+    const flyRect = resolveCollectableDayFlyRect();
+    if (flyRect) setFlyFromRect(flyRect);
+    handlePrimaryAction(flyRect);
+  }, [
+    claiming,
+    flying,
+    resolveCollectableDayFlyRect,
+    handlePrimaryAction,
+  ]);
+
+  const handleClose = useCallback(() => {
+    beginPrimaryAction();
+  }, [beginPrimaryAction]);
+
+  const handleDayTap = useCallback(() => {
+    beginPrimaryAction();
+  }, [beginPrimaryAction]);
 
   const handleClaimCredit = useCallback(
     (threshold: number, rect: DOMRect) => {
@@ -437,6 +459,8 @@ export function DailyLoginModal({ open }: Props) {
   const weekDays = viewModel?.days ?? [];
   const regularDays = weekDays.slice(0, 6);
   const day7 = weekDays[6] ?? null;
+  const collectableDay = viewModel ? findCollectableDay(viewModel) : null;
+  const claimingDayNumber = claiming ? collectableDay?.dayNumber ?? null : null;
   const progressFillPct = viewModel
     ? Math.min(
         100,
@@ -444,7 +468,9 @@ export function DailyLoginModal({ open }: Props) {
       )
     : 0;
   const interactionDisabled = claiming || flying;
-  const primaryActionLabel = "Close daily bonus";
+  const primaryActionLabel = canDismissModal
+    ? "Close daily bonus"
+    : "Collect daily bonus";
 
   return createPortal(
     <>
@@ -457,7 +483,7 @@ export function DailyLoginModal({ open }: Props) {
           type="button"
           className="daily-login-overlay__tap-zone"
           aria-label={primaryActionLabel}
-          onClick={() => handlePrimaryAction()}
+          onClick={() => beginPrimaryAction()}
           disabled={interactionDisabled}
         />
 
@@ -527,7 +553,8 @@ export function DailyLoginModal({ open }: Props) {
                     day={day}
                     claiming={claimingDayNumber === day.dayNumber}
                     disabled={interactionDisabled}
-                    onClaim={handleClaimDay}
+                    onTap={handleDayTap}
+                    registerCellRef={registerDayCellRef}
                   />
                 ))}
               </ul>
@@ -539,7 +566,8 @@ export function DailyLoginModal({ open }: Props) {
                     featured
                     claiming={claimingDayNumber === day7.dayNumber}
                     disabled={interactionDisabled}
-                    onClaim={handleClaimDay}
+                    onTap={handleDayTap}
+                    registerCellRef={registerDayCellRef}
                   />
                 ) : null}
               </ul>
