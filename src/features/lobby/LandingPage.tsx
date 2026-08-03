@@ -1293,7 +1293,6 @@ export function LandingPage() {
                       }}
                       autoComplete="off"
                       enterKeyHint="search"
-                      placeholder="BGAMING"
                       aria-label="BGAMING"
                     />
                     {lobbySearchExpanded ? (
