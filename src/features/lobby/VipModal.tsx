@@ -41,6 +41,7 @@ export function VipModal({ open, onClose }: Props) {
 
   const {
     useServerVipBar,
+    isMaxLevel: vipProgressIsMax,
     current: vipProgressCurrent,
     required: vipProgressRequired,
     fillPct: vipProgressFillPct,
@@ -129,15 +130,18 @@ export function VipModal({ open, onClose }: Props) {
               className="vip-modal__bar"
               role="progressbar"
               aria-valuemin={0}
-              aria-valuemax={vipProgressRequired}
-              aria-valuenow={vipProgressCurrent}
+              aria-valuemax={vipProgressIsMax ? 100 : vipProgressRequired}
+              aria-valuenow={vipProgressIsMax ? 100 : vipProgressCurrent}
+              aria-valuetext={vipProgressIsMax ? "MAX" : undefined}
               aria-label="VIP point progress">
               <div
                 className="vip-modal__bar-fill"
                 style={{ width: `${vipProgressFillPct}%` }}
               />
               <span className="vip-modal__bar-label">
-                {vipProgressCurrent}/{vipProgressRequired}
+                {vipProgressIsMax
+                  ? "MAX"
+                  : `${vipProgressCurrent}/${vipProgressRequired}`}
               </span>
               <div className="vip-modal__bar-cap" aria-hidden>
                 <img
