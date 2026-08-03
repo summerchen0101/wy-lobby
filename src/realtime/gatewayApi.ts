@@ -29,6 +29,8 @@ export const GATEWAY_API_LIST_PLAYER_AVATARS = 22
 export const GATEWAY_API_UPDATE_PLAYER_AVATAR = 23
 /** 更新新手教學進度；body 為 megaman.UpdateNoviceTeaching */
 export const GATEWAY_API_UPDATE_NOVICE_TEACHING = 33
+/** 刪除帳號；body 為 megaman.DeletePlayerInfoReq */
+export const GATEWAY_API_DELETE_ACCOUNT = 34
 /** 取得第三方遊戲連結；body 為 megaman.GetThirdPartyGameInfoRequest */
 export const GATEWAY_API_GET_THIRD_PARTY_GAME_INFO = 701
 

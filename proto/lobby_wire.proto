@@ -212,6 +212,21 @@ message UpdateNoviceTeaching {
   NoviceTeaching noviceTeaching = 2;
 }
 
+// 對齊 proto/megaman/playerinfo.proto DeletePlayerInfoReq（Gateway DELETE_ACCOUNT=34）
+enum OAuthProvider {
+  UNKNOWN_OAUTH_PROVIDER = 0;
+  PROVIDER_MEGA = 1;
+  PROVIDER_GOOGLE = 2;
+  PROVIDER_FB = 3;
+  PROVIDER_LINE = 4;
+  PROVIDER_APPLE = 5;
+}
+
+message DeletePlayerInfoReq {
+  OAuthProvider privoder = 1;
+  string accessToken = 2;
+}
+
 // --- wallet.Bag（對齊 proto/wallet/wallet.proto）與 LOBBY_GET 衛星型別 ---
 
 enum CoinType {

@@ -442,6 +442,28 @@ export default {
             }
           }
         },
+        "OAuthProvider": {
+          "values": {
+            "UNKNOWN_OAUTH_PROVIDER": 0,
+            "PROVIDER_MEGA": 1,
+            "PROVIDER_GOOGLE": 2,
+            "PROVIDER_FB": 3,
+            "PROVIDER_LINE": 4,
+            "PROVIDER_APPLE": 5
+          }
+        },
+        "DeletePlayerInfoReq": {
+          "fields": {
+            "privoder": {
+              "type": "OAuthProvider",
+              "id": 1
+            },
+            "accessToken": {
+              "type": "string",
+              "id": 2
+            }
+          }
+        },
         "CoinType": {
           "values": {
             "UNKNOWN_COIN_TYPE": 0,
