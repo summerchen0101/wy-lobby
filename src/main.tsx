@@ -20,6 +20,18 @@ import { registerSpaServiceWorkerOnLoad } from './lib/spaServiceWorker'
 
 applyThemeFromEnv()
 
+function preventNativeDrag(): void {
+  if (typeof document === 'undefined') return
+  document.addEventListener(
+    'dragstart',
+    (event) => {
+      event.preventDefault()
+    },
+    { capture: true },
+  )
+}
+preventNativeDrag()
+
 // #region agent log
 function registerAgentDebugLifecycle(): void {
   if (typeof window === 'undefined') return
