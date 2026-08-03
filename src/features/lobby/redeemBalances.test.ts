@@ -24,4 +24,17 @@ describe("redeemScBalancesFromLobby", () => {
     // raw 相減 1407720800（140772.0800）經 formatScFromRaw 會因浮點誤差變成 140772.07
     expect(amount - redeemableAmount).toBe(1_407_720_800);
   });
+
+  it("redeemable=0 時 total 與 unplayed 皆為 2.30（raw=23000）", () => {
+    const amount = 23_000;
+    const { redeemableAmount, unplayedHundredths } = redeemScBalancesFromLobby({
+      lobbyGet: {
+        bag: { coins: [{ amount, redeemableAmount: 0 }] },
+      } as never,
+    });
+
+    expect(redeemableAmount).toBe(0);
+    expect(formatScFromRaw(amount)).toBe("2.30");
+    expect(formatScFromTruncatedHundredths(unplayedHundredths)).toBe("2.30");
+  });
 });
