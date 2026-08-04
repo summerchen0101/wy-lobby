@@ -25,24 +25,35 @@ function releaseVideos(videos: readonly (HTMLVideoElement | null)[]) {
   }
 }
 
-async function waitForVideoCanPlay(video: HTMLVideoElement): Promise<void> {
+async function waitForVideoCanPlay(
+  video: HTMLVideoElement,
+  timeoutMs = 12_000,
+): Promise<void> {
   if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return;
-  await new Promise<void>((resolve, reject) => {
-    const cleanup = () => {
-      video.removeEventListener("canplay", onCanPlay);
-      video.removeEventListener("error", onError);
-    };
-    const onCanPlay = () => {
-      cleanup();
-      resolve();
-    };
-    const onError = () => {
-      cleanup();
-      reject(new Error("[newbie-tutorial] video load failed"));
-    };
-    video.addEventListener("canplay", onCanPlay, { once: true });
-    video.addEventListener("error", onError, { once: true });
-  });
+  await Promise.race([
+    new Promise<void>((resolve, reject) => {
+      const cleanup = () => {
+        video.removeEventListener("canplay", onCanPlay);
+        video.removeEventListener("error", onError);
+      };
+      const onCanPlay = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = () => {
+        cleanup();
+        reject(new Error("[newbie-tutorial] video load failed"));
+      };
+      video.addEventListener("canplay", onCanPlay, { once: true });
+      video.addEventListener("error", onError, { once: true });
+    }),
+    new Promise<void>((_, reject) => {
+      window.setTimeout(
+        () => reject(new Error("[newbie-tutorial] video load timeout")),
+        timeoutMs,
+      );
+    }),
+  ]);
 }
 
 async function waitForFirstVideoFrame(video: HTMLVideoElement): Promise<void> {
@@ -70,7 +81,11 @@ async function playTutorialVideo(
   soundUnlocked: boolean,
 ): Promise<{ ok: true; soundUnlocked: boolean } | { ok: false }> {
   const wantSound = isLobbySoundEnabled();
-  await waitForVideoCanPlay(video);
+  try {
+    await waitForVideoCanPlay(video);
+  } catch {
+    return { ok: false };
+  }
 
   const tryUnmuted = async (): Promise<boolean> => {
     if (!wantSound) {
@@ -119,6 +134,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
   const [activeVideoReady, setActiveVideoReady] = useState(false);
   const [awaitingClick, setAwaitingClick] = useState(false);
   const [needsTapToResume, setNeedsTapToResume] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const activeClip = NEWBIE_VIDEO_TUTORIAL_CLIPS[index];
   const lastClip = index >= NEWBIE_VIDEO_TUTORIAL_CLIPS.length - 1;
@@ -131,6 +147,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     setActiveVideoReady(false);
     setAwaitingClick(false);
     setNeedsTapToResume(false);
+    setLoadFailed(false);
     resumePlayOnTapRef.current = false;
     soundUnlockedRef.current = false;
   }, [open]);
@@ -166,10 +183,12 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     if (fromUserGesture) soundUnlockedRef.current = true;
     setActiveVideoReady(false);
     setAwaitingClick(false);
+    setLoadFailed(false);
     const result = await playTutorialVideo(video, soundUnlockedRef.current);
     if (!result.ok) {
       resumePlayOnTapRef.current = true;
       setNeedsTapToResume(true);
+      setLoadFailed(true);
       return false;
     }
     soundUnlockedRef.current = result.soundUnlocked;
@@ -221,6 +240,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     if (resumePlayOnTapRef.current) {
       resumePlayOnTapRef.current = false;
       setNeedsTapToResume(false);
+      setLoadFailed(false);
       void tryPlayActive(true);
       return;
     }
@@ -230,12 +250,15 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     advance();
   }, [tryPlayActive, advance, awaitingClick]);
 
+  const showResumeHint = needsTapToResume || loadFailed;
+  const showBootHint = open && !activeVideoReady && !showResumeHint && !awaitingClick;
+
   if (!open) return null;
 
   return createPortal(
     <div
       className={
-        awaitingClick || needsTapToResume
+        awaitingClick || showResumeHint
           ? "newbie-video-tutorial newbie-video-tutorial--awaiting-tap"
           : "newbie-video-tutorial"
       }
@@ -247,8 +270,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
       <div className="newbie-video-tutorial__stack">
         {NEWBIE_VIDEO_TUTORIAL_CLIPS.map((clip, i) => {
           const active = i === index;
-          const visible =
-            active && (activeVideoReady || needsTapToResume);
+          const videoReady = activeVideoReady || showResumeHint;
           return (
             <video
               key={clip.src}
@@ -256,21 +278,45 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
                 videoRefs.current[i] = el;
               }}
               className={
-                visible
-                  ? "newbie-video-tutorial__video"
-                  : "newbie-video-tutorial__video newbie-video-tutorial__video--hidden"
+                "newbie-video-tutorial__video" +
+                (active
+                  ? videoReady
+                    ? ""
+                    : " newbie-video-tutorial__video--pending"
+                  : " newbie-video-tutorial__video--inactive")
               }
               src={clip.src}
               playsInline
+              muted
               preload={i === index || i === index + 1 ? "auto" : "none"}
               draggable={false}
               controlsList="nodownload nofullscreen noremoteplayback"
-              aria-hidden={!visible}
+              aria-hidden={!active || !videoReady}
               onEnded={active ? onActiveVideoEnded : undefined}
             />
           );
         })}
       </div>
+      {showBootHint ? (
+        <p className="newbie-video-tutorial__hint" aria-live="polite">
+          Loading tutorial…
+        </p>
+      ) : null}
+      {showResumeHint ? (
+        <p className="newbie-video-tutorial__hint newbie-video-tutorial__hint--tap">
+          Tap to continue
+        </p>
+      ) : null}
+      <button
+        type="button"
+        className="newbie-video-tutorial__skip"
+        onClick={(e) => {
+          e.stopPropagation();
+          finish();
+        }}
+      >
+        Skip
+      </button>
     </div>,
     document.body,
   );

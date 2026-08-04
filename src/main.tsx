@@ -12,13 +12,16 @@ import './index.css'
 import { initSitePatternTileCssVar } from './lib/publicImageUrl'
 initSitePatternTileCssVar()
 import './styles/site-background.css'
+import './styles/ios-safari-fixes.css'
 import { applyThemeFromEnv } from './theme/applyTheme'
 import i18n from './i18n/i18n'
 import App from './App.tsx'
 import { agentDebugLog } from './debug/agentDebugIngest'
+import { registerChunkLoadRecoveryHandlers } from './lib/chunkLoadRecovery'
 import { registerSpaServiceWorkerOnLoad } from './lib/spaServiceWorker'
 
 applyThemeFromEnv()
+registerChunkLoadRecoveryHandlers()
 
 function preventNativeDrag(): void {
   if (typeof document === 'undefined') return

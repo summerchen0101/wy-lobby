@@ -1,0 +1,48 @@
+/* iOS Safari: fixed body backgrounds + backdrop-filter modals often fail to repaint after close. */
+
+@supports (-webkit-touch-callout: none) {
+  body {
+    background-image: none;
+    background-attachment: scroll;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--color-bg);
+    background-image:
+      radial-gradient(
+        ellipse 80% 50% at 50% -15%,
+        var(--theme-radial-green-body),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 45% 35% at 100% 35%,
+        var(--theme-radial-gold-body),
+        transparent 50%
+      ),
+      var(--site-pattern-tile-url, url("/images/lobby/bg/Pattern_bg.png"));
+    background-repeat: no-repeat, no-repeat, repeat;
+    background-size:
+      auto,
+      auto,
+      250px 250px;
+  }
+
+  #root {
+    isolation: isolate;
+  }
+
+  .app-modal-overlay,
+  .daily-login-overlay,
+  .invite-friends-terms-modal-overlay,
+  .beggar-envelope-overlay,
+  .newbie-tutorial-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgb(0 0 0 / 82%);
+  }
+}

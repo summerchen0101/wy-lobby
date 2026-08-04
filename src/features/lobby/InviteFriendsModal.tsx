@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Copy } from 'lucide-react'
 import { InfoPopover } from '../../components/InfoPopover'
 import { useAlert } from '../../components/alert/alertContext'
+import { forceSafariRepaint } from '../../lib/forceSafariRepaint'
 import { buildReferralInviteUrl, isWsLobbyGamesEnabled } from '../../lib/env'
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from '../../lib/currencyIcons'
 import {
@@ -114,6 +115,7 @@ export function InviteFriendsModal({ open, onClose }: Props) {
 
   useEffect(() => {
     if (open) return
+    forceSafariRepaint()
     setReferralInfo(null)
     setLoadPhase('idle')
     setWsConnectSlow(false)

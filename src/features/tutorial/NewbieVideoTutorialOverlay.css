@@ -5,7 +5,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  background: #000;
+  background: var(--color-bg, #1d1f51);
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
@@ -33,9 +33,66 @@
   -webkit-user-drag: none;
 }
 
-.newbie-video-tutorial__video--hidden {
-  visibility: hidden;
+.newbie-video-tutorial__video--inactive {
   position: absolute;
   inset: 0;
+  opacity: 0;
   pointer-events: none;
+}
+
+/* Safari won't decode videos with visibility:hidden — use opacity only while booting. */
+.newbie-video-tutorial__video--pending {
+  opacity: 0;
+}
+
+.newbie-video-tutorial__hint {
+  position: absolute;
+  left: 50%;
+  bottom: max(5.5rem, calc(var(--safe-bottom) + 4rem));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 55%);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.newbie-video-tutorial__hint--tap {
+  animation: newbie-video-tutorial-hint-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes newbie-video-tutorial-hint-pulse {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.newbie-video-tutorial__skip {
+  position: absolute;
+  top: max(0.85rem, var(--safe-top));
+  right: max(0.85rem, var(--page-pad-inline));
+  z-index: 3;
+  margin: 0;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 45%);
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }

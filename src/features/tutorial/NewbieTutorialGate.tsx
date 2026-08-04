@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuth } from "../../auth/useAuth";
+import { forceSafariRepaint } from "../../lib/forceSafariRepaint";
 import { useGeo } from "../geo/geoContext";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
 import {
@@ -21,6 +22,14 @@ export function NewbieTutorialGate() {
     useGatewayLobby();
   const [open, setOpen] = useState(false);
   const [welcomeVoiceGateVersion, setWelcomeVoiceGateVersion] = useState(0);
+  const wasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (wasOpenRef.current && !open) {
+      forceSafariRepaint();
+    }
+    wasOpenRef.current = open;
+  }, [open]);
 
   useEffect(() => {
     const sync = () => setWelcomeVoiceGateVersion((v) => v + 1);
