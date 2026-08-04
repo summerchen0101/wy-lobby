@@ -321,14 +321,7 @@ export function ShopPage() {
         setBindingBusy(false);
       }
     },
-    [
-      checkoutPack,
-      user?.id,
-      requestRef,
-      mergeUser,
-      refreshLobbyGet,
-      executeBuyProduct,
-    ],
+    [checkoutPack, user?.id, requestRef, mergeUser, refreshLobbyGet],
   );
 
   const handleBindingSuccessConfirm = useCallback(() => {

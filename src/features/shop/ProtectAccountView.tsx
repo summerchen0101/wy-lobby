@@ -70,8 +70,6 @@ export function ProtectAccountView({
     () => new Set(),
   );
   const scrollInvalidIntoViewAfterSubmit = useRef(false);
-  const phoneNumberRef = useRef(phoneNumber);
-  phoneNumberRef.current = phoneNumber;
 
   const fieldDomId = useCallback(
     (key: ShopBindingFieldKey): string =>
@@ -130,9 +128,11 @@ export function ProtectAccountView({
     if (!raw) return;
     const split = splitPhoneForBindingForm(raw);
     if (!split.national) return;
-    if (phoneNumberRef.current.replace(/\D/g, "").length > 0) return;
     setPhoneCountry(split.countryCode);
-    setPhoneNumber(split.national);
+    setPhoneNumber((prev) => {
+      if (prev.replace(/\D/g, "").length > 0) return prev;
+      return split.national;
+    });
   }, [bindingPrefill?.phone]);
 
   useEffect(() => {

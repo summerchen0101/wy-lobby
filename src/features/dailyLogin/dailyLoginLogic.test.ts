@@ -121,6 +121,7 @@ describe("dailyLoginLogic", () => {
     const { startIndex, days } = computeSevenDayWindow(flat);
     expect(startIndex).toBe(7);
     expect(days).toHaveLength(7);
+    expect(days[0].dateMs).toBe(day8Date);
     expect(days[0].status).toBe("claimable");
     const firstMs = days[0].dateMs;
     const lastMs = days[6].dateMs;
@@ -148,7 +149,6 @@ describe("dailyLoginLogic", () => {
 
   it("advances to week two when day 8 progress is complete", () => {
     const base = Date.UTC(2026, 5, 1);
-    const dayMs = 86400000;
     const missions = buildMissionsByDate(14, base, (i) => ({
       collected: i < 7,
       claimable: i === 7,
@@ -175,6 +175,7 @@ describe("dailyLoginLogic", () => {
     const { startIndex, days } = computeSevenDayWindow(flat);
     expect(startIndex).toBe(14);
     expect(days.length).toBe(7);
+    expect(days[6].dateMs).toBe(day21Date);
     expect(days[6].status).toBe("claimable");
   });
 
@@ -794,7 +795,6 @@ describe("dailyLoginLogic", () => {
 
   it("holds completed window until next cycle day is claimable", () => {
     const base = Date.UTC(2026, 5, 1);
-    const dayMs = 86400000;
     const missions = buildMissionsByDate(14, base, (i) => ({
       collected: i < 7,
       claimable: false,

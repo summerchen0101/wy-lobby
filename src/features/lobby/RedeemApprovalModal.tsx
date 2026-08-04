@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId } from "react";
+import { useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import { useWordData } from "../../wordData/useWordData";
 import { formatScFromRawWireInteger } from "../../wallet/formatWalletAmount";
@@ -84,8 +84,4 @@ export function RedeemApprovalModal({ open, amountsWire, onClose }: Props) {
     </div>,
     document.body,
   );
-}
-
-export function formatRedeemApprovalAmountsForTest(amountsWire: string[]): string {
-  return formatApprovalFiatDisplay(amountsWire);
 }
