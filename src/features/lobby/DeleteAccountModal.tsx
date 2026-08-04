@@ -10,12 +10,15 @@ import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { useWordData } from "../../wordData/useWordData";
 import { WordDataText } from "../../wordData/WordDataText";
+import { isDeleteConfirmTextValid } from "./deleteAccountValidation";
 import "./DeleteAccountModal.css";
 
 type Props = {
   open: boolean;
   onClose: () => void;
 };
+
+type Step = "input" | "done";
 
 export function DeleteAccountModal({ open, onClose }: Props) {
   const w = useWordData();
@@ -25,21 +28,28 @@ export function DeleteAccountModal({ open, onClose }: Props) {
   const titleId = useId();
   const inputId = useId();
   const [confirmText, setConfirmText] = useState("");
-  const [step, setStep] = useState<"confirm" | "done">("confirm");
+  const [step, setStep] = useState<Step>("input");
+  const [showInputError, setShowInputError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setConfirmText("");
-    setStep("confirm");
+    setStep("input");
+    setShowInputError(false);
     setSubmitting(false);
   }, [open]);
 
   const onKey = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !submitting) onClose();
+      if (e.key !== "Escape" || submitting) return;
+      if (showInputError) {
+        setShowInputError(false);
+        return;
+      }
+      onClose();
     },
-    [onClose, submitting],
+    [onClose, showInputError, submitting],
   );
 
   useEffect(() => {
@@ -91,84 +101,135 @@ export function DeleteAccountModal({ open, onClose }: Props) {
     }
   }, [gatewayRequestReady, logout, requestRef, show, token]);
 
+  const handleInputConfirm = useCallback(() => {
+    if (submitting) return;
+    if (!isDeleteConfirmTextValid(confirmText)) {
+      setShowInputError(true);
+      return;
+    }
+    void submitDelete();
+  }, [confirmText, submitDelete, submitting]);
+
   if (!open) return null;
 
-  const canSubmit = confirmText.trim().toUpperCase() === "DELETE" && !submitting;
+  const showTitle = step === "input";
 
   return createPortal(
-    <div className="app-modal-overlay" role="presentation" onClick={submitting ? undefined : onClose}>
+    <>
       <div
-        className="app-modal app-modal--col delete-account-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(e) => e.stopPropagation()}
+        className="app-modal-overlay"
+        role="presentation"
+        onClick={submitting || showInputError ? undefined : onClose}
       >
-        <div className="app-modal__header">
-          <button
-            type="button"
-            className="app-modal__close"
-            onClick={onClose}
-            disabled={submitting}
-            aria-label="Close"
-          >
-            ×
-          </button>
-          <h2 id={titleId} className="app-modal__title">
-            {w(4085)}
-          </h2>
-        </div>
-        <hr className="app-modal__rule" />
-        <div className="app-modal__body">
-          {step === "confirm" ? (
-            <>
-              <p className="delete-account-modal__text">
-                <WordDataText id={4086} />
-              </p>
-              <label className="delete-account-modal__label" htmlFor={inputId}>
-                <WordDataText id={4087} />
-              </label>
-              <input
-                id={inputId}
-                className="delete-account-modal__input"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                autoComplete="off"
+        <div
+          className="app-modal app-modal--col delete-account-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={showTitle ? titleId : undefined}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {showTitle ? (
+            <div className="app-modal__header">
+              <h2 id={titleId} className="app-modal__title">
+                {w(4085)}
+              </h2>
+              <button
+                type="button"
+                className="app-modal__close"
+                onClick={onClose}
                 disabled={submitting}
-              />
-              <p className="delete-account-modal__warn">{w(1293)}</p>
-              <div className="delete-account-modal__actions">
-                <button
-                  type="button"
-                  className="delete-account-modal__cancel"
-                  onClick={onClose}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
+          {showTitle ? <hr className="app-modal__rule" /> : null}
+          <div className="app-modal__body">
+            {step === "input" ? (
+              <>
+                <p className="delete-account-modal__text">
+                  <WordDataText id={4086} />
+                </p>
+                <label className="delete-account-modal__label" htmlFor={inputId}>
+                  <WordDataText id={4087} />
+                </label>
+                <input
+                  id={inputId}
+                  className="delete-account-modal__input"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  autoComplete="off"
                   disabled={submitting}
-                >
-                  {w(58)}
-                </button>
+                />
+                <div className="delete-account-modal__actions">
+                  <button
+                    type="button"
+                    className="delete-account-modal__cancel btn-crown-secondary"
+                    onClick={onClose}
+                    disabled={submitting}
+                  >
+                    {w(58)}
+                  </button>
+                  <button
+                    type="button"
+                    className="delete-account-modal__submit btn-crown-primary"
+                    disabled={submitting}
+                    onClick={handleInputConfirm}
+                  >
+                    {w(57)}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="delete-account-modal__text">{w(1623)}</p>
                 <button
                   type="button"
-                  className="delete-account-modal__submit"
-                  disabled={!canSubmit}
-                  onClick={() => {
-                    void submitDelete();
-                  }}
+                  className="delete-account-modal__submit btn-crown-primary"
+                  onClick={onClose}
+                >
+                  {w(1655)}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showInputError ? (
+        <div
+          className="app-modal-overlay delete-account-modal__error-overlay"
+          role="presentation"
+        >
+          <div
+            className="app-modal delete-account-modal__error"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-input-error"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="app-modal__body delete-account-modal__error-body">
+              <p
+                id="delete-account-input-error"
+                className="delete-account-modal__error-message"
+              >
+                {w(4088)}
+              </p>
+              <div className="delete-account-modal__error-actions">
+                <button
+                  type="button"
+                  className="delete-account-modal__submit btn-crown-primary"
+                  onClick={() => setShowInputError(false)}
                 >
                   {w(57)}
                 </button>
               </div>
-            </>
-          ) : (
-            <>
-              <p className="delete-account-modal__text">{w(1623)}</p>
-              <button type="button" className="delete-account-modal__submit" onClick={onClose}>
-                {w(1655)}
-              </button>
-            </>
-          )}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>,
+      ) : null}
+    </>,
     document.body,
   );
 }

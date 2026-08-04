@@ -432,17 +432,19 @@ export function ProfilePage() {
             onClick={() => logout()}>
             {w(510756)}
           </button>
+        </div>
+
+        <div className="profile-page__footer">
+          <a className="profile-page__privacy" href="/privacy">
+            {w(209)}
+          </a>
           <button
             type="button"
-            className="profile-page__btn-pill profile-page__btn-pill--danger"
+            className="profile-page__delete-btn btn-crown-secondary"
             onClick={() => setDeleteAccountOpen(true)}>
             {w(510757)}
           </button>
         </div>
-
-        <a className="profile-page__privacy" href="/privacy">
-          {w(209)}
-        </a>
       </div>
 
       <MyProfileModal
