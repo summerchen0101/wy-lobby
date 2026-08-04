@@ -18,5 +18,5 @@ body {
     auto,
     auto,
     250px 250px;
-  background-attachment: fixed, fixed, scroll;
+  background-attachment: fixed, fixed, fixed;
 }

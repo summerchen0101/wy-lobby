@@ -1,16 +1,10 @@
-/* Promotions：整張 PNG 底圖（上半可透明透出 session），標題／CTA 疊於右側暗色區 */
+/* Promotions：底紋由全站 body 提供；標題／CTA 疊於卡片右側暗色區 */
 .promo-page {
   padding-top: var(--space-3);
   padding-bottom: var(--space-8);
   border-radius: 0.5rem;
   position: relative;
   overflow: visible;
-  /* section 細紋全寬；標題／列表由 promo-page__inner 置中收斂（對齊 /shop） */
-  background-image: repeating-linear-gradient(
-    115deg,
-    color-mix(in srgb, var(--crown-gold) 6%, transparent) 0 2px,
-    transparent 2px 14px
-  );
 }
 
 /* 與 shop-page__inner：小螱直欄／平板適度加寬，整塊在主畫布水平置中 */
