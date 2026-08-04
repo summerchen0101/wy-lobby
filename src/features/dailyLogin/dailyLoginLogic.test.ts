@@ -503,6 +503,40 @@ describe("dailyLoginLogic", () => {
     expect(vm?.days.some((day) => day.status === "claimable")).toBe(false);
   });
 
+  it("does not light next day on refresh when API falsely marks it claimable", () => {
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    const dayMs = 86400000;
+    const missions = buildMissionsByDate(8, now - 6 * dayMs, (i) => ({
+      collected: i < 6,
+      claimable: i === 6,
+    }));
+    const activity = buildMockDailyLoginActivity({
+      achievedCreditAmount: "6",
+      UserDailyMissionsByDates: missions,
+    });
+    const vm = buildDailyLoginViewModel(activity, now, {
+      claimedDailyToday: false,
+    });
+    expect(vm?.hasClaimableDaily).toBe(false);
+    expect(vm?.days.some((day) => day.status === "claimable")).toBe(false);
+    expect(inferClaimedDailyTodayFromActivity(activity)).toBe(true);
+  });
+
+  it("lights today when achievedCredit matches cumulative sign-in slot", () => {
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    const dayMs = 86400000;
+    const missions = buildMissionsByDate(8, now - 5 * dayMs, (i) => ({
+      collected: i < 5,
+      claimable: i === 5,
+    }));
+    const activity = buildMockDailyLoginActivity({
+      achievedCreditAmount: "6",
+      UserDailyMissionsByDates: missions,
+    });
+    const vm = buildDailyLoginViewModel(activity, now);
+    expect(vm?.days.some((day) => day.status === "claimable")).toBe(true);
+  });
+
   it("only lights up when actionTimes progress is complete", () => {
     const now = Date.UTC(2026, 6, 18, 12, 0, 0);
     const dayMs = 86400000;
