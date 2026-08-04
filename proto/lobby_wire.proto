@@ -77,6 +77,7 @@ message WalletGetRequest {
 message WalletGetResponse {
   Bag bag = 1;
   int64 subsidyAmount = 2;
+  repeated string redeemSCList = 3;
 }
 
 // Gateway push（如 SLOT_JACKPOT_INFO_PUSH 14）：累積獎池；jackpot_amounts 前三個元素對應大廳 JP1～JP3。
@@ -515,6 +516,7 @@ enum WithdrawOrderPaymentStatus {
   Success = 5;
   Failed = 6;
   ExpirationRejected = 7;
+  Canceled = 8;
 }
 
 message WithdrawSuccessPush {
@@ -539,6 +541,7 @@ message ListWithdrawOrdersRespWithdrawOrder {
   int32 withdrawOrderPaymentStatus = 4;
   int64 createdAtTimestampMillisecond = 5;
   string remark = 6;
+  string uuu = 7;
 }
 
 message ListWithdrawOrdersResp {
@@ -565,6 +568,12 @@ message CreateWithdrawOrderResp {
   string withdrawOrderUID = 1;
   string paymentURL = 2;
 }
+
+message CancelRedeemOrderReq {
+  string redeemOrderUID = 1;
+}
+
+message CancelRedeemOrderResp {}
 
 // --- Referral — 對齊 proto/megaman/activity.proto；Gateway GetReferralInfo=540, ClaimReferralReward=541 ---
 // google.protobuf.StringValue 二進位相容（field 1 = value）

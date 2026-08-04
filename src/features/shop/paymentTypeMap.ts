@@ -52,3 +52,18 @@ export function resolveServerPaymentTypeForUiMethod(
   }
   return null;
 }
+
+export function shopPaymentMethodLabel(method: ShopPaymentMethodId): string {
+  switch (method) {
+    case "google":
+      return "Google Pay";
+    case "apple":
+      return "Apple Pay";
+    case "credit":
+      return "Credit Card";
+    case "cashapp":
+      return "Cash App";
+    default:
+      return method;
+  }
+}

@@ -84,6 +84,11 @@ export default {
             "subsidyAmount": {
               "type": "int64",
               "id": 2
+            },
+            "redeemSCList": {
+              "rule": "repeated",
+              "type": "string",
+              "id": 3
             }
           }
         },
@@ -1168,7 +1173,8 @@ export default {
             "Proccessing": 4,
             "Success": 5,
             "Failed": 6,
-            "ExpirationRejected": 7
+            "ExpirationRejected": 7,
+            "Canceled": 8
           }
         },
         "WithdrawSuccessPush": {
@@ -1242,6 +1248,10 @@ export default {
             "remark": {
               "type": "string",
               "id": 6
+            },
+            "uuu": {
+              "type": "string",
+              "id": 7
             }
           }
         },
@@ -1317,6 +1327,17 @@ export default {
               "id": 2
             }
           }
+        },
+        "CancelRedeemOrderReq": {
+          "fields": {
+            "redeemOrderUID": {
+              "type": "string",
+              "id": 1
+            }
+          }
+        },
+        "CancelRedeemOrderResp": {
+          "fields": {}
         },
         "StringValue": {
           "fields": {

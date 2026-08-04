@@ -232,6 +232,7 @@ export type ListProductsWireProduct = {
   price: string;
   paymentTypes: string[];
   productContents: Record<string, unknown>[];
+  vipExp: number;
 };
 
 export type ListProductsWireResult = {
@@ -253,15 +254,26 @@ export function decodeListProductsResponseBytes(
       price?: string;
       paymentTypes?: Array<string | number>;
       productContents?: Record<string, unknown>[];
+      vipExp?: string | number;
     }>;
   };
-  const products: ListProductsWireProduct[] = (o.products ?? []).map((p) => ({
-    productID: String(p.productID ?? "0"),
-    originalPrice: String(p.originalPrice ?? ""),
-    price: String(p.price ?? ""),
-    paymentTypes: (p.paymentTypes ?? []).map((x) => String(x)),
-    productContents: p.productContents ?? [],
-  }));
+  const products: ListProductsWireProduct[] = (o.products ?? []).map((p) => {
+    const rawVip = p.vipExp;
+    const vipExp =
+      typeof rawVip === "number"
+        ? rawVip
+        : typeof rawVip === "string"
+          ? Number(rawVip)
+          : 0;
+    return {
+      productID: String(p.productID ?? "0"),
+      originalPrice: String(p.originalPrice ?? ""),
+      price: String(p.price ?? ""),
+      paymentTypes: (p.paymentTypes ?? []).map((x) => String(x)),
+      productContents: p.productContents ?? [],
+      vipExp: Number.isFinite(vipExp) ? vipExp : 0,
+    };
+  });
   return { products };
 }
 

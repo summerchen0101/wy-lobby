@@ -286,3 +286,15 @@
 .redeem-method-modal__success-cta:active {
   transform: translateY(1px);
 }
+
+.redeem-method-modal__fee-tiers {
+  margin: var(--space-3) 0 var(--space-4);
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  color: var(--color-text-muted);
+}

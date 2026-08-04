@@ -14,7 +14,14 @@ import { ClientVersionError } from "../../lib/api/clientVersionError";
 import { presentClientVersionError } from "../../lib/clientVersionUi";
 import { useWordData } from "../../wordData/useWordData";
 import { AuthClearableInputWrap } from "./AuthClearableInputWrap";
+import { AuthFieldError } from "./AuthFieldError";
 import { AuthSocialButtons } from "./AuthSocialButtons";
+import {
+  clearFieldError,
+  hasFieldErrors,
+  type LoginFieldErrors,
+  validateLoginFields,
+} from "./authFormValidation";
 import "./AuthModals.css";
 
 type Props = {
@@ -73,6 +80,7 @@ export function LoginModal({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -89,6 +97,7 @@ export function LoginModal({
     if (!open) return;
     setFormError(null);
     setOauthError(null);
+    setFieldErrors({});
   }, [open]);
 
   const finishLogin = useCallback(() => {
@@ -101,6 +110,15 @@ export function LoginModal({
   async function onSignIn(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
+    const nextFieldErrors = validateLoginFields({
+      account,
+      password,
+    });
+    if (hasFieldErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors);
+      return;
+    }
+    setFieldErrors({});
     setSubmitting(true);
     try {
       await login(account.trim(), password);
@@ -172,10 +190,14 @@ export function LoginModal({
               >
                 {w(6)}:
               </label>
+              <AuthFieldError message={fieldErrors.account} variant="modal" />
               <AuthClearableInputWrap
                 variant="modal"
                 value={account}
-                onClear={() => setAccount("")}
+                onClear={() => {
+                  setAccount("");
+                  setFieldErrors((prev) => clearFieldError(prev, "account"));
+                }}
                 clearAriaLabel="Clear email"
               >
                 <input
@@ -186,8 +208,12 @@ export function LoginModal({
                   autoComplete="username"
                   placeholder={w(7)}
                   value={account}
-                  onChange={(e) => setAccount(e.target.value)}
+                  onChange={(e) => {
+                    setAccount(e.target.value);
+                    setFieldErrors((prev) => clearFieldError(prev, "account"));
+                  }}
                   required
+                  aria-invalid={Boolean(fieldErrors.account)}
                 />
               </AuthClearableInputWrap>
               <label
@@ -196,11 +222,15 @@ export function LoginModal({
               >
                 {w(8)}:
               </label>
+              <AuthFieldError message={fieldErrors.password} variant="modal" />
               <AuthClearableInputWrap
                 variant="modal"
                 modalWrap="password"
                 value={password}
-                onClear={() => setPassword("")}
+                onClear={() => {
+                  setPassword("");
+                  setFieldErrors((prev) => clearFieldError(prev, "password"));
+                }}
                 clearAriaLabel="Clear password"
                 suffix={
                   <button
@@ -224,8 +254,12 @@ export function LoginModal({
                   autoComplete="current-password"
                   placeholder={w(9)}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFieldErrors((prev) => clearFieldError(prev, "password"));
+                  }}
                   required
+                  aria-invalid={Boolean(fieldErrors.password)}
                 />
               </AuthClearableInputWrap>
               <p className="auth-modal__forgot-password">

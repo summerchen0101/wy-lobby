@@ -1,19 +1,30 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IoChevronBack } from "react-icons/io5";
+import { CoinFlyToBalance } from "../../components/CoinFlyToBalance";
+import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
+import { formatVipPoints } from "../lobby/vipHelpers";
 import { useWordData } from "../../wordData/useWordData";
 import "./ShopCheckout.css";
 import { ProtectAccountView } from "./ProtectAccountView";
+import { shopCoinPileSrc } from "./shopCoinPile";
 import type {
   ShopBindingFormPayload,
   ShopBindingPrefill,
+  ShopPack,
 } from "./types";
 
-export type CheckoutStep = "loading" | "protect" | "payment" | "success";
+export type CheckoutStep =
+  | "loading"
+  | "protect"
+  | "bindingSuccess"
+  | "payment"
+  | "success";
 
 type Props = {
   open: boolean;
   step: CheckoutStep;
+  pack: ShopPack;
   buyBusy: boolean;
   buyError: string | null;
   paymentUrl: string | null;
@@ -21,11 +32,15 @@ type Props = {
   bindingError: string | null;
   protectNeedSms: boolean;
   bindingPrefill?: ShopBindingPrefill;
+  flying: boolean;
   onClose: () => void;
+  onBackFromProtect: () => void;
   onBackToProtectForm: () => void;
   onBindingSubmit: (payload: ShopBindingFormPayload) => Promise<void>;
-  /** 開啟第三方金流結帳 URL；回傳 false 表示已阻擋（Toast 由父層處理） */
+  onBindingSuccessConfirm: () => void;
   onOpenPaymentPage: (url: string) => boolean;
+  onSuccessFlyComplete: () => void;
+  onStartSuccessFly: (rect: DOMRect) => void;
 };
 
 function BackIcon() {
@@ -136,7 +151,34 @@ function PaymentFrameView({
   );
 }
 
-function SuccessView({ onClose }: { onClose: () => void }) {
+function BindingSuccessView({ onConfirm }: { onConfirm: () => void }) {
+  const w = useWordData();
+  return (
+    <div
+      className="shop-checkout__summary-body shop-checkout__binding-success-body"
+      role="status">
+      <p className="shop-checkout__binding-success-text">{w(121)}</p>
+      <button
+        type="button"
+        className="shop-checkout__submit shop-checkout__submit--blue"
+        onClick={onConfirm}>
+        {w(57)}
+      </button>
+    </div>
+  );
+}
+
+function SuccessView({
+  pack,
+  flying,
+  onClose,
+  onPileRef,
+}: {
+  pack: ShopPack;
+  flying: boolean;
+  onClose: () => void;
+  onPileRef: (el: HTMLImageElement | null) => void;
+}) {
   const w = useWordData();
   return (
     <>
@@ -151,7 +193,8 @@ function SuccessView({ onClose }: { onClose: () => void }) {
           type="button"
           className="app-modal__close"
           onClick={onClose}
-          aria-label="Close">
+          aria-label="Close"
+          disabled={flying}>
           ×
         </button>
       </header>
@@ -160,10 +203,43 @@ function SuccessView({ onClose }: { onClose: () => void }) {
         <p className="shop-checkout__success-text">
           Your purchase is complete. Coins have been added to your wallet.
         </p>
+        <div className="shop-checkout__success-pile-wrap">
+          <img
+            ref={onPileRef}
+            src={shopCoinPileSrc(pack.coinPile)}
+            alt=""
+            className="shop-checkout__success-pile"
+          />
+        </div>
+        <p className="shop-checkout__line">
+          <span className="shop-checkout__line-muted">{w(104)}</span>
+          <span className="shop-checkout__line-gc">
+            <img src={CURRENCY_ICON_GC} alt="" width={20} height={20} />
+            <span className="shop-checkout__line-amt--gc">{pack.gcLabel}</span>
+          </span>
+        </p>
+        {pack.bonusSc > 0 ? (
+          <p className="shop-checkout__line">
+            <span className="shop-checkout__line-muted">+{w(105)}</span>
+            <span className="shop-checkout__line-sc">
+              <img src={CURRENCY_ICON_SC} alt="" width={20} height={20} />
+              <span className="shop-checkout__line-amt--sc">{pack.bonusSc}</span>
+            </span>
+          </p>
+        ) : null}
+        {pack.vipExp > 0 ? (
+          <p className="shop-checkout__line">
+            <span className="shop-checkout__line-muted">+</span>
+            <span className="shop-checkout__line-amt--gc">
+              {formatVipPoints(pack.vipExp)} {w(510760)}
+            </span>
+          </p>
+        ) : null}
         <button
           type="button"
           className="shop-checkout__submit shop-checkout__submit--blue"
-          onClick={onClose}>
+          onClick={onClose}
+          disabled={flying}>
           OK
         </button>
       </div>
@@ -174,6 +250,7 @@ function SuccessView({ onClose }: { onClose: () => void }) {
 export function ShopCheckoutOverlay({
   open,
   step,
+  pack,
   buyBusy,
   buyError,
   paymentUrl,
@@ -181,66 +258,121 @@ export function ShopCheckoutOverlay({
   bindingError,
   protectNeedSms,
   bindingPrefill,
+  flying,
   onClose,
+  onBackFromProtect,
   onBackToProtectForm,
   onBindingSubmit,
+  onBindingSuccessConfirm,
   onOpenPaymentPage,
+  onSuccessFlyComplete,
+  onStartSuccessFly,
 }: Props) {
+  const pileRef = useRef<HTMLImageElement | null>(null);
+  const [flyFromRect, setFlyFromRect] = useState<DOMRect | null>(null);
+  const successFlyStartedRef = useRef(false);
+
   const handleBackdrop = useCallback(() => {
-    if (step === "success") return;
+    if (step === "success" || step === "bindingSuccess" || flying) return;
     onClose();
-  }, [step, onClose]);
+  }, [step, flying, onClose]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (step === "success") return;
+      if (step === "success" || step === "bindingSuccess" || flying) return;
       onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, step, onClose]);
+  }, [open, step, flying, onClose]);
+
+  useEffect(() => {
+    if (step !== "success") {
+      successFlyStartedRef.current = false;
+      setFlyFromRect(null);
+      return;
+    }
+    if (successFlyStartedRef.current) return;
+    successFlyStartedRef.current = true;
+
+    const timer = window.setTimeout(() => {
+      const el = pileRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setFlyFromRect(rect);
+      onStartSuccessFly(rect);
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [step, onStartSuccessFly]);
 
   if (!open) return null;
 
   return createPortal(
-    <div
-      className="app-modal-overlay"
-      role="presentation"
-      onClick={handleBackdrop}>
+    <>
       <div
-        className={
-          "app-modal app-modal--col shop-checkout" +
-          (step === "payment" ? " shop-checkout--payment" : "")
-        }
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="shop-checkout-dialog-title"
-        onClick={(e) => e.stopPropagation()}>
-        {step === "protect" ? (
-          <ProtectAccountView
-            bindingBusy={bindingBusy}
-            bindingError={bindingError}
-            protectNeedSms={protectNeedSms}
-            bindingPrefill={bindingPrefill}
-            onClose={onClose}
-            onBackToProtectForm={onBackToProtectForm}
-            onSubmit={onBindingSubmit}
-          />
-        ) : step === "loading" ? (
-          <LoadingView buyBusy={buyBusy} buyError={buyError} onClose={onClose} />
-        ) : step === "payment" && paymentUrl ? (
-          <PaymentFrameView
-            paymentUrl={paymentUrl}
-            onClose={onClose}
-            onOpenPaymentPage={onOpenPaymentPage}
-          />
-        ) : (
-          <SuccessView onClose={onClose} />
-        )}
+        className="app-modal-overlay"
+        role="presentation"
+        onClick={handleBackdrop}>
+        <div
+          className={
+            "app-modal app-modal--col shop-checkout" +
+            (step === "payment" ? " shop-checkout--payment" : "")
+          }
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="shop-checkout-dialog-title"
+          onClick={(e) => e.stopPropagation()}>
+          {step === "protect" ? (
+            <ProtectAccountView
+              bindingBusy={bindingBusy}
+              bindingError={bindingError}
+              protectNeedSms={protectNeedSms}
+              bindingPrefill={bindingPrefill}
+              onClose={onBackFromProtect}
+              onBackToProtectForm={onBackToProtectForm}
+              onSubmit={onBindingSubmit}
+            />
+          ) : step === "bindingSuccess" ? (
+            <BindingSuccessView onConfirm={onBindingSuccessConfirm} />
+          ) : step === "loading" ? (
+            <LoadingView
+              buyBusy={buyBusy}
+              buyError={buyError}
+              onClose={onClose}
+            />
+          ) : step === "payment" && paymentUrl ? (
+            <PaymentFrameView
+              paymentUrl={paymentUrl}
+              onClose={onClose}
+              onOpenPaymentPage={onOpenPaymentPage}
+            />
+          ) : step === "success" ? (
+            <SuccessView
+              pack={pack}
+              flying={flying}
+              onClose={onClose}
+              onPileRef={(el) => {
+                pileRef.current = el;
+              }}
+            />
+          ) : (
+            <LoadingView
+              buyBusy={buyBusy}
+              buyError={buyError}
+              onClose={onClose}
+            />
+          )}
+        </div>
       </div>
-    </div>,
+      <CoinFlyToBalance
+        active={flying && !!flyFromRect}
+        fromRect={flyFromRect}
+        onComplete={onSuccessFlyComplete}
+      />
+    </>,
     document.body,
   );
 }

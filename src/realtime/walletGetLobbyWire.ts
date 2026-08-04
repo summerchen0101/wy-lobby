@@ -18,6 +18,7 @@ const WalletGetResponseType = mustLookup("megaman.WalletGetResponse");
 export type WalletGetResponseDecoded = {
   bag?: Record<string, unknown>;
   subsidyAmount?: string | number;
+  redeemSCList?: string[];
 };
 
 /** WalletType.GC = 1, SC = 2 */
@@ -40,6 +41,15 @@ export function decodeWalletGetResponseBytes(
     defaults: true,
     enums: String,
   }) as WalletGetResponseDecoded;
+}
+
+export function parseRedeemSCList(
+  raw: string[] | undefined | null,
+): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((v) => String(v ?? "").trim().replace(/,/g, ""))
+    .filter((v) => /^\d+$/.test(v));
 }
 
 export function parseSubsidyAmount(

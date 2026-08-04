@@ -61,6 +61,35 @@
   }
 }
 
+.shop-page__card--clickable {
+  cursor: pointer;
+  transition:
+    filter 0.12s ease,
+    transform 0.08s ease;
+}
+
+.shop-page__card--clickable:hover {
+  filter: brightness(1.04);
+}
+
+.shop-page__card--clickable:active {
+  transform: translateY(1px);
+}
+
+.shop-page__card--disabled {
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+.shop-page__card--disabled:hover {
+  filter: none;
+}
+
+.shop-page__card--disabled:active {
+  transform: none;
+}
+
 .shop-page__card {
   display: flex;
   flex-direction: column;
@@ -182,6 +211,35 @@
   color: #fafafa;
 }
 
+.shop-page__vip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin: 0.15rem 0 0;
+  font-size: clamp(0.6rem, 1.6vw, 0.75rem);
+  font-weight: 600;
+  color: var(--crown-gold);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.shop-page__vip-plus {
+  letter-spacing: 0.04em;
+}
+
+.shop-page__vip-amt {
+  font-weight: 800;
+  color: #fafafa;
+}
+
+.shop-page__vip-label {
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.shop-page__price-pill,
 .shop-page__price-btn {
   --shop-price-btn-shadow: var(--crown-gold-shadow);
   width: 100%;

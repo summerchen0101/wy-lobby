@@ -13,12 +13,18 @@ export type ShopPack = {
   coinPile: 1 | 2 | 3 | 4 | 5;
   /** 後端 paymentTypes 原字串 */
   paymentTypes: string[];
+  /** ListProductsResponseProduct.vipExp */
+  vipExp: number;
 };
 
 /** LOBBY_GET / account fields used to prefill the binding form when empty. */
 export type ShopBindingPrefill = {
   email?: string;
   phone?: string;
+  firstName?: string;
+  lastName?: string;
+  /** YYYY-MM-DD */
+  birthday?: string;
 };
 
 /** Payload for megaman.MegaAccountBindingRequest (shop simplified binding). */

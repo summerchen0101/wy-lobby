@@ -4,13 +4,19 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
 import type { RegisterBody } from '../../lib/api/types'
+import { AuthFieldError } from './AuthFieldError'
+import {
+  clearFieldError,
+  hasFieldErrors,
+  OTP_MAX_LEN,
+  type OtpFieldErrors,
+  validateOtpCode,
+} from './authFormValidation'
 import { useWordData } from '../../wordData/useWordData'
 import './AuthModals.css'
 import './PhoneVerificationModal.css'
 
 const RESEND_SECONDS = 27
-const OTP_MIN_LEN = 4
-const OTP_MAX_LEN = 6
 
 type Props = {
   open: boolean
@@ -30,12 +36,14 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
   const [otp, setOtp] = useState('')
   const [resendLeft, setResendLeft] = useState(RESEND_SECONDS)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<OtpFieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setOtp('')
     setError(null)
+    setFieldErrors({})
     setResendLeft(RESEND_SECONDS)
   }, [open])
 
@@ -63,14 +71,15 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
     e.preventDefault()
     if (!pendingBody) return
     setError(null)
-    const code = otp.replace(/\s/g, '')
-    if (code.length < OTP_MIN_LEN || code.length > OTP_MAX_LEN) {
-      setError(w(106))
+    const nextFieldErrors = validateOtpCode(otp)
+    if (hasFieldErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors)
       return
     }
+    setFieldErrors({})
     setSubmitting(true)
     try {
-      await register({ ...pendingBody, answer: code })
+      await register({ ...pendingBody, answer: otp.replace(/\s/g, '') })
       onClose()
       navigate('/', { replace: true })
     } catch (err) {
@@ -119,6 +128,7 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
               <label className="phone-verify-modal__otp-label" htmlFor={otpId}>
                 {w(35)}
               </label>
+              <AuthFieldError message={fieldErrors.code} variant="modal" />
               <div className="phone-verify-modal__input-wrap">
                 <input
                   id={otpId}
@@ -128,7 +138,11 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
                   autoComplete="one-time-code"
                   placeholder={w(36)}
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, OTP_MAX_LEN))}
+                  onChange={(e) => {
+                    setOtp(e.target.value.replace(/\D/g, '').slice(0, OTP_MAX_LEN))
+                    setFieldErrors((prev) => clearFieldError(prev, 'code'))
+                  }}
+                  aria-invalid={Boolean(fieldErrors.code)}
                 />
                 <button
                   type="button"

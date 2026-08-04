@@ -4,6 +4,7 @@ import { InfoPopover } from "../../components/InfoPopover";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import { CURRENCY_ICON_SC } from "../../lib/currencyIcons";
+import { openZendeskOrFallback } from "../../lib/zendeskSupport";
 import {
   formatScFromRaw,
   formatScFromRawWireInteger,
@@ -11,9 +12,13 @@ import {
   formatWithdrawHistoryFiatAmount,
   MIN_REDEEM_SC_DISPLAY,
 } from "../../wallet/formatWalletAmount";
-import { GATEWAY_API_LIST_WITHDRAW_ORDERS } from "../../realtime/gatewayApi";
+import {
+  GATEWAY_API_CANCEL_REDEEM_ORDER,
+  GATEWAY_API_LIST_WITHDRAW_ORDERS,
+} from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
+  encodeCancelRedeemOrderRequestBytes,
   encodeListWithdrawOrdersRequestBytes,
   decodeListWithdrawOrdersResponseBytes,
   type WithdrawOrderWireRow,
@@ -33,6 +38,13 @@ import {
   resolveMinRedeemDisplay,
   resolveMinRedeemRaw,
 } from "./redeemMinAmount";
+import {
+  formatRedeemHistoryLinkAmount,
+  formatWithdrawCreatedAt,
+  redeemHistoryStatusClassName,
+  withdrawHistoryShowsCancel,
+  withdrawHistoryShowsRemark,
+} from "./redeemHistoryUi";
 import { useWordData } from "../../wordData/useWordData";
 import "./RedeemPage.css";
 import "./SessionPageDecor.css";
@@ -40,28 +52,6 @@ import "./SessionPageDecor.css";
 const SC_INLINE_PX = 18;
 
 const ORDERS_PER_PAGE = 4;
-
-/** Aligns with withdrawOrderPaymentStatusToLabel() labels in withdrawLobbyWire. */
-const WITHDRAW_HISTORY_STATUS_MOD: Record<
-  string,
-  "positive" | "progress" | "negative" | "muted"
-> = {
-  Success: "positive",
-  Passed: "positive",
-  Reviewing: "progress",
-  Processing: "progress",
-  Rejected: "negative",
-  Failed: "negative",
-  Expired: "negative",
-  Unknown: "muted",
-};
-
-function redeemHistoryStatusClassName(statusLabel: string): string {
-  const base = "redeem-page__history-status";
-  const mod =
-    WITHDRAW_HISTORY_STATUS_MOD[statusLabel] ?? "muted";
-  return `${base} ${base}--${mod}`;
-}
 
 function ScInlineIcon() {
   return (
@@ -77,6 +67,92 @@ function ScInlineIcon() {
 
 /** Re-export: minimum redeemable SC shown to the user (50). */
 export const MIN_REDEEM_SC = MIN_REDEEM_SC_DISPLAY;
+
+type RedeemHistoryRowProps = {
+  row: WithdrawOrderWireRow;
+  cancelBusyUid: string | null;
+  onCancel: (uid: string) => void;
+  w: (id: number, ...args: string[]) => string;
+};
+
+function RedeemHistoryRow({
+  row,
+  cancelBusyUid,
+  onCancel,
+  w,
+}: RedeemHistoryRowProps) {
+  const fiatAmount = formatWithdrawHistoryFiatAmount(row.amount);
+  const linkLabel = w(
+    510476,
+    "Redeem",
+    formatRedeemHistoryLinkAmount(fiatAmount),
+  );
+  const orderUrl = row.uuu.trim();
+  const createdAtLabel = formatWithdrawCreatedAt(
+    row.createdAtTimestampMillisecond,
+  );
+  const showRemark = withdrawHistoryShowsRemark(row.withdrawOrderPaymentStatus);
+  const showCancel = withdrawHistoryShowsCancel(row.withdrawOrderPaymentStatus);
+  const cancelBusy =
+    cancelBusyUid !== null &&
+    cancelBusyUid === row.withdrawOrderUID &&
+    row.withdrawOrderUID !== "";
+
+  return (
+    <li className="redeem-page__history-row">
+      <InfoPopover
+        align="start"
+        panelClassName="redeem-page__history-date-popover"
+        content={
+          <p className="redeem-page__history-date-text">
+            {w(510475)}
+            {createdAtLabel}
+          </p>
+        }>
+        {(p, triggerRef) => (
+          <button
+            ref={triggerRef}
+            type="button"
+            className="redeem-page__history-icon"
+            aria-label="Order create date"
+            {...p}>
+            i
+          </button>
+        )}
+      </InfoPopover>
+      {orderUrl ? (
+        <button
+          type="button"
+          className="redeem-page__history-link"
+          onClick={() => window.open(orderUrl, "_blank", "noopener,noreferrer")}>
+          {linkLabel}
+        </button>
+      ) : (
+        <span className="redeem-page__history-desc">{linkLabel}</span>
+      )}
+      <div className="redeem-page__history-status-col">
+        <span
+          className={redeemHistoryStatusClassName(
+            row.withdrawOrderPaymentStatus,
+          )}>
+          {row.statusLabel}
+        </span>
+        {showRemark && row.remark ? (
+          <span className="redeem-page__history-remark">{row.remark}</span>
+        ) : null}
+        {showCancel ? (
+          <button
+            type="button"
+            className="redeem-page__history-cancel"
+            disabled={cancelBusy}
+            onClick={() => onCancel(row.withdrawOrderUID)}>
+            {cancelBusy ? "…" : w(510478)}
+          </button>
+        ) : null}
+      </div>
+    </li>
+  );
+}
 
 export function RedeemPage() {
   const w = useWordData();
@@ -120,6 +196,7 @@ export function RedeemPage() {
   const [initialOrdersFetched, setInitialOrdersFetched] = useState(
     () => redeemOrdersPrefetch !== null,
   );
+  const [cancelBusyUid, setCancelBusyUid] = useState<string | null>(null);
 
   const { amount: scAmount, redeemableAmount, unplayedHundredths } =
     redeemScBalancesFromLobby({
@@ -221,6 +298,39 @@ export function RedeemPage() {
     await fetchOrders(0);
   }, [gatewayRequestReady, fetchOrders, refreshLobbyGet]);
 
+  const handleCancelOrder = useCallback(
+    async (redeemOrderUID: string) => {
+      const uid = redeemOrderUID.trim();
+      if (!uid) return;
+      const req = requestRef.current;
+      if (!req || !gatewayRequestReady) {
+        show("Not connected to server. Try again.", { variant: "error" });
+        return;
+      }
+      setCancelBusyUid(uid);
+      try {
+        const r = await req({
+          type: GATEWAY_API_CANCEL_REDEEM_ORDER,
+          data: encodeCancelRedeemOrderRequestBytes(uid),
+          debugLabel: "CANCEL_REDEEM_ORDER",
+        });
+        const code = String(r.code ?? "");
+        if (!isGatewaySuccessCode(code)) {
+          show(translateGatewayError(code, r.errMessage), { variant: "error" });
+          return;
+        }
+        await fetchOrders(ordersPage);
+      } catch (e) {
+        show(e instanceof Error ? e.message : "Cancel failed", {
+          variant: "error",
+        });
+      } finally {
+        setCancelBusyUid(null);
+      }
+    },
+    [requestRef, gatewayRequestReady, show, fetchOrders, ordersPage],
+  );
+
   const pagerPrev = useCallback(() => {
     setOrdersPage((p) => Math.max(0, p - 1));
   }, []);
@@ -229,13 +339,7 @@ export function RedeemPage() {
     setOrdersPage((p) => Math.min(totalPages - 1, p + 1));
   }, [totalPages]);
 
-  const pagerLabel = useMemo(
-    () =>
-      totalPages <= 1
-        ? ""
-        : `${ordersPage + 1}/${totalPages}`,
-    [ordersPage, totalPages],
-  );
+  const showPager = totalPages > 1;
 
   const cannotRedeem = redeemableAmount < resolveMinRedeemRaw(lobbyGet, user);
   const minRedeemDisplay = resolveMinRedeemDisplay(lobbyGet, user);
@@ -249,6 +353,30 @@ export function RedeemPage() {
 
   const showRedeemHistoryUi =
     gatewayRequestReady && !showInsufficientFullPage;
+
+  const balanceInfoPanel = useMemo(
+    () => (
+      <div className="redeem-page__info-panel">
+        <p>
+          <strong>{w(510493)}</strong> {formatScFromRaw(scAmount)}{" "}
+          <ScInlineIcon />
+        </p>
+        <p>
+          <strong>{w(510494)}</strong> {formatScFromRaw(redeemableAmount)}{" "}
+          <ScInlineIcon />
+        </p>
+        <p>
+          <strong>{w(510495)}</strong>{" "}
+          {formatScFromTruncatedHundredths(unplayedHundredths)} <ScInlineIcon />
+        </p>
+        <p>
+          <ScInlineIcon /> {w(510496)}
+        </p>
+        <p>{w(510497)}</p>
+      </div>
+    ),
+    [w, scAmount, redeemableAmount, unplayedHundredths],
+  );
 
   return (
     <section className="redeem-page page-container session-page session-page--pattern">
@@ -267,30 +395,7 @@ export function RedeemPage() {
           <InfoPopover
             align="end"
             panelClassName="redeem-page__info-popover"
-            content={
-              <div className="redeem-page__info-panel">
-                <p>
-                  <strong>Your Sweeps Coins Balance:</strong>{" "}
-                  {formatScFromRaw(scAmount)} <ScInlineIcon />
-                </p>
-                <p>
-                  <strong>Redeemable Sweeps Coins:</strong>{" "}
-                  {formatScFromRaw(redeemableAmount)} <ScInlineIcon />
-                </p>
-                <p>
-                  <strong>Unplayed Sweeps Coins Balance:</strong>{" "}
-                  {formatScFromTruncatedHundredths(unplayedHundredths)} <ScInlineIcon />
-                </p>
-                <p>
-                  <ScInlineIcon /> 1 Sweeps Coin = $1
-                </p>
-                <p>
-                  Unplayed Sweeps Coins from purchases and bonuses can be used to
-                  play in games, but cannot be redeemed. Sweeps Coins gained by
-                  winnings can be redeemed.
-                </p>
-              </div>
-            }>
+            content={balanceInfoPanel}>
             {(p, triggerRef) => (
               <button
                 ref={triggerRef}
@@ -321,7 +426,7 @@ export function RedeemPage() {
             </div>
             {!hasOrderHistory ? (
               <Link to="/" className="redeem-page__to-lobby">
-                Back to lobby
+                {w(510473)}
               </Link>
             ) : null}
           </div>
@@ -337,32 +442,7 @@ export function RedeemPage() {
       {showRedeemHistoryUi ? (
         <div className="redeem-page__card redeem-page__history-card">
           <div className="redeem-page__history-head">
-            <h2 className="redeem-page__history-title">Redemption History:</h2>
-            <div className="redeem-page__history-pager">
-              <button
-                type="button"
-                className="redeem-page__history-pager-btn"
-                aria-label="Previous page"
-                disabled={ordersPage <= 0 || ordersLoading}
-                onClick={pagerPrev}>
-                ‹
-              </button>
-              <span className="redeem-page__history-pager-link">
-                {pagerLabel}
-              </span>
-              <button
-                type="button"
-                className="redeem-page__history-pager-btn"
-                aria-label="Next page"
-                disabled={
-                  ordersLoading ||
-                  ordersPage >= totalPages - 1 ||
-                  totalPages <= 1
-                }
-                onClick={pagerNext}>
-                ›
-              </button>
-            </div>
+            <h2 className="redeem-page__history-title">{w(510474)}</h2>
           </div>
           <div
             className={
@@ -382,26 +462,16 @@ export function RedeemPage() {
                   className="redeem-page__history-list"
                   aria-label="Redemption history">
                   {ordersRows.map((row, i) => (
-                    <li
+                    <RedeemHistoryRow
                       key={
                         row.withdrawOrderUID ||
                         `${ordersPage}-${row.amount}-${row.withdrawOrderPaymentStatus}-${i}`
                       }
-                      className="redeem-page__history-row">
-                      <span className="redeem-page__history-icon" aria-hidden>
-                        i
-                      </span>
-                      <span className="redeem-page__history-desc">
-                        {formatWithdrawHistoryFiatAmount(row.amount)}{" "}
-                        {row.remark.trim() || "Redemption"}
-                      </span>
-                      <span
-                        className={redeemHistoryStatusClassName(
-                          row.statusLabel,
-                        )}>
-                        {row.statusLabel}
-                      </span>
-                    </li>
+                      row={row}
+                      cancelBusyUid={cancelBusyUid}
+                      onCancel={(uid) => void handleCancelOrder(uid)}
+                      w={w}
+                    />
                   ))}
                 </ul>
                 {ordersRows.length === 0 && !ordersError ? (
@@ -412,6 +482,40 @@ export function RedeemPage() {
               </>
             )}
           </div>
+          {showPager ? (
+            <div className="redeem-page__history-pager redeem-page__history-pager--footer">
+              <button
+                type="button"
+                className="redeem-page__history-pager-btn"
+                aria-label="Previous page"
+                disabled={ordersPage <= 0 || ordersLoading}
+                onClick={pagerPrev}>
+                ‹
+              </button>
+              <span className="redeem-page__history-pager-link">
+                {w(510484)}
+              </span>
+              {showPager ? (
+                <span
+                  className="redeem-page__history-pager-badge"
+                  aria-label={`Page ${ordersPage + 1} of ${totalPages}`}>
+                  {ordersPage + 1}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                className="redeem-page__history-pager-btn"
+                aria-label="Next page"
+                disabled={
+                  ordersLoading ||
+                  ordersPage >= totalPages - 1 ||
+                  totalPages <= 1
+                }
+                onClick={pagerNext}>
+                ›
+              </button>
+            </div>
+          ) : null}
           <button
             type="button"
             className="redeem-page__new-redeem"
@@ -445,6 +549,13 @@ export function RedeemPage() {
           </button>
         </div>
       ) : null}
+
+      <button
+        type="button"
+        className="redeem-page__support-link"
+        onClick={() => void openZendeskOrFallback()}>
+        {w(510486)}
+      </button>
 
       <RedeemBindingModal
         open={bindingModalOpen}

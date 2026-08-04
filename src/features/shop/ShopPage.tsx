@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useAuth } from "../../auth/useAuth";
 import { useAlert } from "../../components/alert/alertContext";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
@@ -20,7 +20,6 @@ import {
   setSocureBindingNavigationContext,
 } from "../../lib/socure/socureDevice";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
-import { publicImageUrl } from "../../lib/publicImageUrl";
 import { isPhoneBound } from "./isPhoneBound";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import { ShopCheckoutOverlay, type CheckoutStep } from "./ShopCheckoutOverlay";
@@ -30,20 +29,17 @@ import type {
   ShopBindingPrefill,
 } from "./types";
 import { useWordData } from "../../wordData/useWordData";
+import { formatVipPoints } from "../lobby/vipHelpers";
+import { DAILY_LOGIN_AUTO_CLOSE_MS } from "../dailyLogin/dailyLoginFlow";
+import { shopCoinPileSrc } from "./shopCoinPile";
 import "./ShopPage.css";
 import "../lobby/SessionPageDecor.css";
-
-const PANEL = publicImageUrl("/images/shop");
 
 const PAYMENT_UNAVAILABLE_MSG =
   "Payment is unavailable. Please try again later.";
 
-/** BuyProduct 新第三方：PaymentType 固定 0，方式於 paymentURL 頁選擇。 */
+/** WebGL：PaymentType 固定 0，付款方式於 paymentURL 頁選擇。 */
 const BUY_PRODUCT_PAYMENT_TYPE = 0;
-
-function coinPileSrc(n: 1 | 2 | 3 | 4 | 5) {
-  return `${PANEL}/icon_coinPile${n}.png`;
-}
 
 export function ShopPage() {
   const w = useWordData();
@@ -65,6 +61,8 @@ export function ShopPage() {
   const [protectNeedSms, setProtectNeedSms] = useState(false);
   const [bindingBusy, setBindingBusy] = useState(false);
   const [bindingError, setBindingError] = useState<string | null>(null);
+  const [flying, setFlying] = useState(false);
+  const successCloseTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!token || !gatewayRequestReady) return;
@@ -74,14 +72,23 @@ export function ShopPage() {
   const packs = shopPacks ?? [];
   const listLoading = Boolean(token) && shopPacks === null;
 
+  const clearSuccessCloseTimer = useCallback(() => {
+    if (successCloseTimerRef.current != null) {
+      window.clearTimeout(successCloseTimerRef.current);
+      successCloseTimerRef.current = null;
+    }
+  }, []);
+
   const closeCheckout = useCallback(() => {
+    clearSuccessCloseTimer();
     setCheckoutPack(null);
     setCheckoutStep("loading");
     setPaymentUrl(null);
     setBuyError(null);
     setProtectNeedSms(false);
     setBindingError(null);
-  }, []);
+    setFlying(false);
+  }, [clearSuccessCloseTimer]);
 
   const handlePaymentCallback = useCallback(
     (payload: { state: 1 | 2 }) => {
@@ -123,6 +130,10 @@ export function ShopPage() {
     void setSocureBindingNavigationContext();
   }, [checkoutStep]);
 
+  useEffect(() => {
+    return () => clearSuccessCloseTimer();
+  }, [clearSuccessCloseTimer]);
+
   const notifyPaymentBlocked = useCallback(() => {
     show(PAYMENT_UNAVAILABLE_MSG, { variant: "info" });
   }, [show]);
@@ -135,8 +146,8 @@ export function ShopPage() {
         notifyPaymentBlocked();
         return false;
       }
-      const w = window.open(trimmed, "_blank");
-      if (!w) console.warn("[shop] payment window.open blocked");
+      const tab = window.open(trimmed, "_blank");
+      if (!tab) console.warn("[shop] payment window.open blocked");
       return true;
     },
     [notifyPaymentBlocked],
@@ -147,6 +158,7 @@ export function ShopPage() {
       const req = requestRef.current;
       if (!req) {
         setBuyError("Not connected");
+        setCheckoutStep("loading");
         return;
       }
       if (!isThirdPartyPaymentEnabled()) {
@@ -154,6 +166,7 @@ export function ShopPage() {
         closeCheckout();
         return;
       }
+      setCheckoutStep("loading");
       setBuyBusy(true);
       setBuyError(null);
       let paymentTab: Window | null = null;
@@ -170,7 +183,13 @@ export function ShopPage() {
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
           paymentTab?.close();
-          setBuyError(translateGatewayError(code, r.errMessage, `Purchase failed (${code})`));
+          setBuyError(
+            translateGatewayError(
+              code,
+              r.errMessage,
+              `Purchase failed (${code})`,
+            ),
+          );
           return;
         }
         const raw = r.data;
@@ -205,22 +224,31 @@ export function ShopPage() {
     [requestRef, notifyPaymentBlocked, closeCheckout],
   );
 
-  const onPackPriceClick = useCallback(
+  const onPackClick = useCallback(
     (p: ShopPack) => {
       if (checkoutPack) return;
       setBuyError(null);
       setPaymentUrl(null);
       setProtectNeedSms(false);
       setBindingError(null);
+      setFlying(false);
       setCheckoutPack(p);
       if (!isPhoneBound(user)) {
         setCheckoutStep("protect");
         return;
       }
-      setCheckoutStep("loading");
       void executeBuyProduct(p);
     },
     [checkoutPack, user, executeBuyProduct],
+  );
+
+  const onPackKeyDown = useCallback(
+    (e: KeyboardEvent, p: ShopPack) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      onPackClick(p);
+    },
+    [onPackClick],
   );
 
   const handleBindingSubmit = useCallback(
@@ -264,7 +292,9 @@ export function ShopPage() {
         });
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
-          setBindingError(translateGatewayError(code, r.errMessage, `Binding failed (${code})`));
+          setBindingError(
+            translateGatewayError(code, r.errMessage, `Binding failed (${code})`),
+          );
           return;
         }
         const raw = r.data;
@@ -284,10 +314,7 @@ export function ShopPage() {
         await refreshLobbyGet();
         setProtectNeedSms(false);
         setBindingError(null);
-        closeCheckout();
-        show("Account verified. Please tap purchase again to continue.", {
-          variant: "success",
-        });
+        setCheckoutStep("bindingSuccess");
       } catch (e) {
         setBindingError(e instanceof Error ? e.message : "Binding failed");
       } finally {
@@ -300,15 +327,40 @@ export function ShopPage() {
       requestRef,
       mergeUser,
       refreshLobbyGet,
-      closeCheckout,
-      show,
+      executeBuyProduct,
     ],
   );
+
+  const handleBindingSuccessConfirm = useCallback(() => {
+    if (!checkoutPack) return;
+    void executeBuyProduct(checkoutPack);
+  }, [checkoutPack, executeBuyProduct]);
 
   const handleBackToProtectForm = useCallback(() => {
     setProtectNeedSms(false);
     setBindingError(null);
   }, []);
+
+  const handleLoadingClose = useCallback(() => {
+    closeCheckout();
+  }, [closeCheckout]);
+
+  const handleStartSuccessFly = useCallback(() => {
+    setFlying(true);
+  }, []);
+
+  const handleSuccessFlyComplete = useCallback(async () => {
+    setFlying(false);
+    try {
+      await refreshLobbyGet();
+    } catch {
+      /* balance refresh best-effort */
+    }
+    clearSuccessCloseTimer();
+    successCloseTimerRef.current = window.setTimeout(() => {
+      closeCheckout();
+    }, DAILY_LOGIN_AUTO_CLOSE_MS);
+  }, [refreshLobbyGet, clearSuccessCloseTimer, closeCheckout]);
 
   return (
     <div className="shop-page page-container session-page session-page--pattern">
@@ -326,7 +378,17 @@ export function ShopPage() {
         ) : (
           <ul className="shop-page__grid">
             {packs.map((p) => (
-              <li key={p.id} className="shop-page__card">
+              <li
+                key={p.id}
+                className={
+                  "shop-page__card shop-page__card--clickable" +
+                  (checkoutPack ? " shop-page__card--disabled" : "")
+                }
+                role="button"
+                tabIndex={checkoutPack ? -1 : 0}
+                aria-disabled={checkoutPack ? true : undefined}
+                onClick={() => onPackClick(p)}
+                onKeyDown={(e) => onPackKeyDown(e, p)}>
                 <div className="shop-page__card-mid">
                   <div className="shop-page__card-top">
                     <span className="shop-page__gc-row">
@@ -345,7 +407,7 @@ export function ShopPage() {
                   </div>
                   <div className="shop-page__card-art" data-pile={p.coinPile}>
                     <img
-                      src={coinPileSrc(p.coinPile)}
+                      src={shopCoinPileSrc(p.coinPile)}
                       alt=""
                       className="shop-page__card-art-img"
                       loading="lazy"
@@ -366,14 +428,19 @@ export function ShopPage() {
                     </span>
                     <span className="shop-page__bonus-amt">{p.bonusSc}</span>
                   </p>
+                  {p.vipExp > 0 ? (
+                    <p
+                      className="shop-page__vip"
+                      aria-label={`VIP points ${p.vipExp}`}>
+                      <span className="shop-page__vip-plus">+</span>
+                      <span className="shop-page__vip-amt">
+                        {formatVipPoints(p.vipExp)}
+                      </span>
+                      <span className="shop-page__vip-label">{w(510760)}</span>
+                    </p>
+                  ) : null}
                 </div>
-                <button
-                  type="button"
-                  className="shop-page__price-btn"
-                  disabled={!!checkoutPack}
-                  onClick={() => onPackPriceClick(p)}>
-                  {p.price}
-                </button>
+                <span className="shop-page__price-pill">{p.price}</span>
               </li>
             ))}
           </ul>
@@ -383,6 +450,7 @@ export function ShopPage() {
         <ShopCheckoutOverlay
           open
           step={checkoutStep}
+          pack={checkoutPack}
           buyBusy={buyBusy}
           buyError={buyError}
           paymentUrl={paymentUrl}
@@ -395,10 +463,17 @@ export function ShopPage() {
               phone: user?.phone,
             } satisfies ShopBindingPrefill
           }
-          onClose={closeCheckout}
+          flying={flying}
+          onClose={
+            checkoutStep === "loading" ? handleLoadingClose : closeCheckout
+          }
+          onBackFromProtect={closeCheckout}
           onBackToProtectForm={handleBackToProtectForm}
           onBindingSubmit={handleBindingSubmit}
+          onBindingSuccessConfirm={handleBindingSuccessConfirm}
           onOpenPaymentPage={openThirdPartyPaymentPage}
+          onStartSuccessFly={handleStartSuccessFly}
+          onSuccessFlyComplete={handleSuccessFlyComplete}
         />
       ) : null}
     </div>

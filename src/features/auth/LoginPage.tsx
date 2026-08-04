@@ -8,6 +8,13 @@ import { ClientVersionError } from '../../lib/api/clientVersionError'
 import { presentClientVersionError } from '../../lib/clientVersionUi'
 import { useWordData } from '../../wordData/useWordData'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
+import { AuthFieldError } from './AuthFieldError'
+import {
+  clearFieldError,
+  hasFieldErrors,
+  type LoginFieldErrors,
+  validateLoginFields,
+} from './authFormValidation'
 import './AuthPages.css'
 
 export function LoginPage() {
@@ -26,6 +33,7 @@ export function LoginPage() {
   const [account, setAccount] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -37,6 +45,15 @@ export function LoginPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    const nextFieldErrors = validateLoginFields({
+      account,
+      password,
+    })
+    if (hasFieldErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors)
+      return
+    }
+    setFieldErrors({})
     setSubmitting(true)
     try {
       await login(account.trim(), password)
@@ -69,10 +86,14 @@ export function LoginPage() {
               <label className="auth-form__label" htmlFor="login-account">
                 {w(6)}
               </label>
+              <AuthFieldError message={fieldErrors.account} variant="page" />
               <AuthClearableInputWrap
                 variant="page"
                 value={account}
-                onClear={() => setAccount('')}
+                onClear={() => {
+                  setAccount('')
+                  setFieldErrors((prev) => clearFieldError(prev, 'account'))
+                }}
                 clearAriaLabel="Clear account"
               >
                 <input
@@ -81,8 +102,12 @@ export function LoginPage() {
                   name="account"
                   autoComplete="username"
                   value={account}
-                  onChange={(e) => setAccount(e.target.value)}
+                  onChange={(e) => {
+                    setAccount(e.target.value)
+                    setFieldErrors((prev) => clearFieldError(prev, 'account'))
+                  }}
                   required
+                  aria-invalid={Boolean(fieldErrors.account)}
                 />
               </AuthClearableInputWrap>
             </div>
@@ -90,10 +115,14 @@ export function LoginPage() {
               <label className="auth-form__label" htmlFor="login-password">
                 {w(8)}
               </label>
+              <AuthFieldError message={fieldErrors.password} variant="page" />
               <AuthClearableInputWrap
                 variant="page"
                 value={password}
-                onClear={() => setPassword('')}
+                onClear={() => {
+                  setPassword('')
+                  setFieldErrors((prev) => clearFieldError(prev, 'password'))
+                }}
                 clearAriaLabel="Clear password"
               >
                 <input
@@ -103,8 +132,12 @@ export function LoginPage() {
                   type="password"
                   autoComplete="current-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setFieldErrors((prev) => clearFieldError(prev, 'password'))
+                  }}
                   required
+                  aria-invalid={Boolean(fieldErrors.password)}
                 />
               </AuthClearableInputWrap>
             </div>

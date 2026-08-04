@@ -73,6 +73,7 @@ export const WORD_DATA: Readonly<Record<number, string>> = {
   118: "Verify your account with the SMS code sent to your phone.",
   119: "Did not get a code?",
   120: "VERIFY",
+  121: "Bind Member account successfully!",
   136: "REDEEM",
   137: "Let us help you redeem your winnings faster - please ensure your details are correct.",
   138: "FirstName",

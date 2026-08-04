@@ -19,7 +19,6 @@ import {
 } from "../../realtime/withdrawLobbyWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import {
-  formatScFromRaw,
   SC_POINT_SCALE,
 } from "../../wallet/formatWalletAmount";
 import { usePaymentCallbackListener } from "../payment/usePaymentCallbackListener";
@@ -56,10 +55,14 @@ function parseWithdrawDisplayToWire(amountStr: string): bigint | null {
 function RedeemWithdrawSuccessView({
   orderUid,
   amountDisplay,
+  statusLabel,
+  backLabel,
   onBackToLobby,
 }: {
   orderUid: string;
   amountDisplay: string;
+  statusLabel: string;
+  backLabel: string;
   onBackToLobby: () => void;
 }) {
   return (
@@ -89,12 +92,14 @@ function RedeemWithdrawSuccessView({
           {orderUid}
         </div>
         <p className="redeem-method-modal__success-field-label">Status</p>
-        <div className="redeem-method-modal__success-status-box">Reviewing</div>
+        <div className="redeem-method-modal__success-status-box">
+          {statusLabel}
+        </div>
         <button
           type="button"
           className="redeem-method-modal__success-cta"
           onClick={onBackToLobby}>
-          BACK TO LOBBY
+          {backLabel}
         </button>
       </div>
     </div>
@@ -353,6 +358,8 @@ export function RedeemMethodModal({
             <RedeemWithdrawSuccessView
               orderUid={successOrderUid}
               amountDisplay={successAmountDisplay}
+              statusLabel={w(510477)}
+              backLabel={w(510473)}
               onBackToLobby={onClose}
             />
           ) : step === "payment" && paymentUrl ? (
@@ -385,13 +392,8 @@ export function RedeemMethodModal({
                 onChange={(e) => setPickAmount(e.target.value)}
                 disabled={submitBusy}
               />
-              <p className="redeem-form-page__hint">
-                Minimum {minDisplay} SC · Redeemable{" "}
-                {redeemableAmountRaw !== undefined
-                  ? formatScFromRaw(redeemableAmountRaw)
-                  : "—"}{" "}
-                SC
-              </p>
+              <p className="redeem-form-page__hint">{w(510488, minDisplay)}</p>
+              <pre className="redeem-method-modal__fee-tiers">{w(510489)}</pre>
               <button
                 type="button"
                 className="redeem-form-page__confirm"

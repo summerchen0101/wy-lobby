@@ -9,6 +9,7 @@ const WITHDRAW_STATUS_WORD_DATA: Readonly<Record<number, number>> = {
   5: 510481,
   6: 510482,
   7: 510483,
+  8: 510483,
 };
 
 const WITHDRAW_STATUS_NAME_WORD_DATA: Readonly<Record<string, number>> = {

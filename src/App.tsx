@@ -14,6 +14,7 @@ import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
 import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
 import { BeggarRedEnvelopeGate } from "./features/lobby/BeggarRedEnvelopeGate";
+import { RedeemApprovalGate } from "./features/lobby/RedeemApprovalGate";
 import { DailyLoginGate } from "./features/dailyLogin/DailyLoginGate";
 import { DailyLoginModalHost } from "./features/dailyLogin/DailyLoginModalHost";
 import { DailyLoginProvider } from "./features/dailyLogin/DailyLoginProvider";
@@ -120,6 +121,7 @@ export default function App() {
                       <IosInstallGuide />
                       <NewbieTutorialGate />
                       <BeggarRedEnvelopeGate />
+                      <RedeemApprovalGate />
                       <DailyLoginGate />
                       <DailyLoginModalHost />
                       <GeoGate />

@@ -45,6 +45,8 @@ export const GATEWAY_API_MEGA_ACCOUNT_BINDING = 362
 export const GATEWAY_API_LIST_WITHDRAW_ORDERS = 621
 /** 建立提現訂單；body 為 megaman.CreateWithdrawOrderReq */
 export const GATEWAY_API_CREATE_WITHDRAW_ORDER = 623
+/** 取消提現訂單；body 為 megaman.CancelRedeemOrderReq */
+export const GATEWAY_API_CANCEL_REDEEM_ORDER = 624
 
 /** 伺服器推播外層：內層 MsgResp（見 megaman.MsgResp） */
 export const GATEWAY_API_SEND_MESSAGE_PUSH = 1000
