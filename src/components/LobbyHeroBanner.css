@@ -12,6 +12,11 @@
   aspect-ratio: 1164 / 1080;
   height: auto;
   background: #000;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .lobby-hero-banner__img--base,
@@ -23,6 +28,8 @@
   height: 100%;
   object-fit: cover;
   object-position: center center;
+  pointer-events: none;
+  -webkit-user-drag: none;
 }
 
 .lobby-hero-banner__img--base {

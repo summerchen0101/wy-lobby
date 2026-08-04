@@ -18,6 +18,7 @@ import i18n from './i18n/i18n'
 import App from './App.tsx'
 import { agentDebugLog } from './debug/agentDebugIngest'
 import { registerChunkLoadRecoveryHandlers } from './lib/chunkLoadRecovery'
+import { registerMediaProtection } from './lib/mediaProtection'
 import { registerSpaServiceWorkerOnLoad } from './lib/spaServiceWorker'
 
 applyThemeFromEnv()
@@ -34,6 +35,7 @@ function preventNativeDrag(): void {
   )
 }
 preventNativeDrag()
+registerMediaProtection()
 
 // #region agent log
 function registerAgentDebugLifecycle(): void {
