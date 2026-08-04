@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useAuth } from "../../auth/useAuth";
 import { useAlert } from "../../components/alert/alertContext";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
 import { formatCompactGcAmount } from "../../lib/formatCompactGcAmount";
@@ -137,6 +138,8 @@ async function fetchDailySignInActivity(
 }
 
 export function DailyLoginProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id?.trim() ?? "";
   const { show } = useAlert();
   const {
     requestRef,
@@ -174,13 +177,13 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const [claimedDailyToday, setClaimedDailyToday] = useState(() =>
-    hasClaimedDailyToday(),
+    hasClaimedDailyToday(userId),
   );
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
-    setClaimedDailyToday(hasClaimedDailyToday());
-  }, [activity]);
+    setClaimedDailyToday(hasClaimedDailyToday(userId));
+  }, [activity, userId]);
 
   useEffect(() => {
     setNowMs(Date.now());
@@ -392,7 +395,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
             : "Rewards claimed!";
 
         if (dailyMissionIds.length > 0) {
-          markDailyClaimedToday();
+          markDailyClaimedToday(userId);
           setClaimedDailyToday(true);
         }
 
@@ -411,6 +414,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       requestRef,
       reload,
       finishClaimSuccess,
+      userId,
     ],
   );
 

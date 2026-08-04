@@ -5,6 +5,7 @@ import {
   buildDailyLoginViewModel,
   buildMockDailyLoginActivity,
   applySameDayDailyClaimCap,
+  inferClaimedDailyTodayFromActivity,
   shouldAutoPopupDailyLogin,
   computeSevenDayWindow,
   enforceSequentialDayStatuses,
@@ -490,6 +491,105 @@ describe("dailyLoginLogic", () => {
     });
     expect(vm?.hasClaimableDaily).toBe(false);
     expect(vm?.days.some((day) => day.status === "claimable")).toBe(false);
+  });
+
+  it("only lights up when actionTimes progress is complete", () => {
+    const now = Date.UTC(2026, 6, 18, 12, 0, 0);
+    const dayMs = 86400000;
+    const missions = buildMissionsByDate(3, Date.UTC(2026, 5, 1), (i) => ({
+      collected: false,
+      claimable: false,
+    }));
+    const firstKey = String(Date.UTC(2026, 5, 1));
+    missions![firstKey]!.userDailyMissions = [
+      {
+        dailyMissionID: "1",
+        date: firstKey,
+        actionTimes: 1,
+        achievedActionTimes: 1,
+        isCollected: false,
+        itemID: 1,
+        itemAmount: 1000,
+        sort: "0",
+      },
+    ];
+    const secondKey = String(Date.UTC(2026, 5, 1) + dayMs);
+    missions![secondKey]!.userDailyMissions = [
+      {
+        dailyMissionID: "2",
+        date: secondKey,
+        actionTimes: 0,
+        achievedActionTimes: 1,
+        isCollected: false,
+        itemID: 1,
+        itemAmount: 2000,
+        sort: "0",
+      },
+    ];
+
+    const vm = buildDailyLoginViewModel(
+      buildMockDailyLoginActivity({ UserDailyMissionsByDates: missions }),
+      now,
+    );
+    expect(
+      vm?.days.find((day) => day.dayNumber === 1)?.status,
+    ).toBe("claimable");
+    expect(
+      vm?.days.find((day) => day.dayNumber === 2)?.status,
+    ).toBe("locked");
+  });
+
+  it("inferClaimedDailyTodayFromActivity is true when next pending progress is incomplete", () => {
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    const dayMs = 86400000;
+    const missions = buildMissionsByDate(3, now - 2 * dayMs, (i) => ({
+      collected: i === 0,
+      claimable: false,
+    }));
+    const activity = buildMockDailyLoginActivity({
+      UserDailyMissionsByDates: missions,
+    });
+    expect(inferClaimedDailyTodayFromActivity(activity)).toBe(true);
+  });
+
+  it("inferClaimedDailyTodayFromActivity is false when next pending is ready to claim", () => {
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    const missions = buildMissionsByDate(3, now, (i) => ({
+      collected: false,
+      claimable: i === 0,
+    }));
+    const activity = buildMockDailyLoginActivity({
+      UserDailyMissionsByDates: missions,
+    });
+    expect(inferClaimedDailyTodayFromActivity(activity)).toBe(false);
+  });
+
+  it("locks next day when session claim cap survives logout re-login", () => {
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    const dayMs = 86400000;
+    const missions = buildMissionsByDate(7, now - 3 * dayMs, (i) => ({
+      collected: i === 0,
+      claimable: i === 1,
+    }));
+    const activity = buildMockDailyLoginActivity({
+      UserDailyMissionsByDates: missions,
+    });
+    const withoutCap = buildDailyLoginViewModel(activity, now, {
+      claimedDailyToday: false,
+    });
+    expect(
+      withoutCap?.days.some(
+        (day) => day.dayNumber === 2 && day.status === "claimable",
+      ),
+    ).toBe(true);
+
+    const withCap = buildDailyLoginViewModel(activity, now, {
+      claimedDailyToday: true,
+    });
+    expect(withCap?.hasClaimableDaily).toBe(false);
+    expect(withCap?.days.some((day) => day.status === "claimable")).toBe(
+      false,
+    );
   });
 
   it("applySameDayDailyClaimCap locks remaining claimable slots", () => {

@@ -489,6 +489,37 @@ export function formatDateRangeEtLabel(
   return `${fmt(startMs)} - ${fmt(endMs)} (ET)`;
 }
 
+/**
+ * Infer same-day daily claim from GET_ACTIVITY when session storage was cleared
+ * (e.g. logout → login). Cumulative sign-in: the next uncollected mission still
+ * has actionTimes < target after today's check-in (login syncs only the current slot).
+ */
+export function inferClaimedDailyTodayFromActivity(
+  activity: ActivityDataDecoded,
+): boolean {
+  const flat = flattenDailyMissions(activity);
+  if (flat.length === 0) return false;
+
+  const firstPending = flat.find((row) => !row.mission.isCollected);
+  if (!firstPending) return false;
+
+  const hasPriorCollected = flat.some(
+    (row) => row.index < firstPending.index && row.mission.isCollected,
+  );
+  if (!hasPriorCollected) return false;
+
+  const { progress, target } = getMissionProgress(firstPending.mission);
+  return progress < target;
+}
+
+/** @deprecated Cumulative sign-in: mission date is not a claim gate. */
+export function applyMissionDateClaimGate(
+  days: DayViewModel[],
+  _nowMs: number = Date.now(),
+): DayViewModel[] {
+  return days;
+}
+
 /** 每天僅能領一次每日簽到：當日已領後其餘「可領」格改為 locked。 */
 export function applySameDayDailyClaimCap(
   days: DayViewModel[],
@@ -610,9 +641,12 @@ export function buildDailyLoginViewModel(
 
   const flat = flattenDailyMissions(activity);
   const { days: rawDays } = computeSevenDayWindow(flat);
+  const claimedDailyToday =
+    options?.claimedDailyToday === true ||
+    inferClaimedDailyTodayFromActivity(activity);
   const days = applySameDayDailyClaimCap(
     enforceSequentialDayStatuses(rawDays),
-    options?.claimedDailyToday === true,
+    claimedDailyToday,
   );
   const creditRewards = findClaimableCreditRewards(activity);
   const hasClaimableDaily =
