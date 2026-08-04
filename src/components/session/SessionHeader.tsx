@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
@@ -23,12 +23,13 @@ import "./SessionChrome.css";
 import "../profile/ProfileAvatarFrame.css";
 
 export function SessionHeader() {
-  const { user } = useAuth();
+  const { user, mergeUser } = useAuth();
   const { show } = useAlert();
   const { requestRef } = useGatewayLobby();
   const { avatarId: storedAvatarId } = useProfileAvatarId();
   const [avatarImgFailed, setAvatarImgFailed] = useState(false);
   const [walletSwitchBusy, setWalletSwitchBusy] = useState(false);
+  const [walletThumbTransition, setWalletThumbTransition] = useState(false);
   const { activeWallet, setActiveWallet } = useWallet();
   const { amount } = getWalletDisplay(user ?? undefined, activeWallet);
 
@@ -45,6 +46,13 @@ export function SessionHeader() {
   useEffect(() => {
     setAvatarImgFailed(false);
   }, [displayAvatarId]);
+
+  /** 從 /play 返回時 header 會 remount；略過首幀 transform transition，避免幣種滑塊重播動畫。 */
+  useLayoutEffect(() => {
+    setWalletThumbTransition(false);
+    const id = requestAnimationFrame(() => setWalletThumbTransition(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   async function toggleWallet() {
     const next: ActiveWallet = activeWallet === "GC" ? "SC" : "GC";
@@ -71,6 +79,7 @@ export function SessionHeader() {
         );
       }
       setActiveWallet(next);
+      mergeUser({ lobbyWalletType: next });
     } catch (e) {
       show(e instanceof Error ? e.message : "Could not switch wallet", {
         variant: "error",
@@ -155,7 +164,10 @@ export function SessionHeader() {
             <span
               className={
                 "session-header__wallet-thumb" +
-                (activeWallet === "SC" ? " is-sc" : " is-gc")
+                (activeWallet === "SC" ? " is-sc" : " is-gc") +
+                (walletThumbTransition
+                  ? " session-header__wallet-thumb--animate"
+                  : "")
               }>
               <img
                 src={getCurrencyIconUrl(activeWallet)}

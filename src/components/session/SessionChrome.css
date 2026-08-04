@@ -336,8 +336,11 @@
   padding: 0rem;
   box-sizing: border-box;
   line-height: 0;
-  transition: transform 0.28s ease;
   will-change: transform;
+}
+
+.session-header__wallet-thumb--animate {
+  transition: transform 0.28s ease;
 }
 
 .session-header__wallet-thumb-img {
@@ -550,6 +553,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .session-header__wallet-thumb--animate {
+    transition: none;
+  }
+
   .session-footer__icon {
     transition: none;
   }
