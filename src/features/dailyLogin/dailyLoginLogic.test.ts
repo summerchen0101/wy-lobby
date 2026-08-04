@@ -496,7 +496,7 @@ describe("dailyLoginLogic", () => {
   it("only lights up when actionTimes progress is complete", () => {
     const now = Date.UTC(2026, 6, 18, 12, 0, 0);
     const dayMs = 86400000;
-    const missions = buildMissionsByDate(3, Date.UTC(2026, 5, 1), (i) => ({
+    const missions = buildMissionsByDate(3, Date.UTC(2026, 5, 1), () => ({
       collected: false,
       claimable: false,
     }));

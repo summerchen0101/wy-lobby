@@ -513,10 +513,7 @@ export function inferClaimedDailyTodayFromActivity(
 }
 
 /** @deprecated Cumulative sign-in: mission date is not a claim gate. */
-export function applyMissionDateClaimGate(
-  days: DayViewModel[],
-  _nowMs: number = Date.now(),
-): DayViewModel[] {
+export function applyMissionDateClaimGate(days: DayViewModel[]): DayViewModel[] {
   return days;
 }
 
