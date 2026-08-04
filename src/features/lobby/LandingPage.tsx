@@ -1311,6 +1311,39 @@ export function LandingPage() {
                     ) : null}
                   </div>
                 </div>
+                {thirdPartyGamesEnabled ? (
+                  <div className="lobby-provider-tab">
+                    <button
+                      ref={providerTabBtnRef}
+                      id={lobbyTabDomId("providers")}
+                      type="button"
+                      className={
+                        "lobby-game-filter__tab lobby-game-filter__tab--providers" +
+                        (lobbyFilter === "providers" || providerMenuOpen
+                          ? " is-active"
+                          : "") +
+                        (providerMenuOpen ? " is-menu-open" : "")
+                      }
+                      role="tab"
+                      aria-selected={
+                        lobbyFilter === "providers" || providerMenuOpen
+                      }
+                      aria-controls="lobby-games-panel"
+                      aria-haspopup="listbox"
+                      aria-expanded={providerMenuOpen}
+                      tabIndex={
+                        lobbyFilter === "providers" || providerMenuOpen ? 0 : -1
+                      }
+                      onClick={onProvidersTabClick}>
+                      <span>PROVIDERS</span>
+                      <ChevronDown
+                        className="lobby-provider-tab__chevron"
+                        strokeWidth={2.5}
+                        aria-hidden
+                      />
+                    </button>
+                  </div>
+                ) : null}
                 <div
                   ref={setLobbyGameFilterContainerRef}
                   className="lobby-game-filter"
@@ -1322,41 +1355,7 @@ export function LandingPage() {
                   onPointerCancel={onLobbyGameFilterPointerCancel}
                   onLostPointerCapture={onLobbyGameFilterLostPointerCapture}>
                   {lobbyFilterTabsList.map(({ id, label }) =>
-                    id === "providers" && thirdPartyGamesEnabled ? (
-                      <div key={id} className="lobby-provider-tab">
-                        <button
-                          ref={providerTabBtnRef}
-                          id={lobbyTabDomId(id)}
-                          type="button"
-                          className={
-                            "lobby-game-filter__tab lobby-game-filter__tab--providers" +
-                            (lobbyFilter === "providers" || providerMenuOpen
-                              ? " is-active"
-                              : "") +
-                            (providerMenuOpen ? " is-menu-open" : "")
-                          }
-                          role="tab"
-                          aria-selected={
-                            lobbyFilter === "providers" || providerMenuOpen
-                          }
-                          aria-controls="lobby-games-panel"
-                          aria-haspopup="listbox"
-                          aria-expanded={providerMenuOpen}
-                          tabIndex={
-                            lobbyFilter === "providers" || providerMenuOpen
-                              ? 0
-                              : -1
-                          }
-                          onClick={onProvidersTabClick}>
-                          <span>{label}</span>
-                          <ChevronDown
-                            className="lobby-provider-tab__chevron"
-                            strokeWidth={2.5}
-                            aria-hidden
-                          />
-                        </button>
-                      </div>
-                    ) : isProviderTabId(id) ? (
+                    id === "providers" ? null : isProviderTabId(id) ? (
                       <button
                         key={id}
                         id={lobbyTabDomId(id)}
