@@ -7,6 +7,7 @@ import {
   normalizeWireTimestampToSec,
   parseWireInt64,
 } from "../../realtime/activityLobbyWire";
+import { applyDailyLoginVipBonus } from "./dailyLoginVipBonus";
 
 export type MissionStatus = "locked" | "claimable" | "claimed";
 
@@ -82,6 +83,14 @@ export function getMissionStatus(m: UserDailyMissionDecoded): MissionStatus {
   // 小強：登入才會把 actionTimes 從 0 改 1；0 表示尚未完成
   if (progress <= 0 || progress < target) return "locked";
   return "claimable";
+}
+
+/** xlsx: actionTimes (progress) >= achievedActionTimes (required) */
+export function isMissionThresholdMet(
+  m: UserDailyMissionDecoded,
+): boolean {
+  const { progress, target } = getMissionProgress(m);
+  return progress >= target;
 }
 
 export function isMissionClaimable(m: UserDailyMissionDecoded): boolean {
@@ -203,7 +212,10 @@ export function flattenDailyMissions(
   return flat;
 }
 
-function rewardsFromMissions(missions: UserDailyMissionDecoded[]): DayReward[] {
+function rewardsFromMissions(
+  missions: UserDailyMissionDecoded[],
+  vipLevel: number = 0,
+): DayReward[] {
   const rewards: DayReward[] = [];
   for (const m of missions) {
     const itemID = parseWireInt64(m.itemID) ?? 0;
@@ -211,7 +223,7 @@ function rewardsFromMissions(missions: UserDailyMissionDecoded[]): DayReward[] {
     if (itemID <= 0 || itemAmount <= 0) continue;
     rewards.push({
       itemID,
-      itemAmount,
+      itemAmount: applyDailyLoginVipBonus(itemAmount, itemID, vipLevel),
       wallet: walletFromItemId(itemID),
     });
   }
@@ -268,20 +280,23 @@ function collectClaimableMissionIds(
 function dayViewModelFromGroup(
   group: DayGroup,
   dayNumber: number,
+  displayStatus: MissionStatus,
+  vipLevel: number = 0,
 ): DayViewModel {
-  const status = dayStatusFromMissions(group.missions);
+  const rawStatus = dayStatusFromMissions(group.missions);
   const claimableMissionIds = collectClaimableMissionIds(
     group.missions,
-    status,
+    displayStatus === "claimable" ? "claimable" : rawStatus,
   );
   return {
     dayNumber,
     index: group.indices[0] ?? dayNumber - 1,
     missions: group.missions,
     dateMs: group.dateMs,
-    status,
-    rewards: rewardsFromMissions(group.missions),
-    claimableMissionIds,
+    status: displayStatus,
+    rewards: rewardsFromMissions(group.missions, vipLevel),
+    claimableMissionIds:
+      displayStatus === "claimable" ? claimableMissionIds : [],
   };
 }
 
@@ -289,26 +304,124 @@ function createPlaceholderDayGroup(dateMs: number): DayGroup {
   return { dateMs, missions: [], indices: [] };
 }
 
-function computeActiveDayIndex(groups: DayGroup[]): number {
-  const claimableIdx = groups.findIndex(
-    (g) => dayStatusFromMissions(g.missions) === "claimable",
-  );
-  if (claimableIdx >= 0) return claimableIdx;
-
-  const nextPendingIdx = groups.findIndex(
-    (g) => dayStatusFromMissions(g.missions) === "locked",
-  );
-  if (nextPendingIdx >= 0) return nextPendingIdx;
-
-  const lastClaimedIdx = groups.reduce(
-    (acc, g, i) =>
-      dayStatusFromMissions(g.missions) === "claimed" ? i : acc,
-    -1,
-  );
-  if (lastClaimedIdx >= 0) {
-    return Math.min(lastClaimedIdx + 1, Math.max(0, groups.length - 1));
+/**
+ * 累計簽到今日點位：已領日數 + 目前可領日數（積壓最多 2）− 1。
+ * 不用任務 date；避免 API 誤標未來多筆可領時把點位推到最後。
+ */
+export function findCumulativeProgressDayGroupIndex(
+  groups: DayGroup[],
+): number {
+  let collected = 0;
+  for (const group of groups) {
+    if (dayStatusFromMissions(group.missions) === "claimed") {
+      collected++;
+      continue;
+    }
+    break;
   }
-  return 0;
+  const leadingClaimable = countLeadingCollectableDayGroupsFromGroups(groups);
+  if (leadingClaimable <= 0) {
+    return Math.max(0, collected - 1);
+  }
+  const activeSpan = leadingClaimable === 2 ? 2 : 1;
+  return collected + activeSpan - 1;
+}
+
+export function findCumulativeProgressDayIndexFromFlat(
+  flat: FlatMission[],
+): number {
+  return findCumulativeProgressDayGroupIndex(groupFlatIntoDayGroups(flat));
+}
+
+/** 從第一筆未領起，連續可領的「日」數（GC+SC 同日只算 1 日）。 */
+export function countLeadingCollectableDayGroupsFromGroups(
+  groups: DayGroup[],
+): number {
+  let count = 0;
+  for (const group of groups) {
+    const status = dayStatusFromMissions(group.missions);
+    if (status === "claimed") continue;
+    if (status === "claimable") {
+      count++;
+      continue;
+    }
+    break;
+  }
+  return count;
+}
+
+export function countLeadingCollectableDayGroupsFromFlat(
+  flat: FlatMission[],
+): number {
+  return countLeadingCollectableDayGroupsFromGroups(
+    groupFlatIntoDayGroups(flat),
+  );
+}
+
+export function countLeadingCollectableDayGroups(
+  activity: ActivityDataDecoded,
+): number {
+  return countLeadingCollectableDayGroupsFromFlat(flattenDailyMissions(activity));
+}
+
+function computeLitClaimableDayIndices(groups: DayGroup[]): Set<number> {
+  const leading = countLeadingCollectableDayGroupsFromGroups(groups);
+  const maxLit = leading === 2 ? 2 : 1;
+  const lit = new Set<number>();
+  let count = 0;
+  for (let i = 0; i < groups.length; i++) {
+    const status = dayStatusFromMissions(groups[i]!.missions);
+    if (status === "claimed") continue;
+    if (status === "claimable") {
+      if (count < maxLit) {
+        lit.add(i);
+        count++;
+      }
+      continue;
+    }
+    break;
+  }
+  return lit;
+}
+
+function displayStatusForDayGroup(
+  group: DayGroup,
+  groupIndex: number,
+  cumulativeProgressIndex: number,
+  litClaimableIndices: Set<number>,
+): MissionStatus {
+  if (groupIndex > cumulativeProgressIndex) return "locked";
+  const raw = dayStatusFromMissions(group.missions);
+  if (raw === "claimable") {
+    return litClaimableIndices.has(groupIndex) ? "claimable" : "locked";
+  }
+  return raw;
+}
+
+function applyDisplayDayStatusesToWindow(
+  windowGroups: DayGroup[],
+  windowStartIndex: number,
+  allDayGroups: DayGroup[],
+  vipLevel: number,
+): DayViewModel[] {
+  const cumulativeProgressIndex =
+    findCumulativeProgressDayGroupIndex(allDayGroups);
+  const litClaimableIndices = computeLitClaimableDayIndices(allDayGroups);
+
+  return windowGroups.map((group, i) => {
+    const groupIndex = windowStartIndex + i;
+    const status = displayStatusForDayGroup(
+      group,
+      groupIndex,
+      cumulativeProgressIndex,
+      litClaimableIndices,
+    );
+    return dayViewModelFromGroup(group, i + 1, status, vipLevel);
+  });
+}
+
+function computeActiveDayIndex(groups: DayGroup[]): number {
+  return findCumulativeProgressDayGroupIndex(groups);
 }
 
 function isWindowFullyClaimed(
@@ -441,6 +554,7 @@ export function groupFlatMissionsByDate(
 
 export function computeSevenDayWindow(
   flat: FlatMission[],
+  vipLevel: number = 0,
 ): {
   startIndex: number;
   days: DayViewModel[];
@@ -450,7 +564,9 @@ export function computeSevenDayWindow(
     const placeholders = padDayGroupsToSeven([], [], 0);
     return {
       startIndex: 0,
-      days: placeholders.map((g, i) => dayViewModelFromGroup(g, i + 1)),
+      days: placeholders.map((g, i) =>
+        dayViewModelFromGroup(g, i + 1, "locked", vipLevel),
+      ),
     };
   }
 
@@ -464,7 +580,12 @@ export function computeSevenDayWindow(
 
   return {
     startIndex,
-    days: windowGroups.map((g, i) => dayViewModelFromGroup(g, i + 1)),
+    days: applyDisplayDayStatusesToWindow(
+      windowGroups,
+      cycleStart,
+      allDayGroups,
+      vipLevel,
+    ),
   };
 }
 
@@ -489,10 +610,20 @@ export function formatDateRangeEtLabel(
   return `${fmt(startMs)} - ${fmt(endMs)} (ET)`;
 }
 
+export function countCollectableMissionsFromFlat(flat: FlatMission[]): number {
+  return flat.filter((row) => isMissionCollectEligible(row.mission)).length;
+}
+
+export function countCollectableMissions(
+  activity: ActivityDataDecoded,
+): number {
+  return countCollectableMissionsFromFlat(flattenDailyMissions(activity));
+}
+
 /**
- * Infer same-day daily claim from GET_ACTIVITY when session storage was cleared
- * (e.g. logout → login). Cumulative sign-in: the next uncollected mission still
- * has actionTimes < target after today's check-in (login syncs only the current slot).
+ * Infer same-day daily claim from GET_ACTIVITY when local storage was cleared.
+ * Cumulative sign-in: the next uncollected mission still has actionTimes < target
+ * after today's check-in (login syncs only the current slot).
  */
 export function inferClaimedDailyTodayFromActivity(
   activity: ActivityDataDecoded,
@@ -500,8 +631,14 @@ export function inferClaimedDailyTodayFromActivity(
   const flat = flattenDailyMissions(activity);
   if (flat.length === 0) return false;
 
+  const collectableCount = countCollectableMissionsFromFlat(flat);
+
   const firstPending = flat.find((row) => !row.mission.isCollected);
-  if (!firstPending) return false;
+  if (!firstPending) {
+    const collectedCount = flat.filter((row) => row.mission.isCollected).length;
+    const achievedCredit = parseWireInt64(activity.achievedCreditAmount) ?? 0;
+    return collectedCount > 0 && achievedCredit >= collectedCount;
+  }
 
   const hasPriorCollected = flat.some(
     (row) => row.index < firstPending.index && row.mission.isCollected,
@@ -509,7 +646,15 @@ export function inferClaimedDailyTodayFromActivity(
   if (!hasPriorCollected) return false;
 
   const { progress, target } = getMissionProgress(firstPending.mission);
-  return progress < target;
+  if (progress < target) return true;
+
+  if (collectableCount === 0) {
+    const collectedCount = flat.filter((row) => row.mission.isCollected).length;
+    const achievedCredit = parseWireInt64(activity.achievedCreditAmount) ?? 0;
+    return collectedCount > 0 && achievedCredit >= collectedCount;
+  }
+
+  return false;
 }
 
 /** @deprecated Cumulative sign-in: mission date is not a claim gate. */
@@ -517,14 +662,66 @@ export function applyMissionDateClaimGate(days: DayViewModel[]): DayViewModel[] 
   return days;
 }
 
-/** 每天僅能領一次每日簽到：當日已領後其餘「可領」格改為 locked。 */
+export type SameDayDailyClaimCapState = {
+  claimedDailyToday: boolean;
+  collectableCount: number;
+  initialCollectableCount: number | null;
+};
+
+export function shouldApplySameDayDailyClaimCap(
+  state: SameDayDailyClaimCapState,
+): boolean {
+  if (!state.claimedDailyToday) return false;
+
+  const { collectableCount, initialCollectableCount } = state;
+  if (
+    initialCollectableCount != null &&
+    initialCollectableCount === 2 &&
+    collectableCount > 0
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+/** 當日已領後其餘「可領」格改為 locked；積壓模式 (>=2) 可連續領完。 */
 export function applySameDayDailyClaimCap(
   days: DayViewModel[],
-  claimedDailyToday: boolean,
+  state: SameDayDailyClaimCapState | boolean,
 ): DayViewModel[] {
-  if (!claimedDailyToday) return days;
+  const capState: SameDayDailyClaimCapState =
+    typeof state === "boolean"
+      ? {
+          claimedDailyToday: state,
+          collectableCount: 0,
+          initialCollectableCount: null,
+        }
+      : state;
+  if (!shouldApplySameDayDailyClaimCap(capState)) return days;
   return days.map((day) => {
     if (day.status !== "claimable") return day;
+    return {
+      ...day,
+      status: "locked" as const,
+      claimableMissionIds: [],
+    };
+  });
+}
+
+/** 積壓 (恰好 2 日) 時亮 2 日；否則只亮最早 1 日。 */
+export function applyBacklogAwareDayStatuses(
+  days: DayViewModel[],
+  leadingCollectableDayGroups: number,
+): DayViewModel[] {
+  const maxLit = leadingCollectableDayGroups === 2 ? 2 : 1;
+  let lit = 0;
+  return days.map((day) => {
+    if (day.status !== "claimable") return day;
+    if (lit < maxLit) {
+      lit++;
+      return day;
+    }
     return {
       ...day,
       status: "locked" as const,
@@ -565,6 +762,7 @@ export function enforceSequentialDayStatuses(
 
 export function findClaimableCreditRewards(
   activity: ActivityDataDecoded,
+  vipLevel: number = 0,
 ): CreditRewardViewModel[] {
   const achieved = parseWireInt64(activity.achievedCreditAmount) ?? 0;
   const rows = activity.dailyMissionCreditRewards ?? [];
@@ -582,11 +780,12 @@ export function findClaimableCreditRewards(
     const byWallet = new Map<"GC" | "SC", DayReward & { isCollected: boolean }>();
     for (const row of thresholdRows) {
       const itemID = parseWireInt64(row.itemID) ?? 0;
+      const itemAmount = parseWireInt64(row.itemAmount) ?? 0;
       const wallet = walletFromItemId(itemID);
       if (byWallet.has(wallet)) continue;
       byWallet.set(wallet, {
         itemID,
-        itemAmount: parseWireInt64(row.itemAmount) ?? 0,
+        itemAmount: applyDailyLoginVipBonus(itemAmount, itemID, vipLevel),
         wallet,
         isCollected: Boolean(row.isCollected),
       });
@@ -611,15 +810,22 @@ export function findClaimableCreditRewards(
 
 export function canClaimTodayUtc(
   flat: FlatMission[],
+  vipLevel: number = 0,
 ): boolean {
   if (flat.length === 0) return false;
-  const { days } = computeSevenDayWindow(flat);
-  return enforceSequentialDayStatuses(days).some((day) => isDayCollectable(day));
+  const { days } = computeSevenDayWindow(flat, vipLevel);
+  return days.some((day) => isDayCollectable(day));
 }
 
 export type BuildDailyLoginViewModelOptions = {
   /** 當日 ET 是否已成功領取過每日簽到（每天僅能打卡一次）。 */
   claimedDailyToday?: boolean;
+  /** 本 ET 日首次 GET_ACTIVITY 時的連續可領日數（積壓判斷）。 */
+  initialCollectableCount?: number | null;
+  /** 快取資料刷新中：不顯示 claimable 避免閃爍。 */
+  suppressClaimableFromStaleCache?: boolean;
+  /** 玩家 VIP 等級（獎勵顯示加乘）。 */
+  vipLevel?: number;
 };
 
 export function buildDailyLoginViewModel(
@@ -630,6 +836,7 @@ export function buildDailyLoginViewModel(
   const activityId = String(activity.activityID ?? "").trim();
   if (!activityId) return null;
 
+  const vipLevel = options?.vipLevel ?? 0;
   const inDisplayWindow = isActivityInDisplayWindow(
     activity.displayStartTime,
     activity.displayEndTime,
@@ -637,15 +844,28 @@ export function buildDailyLoginViewModel(
   );
 
   const flat = flattenDailyMissions(activity);
-  const { days: rawDays } = computeSevenDayWindow(flat);
+  const leadingCollectableDayGroups =
+    countLeadingCollectableDayGroupsFromFlat(flat);
+  const { days: rawDays } = computeSevenDayWindow(flat, vipLevel);
   const claimedDailyToday =
     options?.claimedDailyToday === true ||
     inferClaimedDailyTodayFromActivity(activity);
-  const days = applySameDayDailyClaimCap(
-    enforceSequentialDayStatuses(rawDays),
+  let days = applySameDayDailyClaimCap(rawDays, {
     claimedDailyToday,
-  );
-  const creditRewards = findClaimableCreditRewards(activity);
+    collectableCount: leadingCollectableDayGroups,
+    initialCollectableCount: options?.initialCollectableCount ?? null,
+  });
+  if (options?.suppressClaimableFromStaleCache) {
+    days = days.map((day) => {
+      if (day.status !== "claimable") return day;
+      return {
+        ...day,
+        status: "locked" as const,
+        claimableMissionIds: [],
+      };
+    });
+  }
+  const creditRewards = findClaimableCreditRewards(activity, vipLevel);
   const hasClaimableDaily =
     inDisplayWindow && days.some((day) => isDayCollectable(day));
   const hasClaimableCredit =

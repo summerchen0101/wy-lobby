@@ -39,12 +39,21 @@ describe("dailyLoginCache", () => {
   });
 
   it("persists activity snapshot and id for instant reopen after refresh", () => {
-    expect(readCachedDailyLoginActivity()).toBeNull();
-    writeCachedDailyLoginActivity(sampleActivity);
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    expect(readCachedDailyLoginActivity(now)).toBeNull();
+    writeCachedDailyLoginActivity(sampleActivity, now);
     expect(readCachedDailyLoginActivityId()).toBe("9001");
-    expect(readCachedDailyLoginActivity()).toEqual(sampleActivity);
+    expect(readCachedDailyLoginActivity(now)).toEqual(sampleActivity);
     clearCachedDailyLoginActivity();
-    expect(readCachedDailyLoginActivity()).toBeNull();
+    expect(readCachedDailyLoginActivity(now)).toBeNull();
     expect(readCachedDailyLoginActivityId()).toBeNull();
+  });
+
+  it("discards snapshot from a previous ET calendar day", () => {
+    const dayOne = Date.UTC(2026, 6, 15, 12, 0, 0);
+    const dayTwo = Date.UTC(2026, 6, 16, 12, 0, 0);
+    writeCachedDailyLoginActivity(sampleActivity, dayOne);
+    expect(readCachedDailyLoginActivity(dayOne)).toEqual(sampleActivity);
+    expect(readCachedDailyLoginActivity(dayTwo)).toBeNull();
   });
 });

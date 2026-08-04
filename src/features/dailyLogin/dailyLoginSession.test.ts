@@ -2,15 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearDailyLoginAutoPopupSession,
   clearDailyLoginClaimRecord,
+  getInitialCollectableCount,
   hasClaimedDailyToday,
   markDailyClaimedToday,
   markDailyLoginAutoPopupShown,
+  recordInitialCollectableCount,
   wasDailyLoginAutoPopupShown,
 } from "./dailyLoginSession";
 
-function installSessionStorageMock(): void {
+function installLocalStorageMock(): void {
   const store = new Map<string, string>();
-  vi.stubGlobal("sessionStorage", {
+  vi.stubGlobal("localStorage", {
     getItem: (k: string) => store.get(k) ?? null,
     setItem: (k: string, v: string) => {
       store.set(k, v);
@@ -26,7 +28,7 @@ function installSessionStorageMock(): void {
 
 describe("dailyLoginSession", () => {
   beforeEach(() => {
-    installSessionStorageMock();
+    installLocalStorageMock();
   });
 
   afterEach(() => {
@@ -50,7 +52,7 @@ describe("dailyLoginSession", () => {
     expect(wasDailyLoginAutoPopupShown("42")).toBe(false);
   });
 
-  it("tracks same-day daily claim cap in ET per user", () => {
+  it("tracks same-day daily claim cap in ET per user via localStorage", () => {
     const now = Date.UTC(2026, 6, 15, 12, 0, 0);
     expect(hasClaimedDailyToday("42", now)).toBe(false);
     markDailyClaimedToday("42", now);
@@ -68,13 +70,21 @@ describe("dailyLoginSession", () => {
   });
 
   it("uses America/New_York (ET) for same-day claim cap, not local/UTC midnight", () => {
-    // 2026-07-16 03:30 UTC = 2026-07-15 23:30 ET (still July 15)
     const lateEtSameDay = Date.UTC(2026, 6, 16, 3, 30, 0);
-    // 2026-07-16 05:00 UTC = 2026-07-16 01:00 ET (rolled to July 16)
     const nextEtDay = Date.UTC(2026, 6, 16, 5, 0, 0);
 
     markDailyClaimedToday("42", lateEtSameDay);
     expect(hasClaimedDailyToday("42", lateEtSameDay)).toBe(true);
     expect(hasClaimedDailyToday("42", nextEtDay)).toBe(false);
+  });
+
+  it("records initial collectable count once per ET day", () => {
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    expect(getInitialCollectableCount("42", now)).toBeNull();
+    recordInitialCollectableCount("42", 2, now);
+    expect(getInitialCollectableCount("42", now)).toBe(2);
+    recordInitialCollectableCount("42", 5, now);
+    expect(getInitialCollectableCount("42", now)).toBe(2);
+    expect(getInitialCollectableCount("42", now + 86400000)).toBeNull();
   });
 });
