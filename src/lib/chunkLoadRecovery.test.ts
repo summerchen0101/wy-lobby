@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as iosOrientation from "./iosOrientationStabilizer";
 import {
   isChunkLoadError,
   reloadForStaleChunk,
@@ -30,6 +31,7 @@ describe("chunkLoadRecovery", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -60,6 +62,17 @@ describe("chunkLoadRecovery", () => {
     vi.advanceTimersByTime(10_001);
     expect(reloadForStaleChunk("lazy-import")).toBe(true);
     expect(reload).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips reload during ios orientation grace", () => {
+    const reload = vi.fn();
+    vi.stubGlobal("window", { location: { reload } });
+    vi.spyOn(iosOrientation, "isWithinIosOrientationGrace").mockReturnValue(
+      true,
+    );
+
+    expect(reloadForStaleChunk("lazy-import")).toBe(false);
+    expect(reload).not.toHaveBeenCalled();
   });
 
   it("registers vite preload and unhandledrejection handlers", () => {

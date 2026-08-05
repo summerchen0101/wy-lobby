@@ -18,11 +18,13 @@ import i18n from './i18n/i18n'
 import App from './App.tsx'
 import { agentDebugLog } from './debug/agentDebugIngest'
 import { registerChunkLoadRecoveryHandlers } from './lib/chunkLoadRecovery'
+import { registerIosOrientationChangeMarker } from './lib/iosOrientationStabilizer'
 import { registerMediaProtection } from './lib/mediaProtection'
 import { registerSpaServiceWorkerOnLoad } from './lib/spaServiceWorker'
 
 applyThemeFromEnv()
 registerChunkLoadRecoveryHandlers()
+registerIosOrientationChangeMarker()
 
 function preventNativeDrag(): void {
   if (typeof document === 'undefined') return

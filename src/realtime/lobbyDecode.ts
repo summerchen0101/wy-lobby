@@ -50,6 +50,19 @@ function numFromWire(v: unknown): number | undefined {
   return undefined;
 }
 
+/** LOBBY_GET `playerInfo.noviceTeaching.general`：0 = 尚未完成一般新手教學。 */
+export function isNoviceTeachingGeneralDone(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): boolean {
+  const p = lobbyGet?.playerInfo;
+  if (!p || typeof p !== "object") return false;
+  const nt = (p as { noviceTeaching?: { general?: unknown } | null })
+    .noviceTeaching;
+  if (!nt || typeof nt !== "object") return false;
+  const general = numFromWire((nt as { general?: unknown }).general);
+  return general !== undefined && general !== 0;
+}
+
 /** megaman.GameLabel 數值（若 toObject 未轉成字串則用此對應） */
 const GAME_LABEL_NUM_TO_NAME: Record<number, string> = {
   0: "UNKNOWN_LABEL",

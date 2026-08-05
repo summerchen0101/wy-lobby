@@ -7,22 +7,29 @@ import {
   isWelcomeVoiceGateOpen,
   LOBBY_WELCOME_VOICE_GATE_EVENT,
 } from "../../lib/lobbyWelcomeVoiceGate";
+import { isNoviceTeachingGeneralDone } from "../../realtime/lobbyDecode";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { NewbieVideoTutorialOverlay } from "./NewbieVideoTutorialOverlay";
 import { submitNoviceTeachingGeneralDone } from "./submitNoviceTeachingGeneralDone";
-import {
-  isNewbieTutorialMarkedDone,
-  markNewbieTutorialDone,
-} from "./tutorialStorage";
 
 export function NewbieTutorialGate() {
   const { user, ready } = useAuth();
   const { status: geoStatus } = useGeo();
-  const { requestRef, gatewayRequestReady, needsLobbyHydrationOverlay } =
-    useGatewayLobby();
+  const {
+    requestRef,
+    gatewayRequestReady,
+    needsLobbyHydrationOverlay,
+    lobbyGet,
+    refreshLobbyGet,
+  } = useGatewayLobby();
   const [open, setOpen] = useState(false);
   const [welcomeVoiceGateVersion, setWelcomeVoiceGateVersion] = useState(0);
+  const [completedLocally, setCompletedLocally] = useState(false);
   const wasOpenRef = useRef(false);
+
+  useEffect(() => {
+    setCompletedLocally(false);
+  }, [user?.id]);
 
   useEffect(() => {
     if (wasOpenRef.current && !open) {
@@ -39,7 +46,7 @@ export function NewbieTutorialGate() {
   }, []);
 
   useLayoutEffect(() => {
-    if (!ready || !user || isNewbieTutorialMarkedDone()) {
+    if (!ready || !user) {
       setOpen(false);
       return;
     }
@@ -50,6 +57,10 @@ export function NewbieTutorialGate() {
       setOpen(false);
       return;
     }
+    if (completedLocally || isNoviceTeachingGeneralDone(lobbyGet)) {
+      setOpen(false);
+      return;
+    }
     setOpen(true);
   }, [
     ready,
@@ -57,10 +68,12 @@ export function NewbieTutorialGate() {
     geoStatus,
     needsLobbyHydrationOverlay,
     welcomeVoiceGateVersion,
+    completedLocally,
+    lobbyGet,
   ]);
 
   const handleTutorialComplete = useCallback(() => {
-    markNewbieTutorialDone();
+    setCompletedLocally(true);
     setOpen(false);
 
     const wsOk = isWsLobbyGamesEnabled();
@@ -68,17 +81,26 @@ export function NewbieTutorialGate() {
     const userId = user?.id?.trim() ?? "";
 
     if (wsOk && gatewayRequestReady && request && userId && userId !== "0") {
-      void submitNoviceTeachingGeneralDone(request, userId).then((ok) => {
-        if (!ok) {
-          console.warn(
-            "[newbie-tutorial] UPDATE_NOVICE_TEACHING did not return a 2xx code",
-          );
-        }
-      }).catch((err) => {
-        console.warn("[newbie-tutorial] UPDATE_NOVICE_TEACHING failed", err);
-      });
+      void submitNoviceTeachingGeneralDone(request, userId)
+        .then((ok) => {
+          if (!ok) {
+            console.warn(
+              "[newbie-tutorial] UPDATE_NOVICE_TEACHING did not return a 2xx code",
+            );
+            return;
+          }
+          void refreshLobbyGet().catch((err) => {
+            console.warn(
+              "[newbie-tutorial] LOBBY_GET refresh after UPDATE_NOVICE_TEACHING failed",
+              err,
+            );
+          });
+        })
+        .catch((err) => {
+          console.warn("[newbie-tutorial] UPDATE_NOVICE_TEACHING failed", err);
+        });
     }
-  }, [gatewayRequestReady, requestRef, user?.id]);
+  }, [gatewayRequestReady, refreshLobbyGet, requestRef, user?.id]);
 
   return (
     <NewbieVideoTutorialOverlay

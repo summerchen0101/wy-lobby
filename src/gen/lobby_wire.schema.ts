@@ -368,6 +368,10 @@ export default {
               "type": "WalletType",
               "id": 85
             },
+            "noviceTeaching": {
+              "type": "NoviceTeaching",
+              "id": 53
+            },
             "minTxWdraw": {
               "type": "int64",
               "id": 97

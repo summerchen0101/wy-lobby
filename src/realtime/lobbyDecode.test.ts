@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isNoviceTeachingGeneralDone,
   lobbyDecodedGamesToApiGames,
   lobbyThirdPartyListToApiGames,
   type LobbyGetDecoded,
@@ -114,5 +115,28 @@ describe("lobbyThirdPartyListToApiGames", () => {
     expect(items[0]?.subtitle).toBe("M2PLAY");
     expect(items[0]?.provider).toBe("M2PLAY");
     expect(items[0]?.thirdPartyLaunch?.platform).toBe("MICROGAMING");
+  });
+});
+
+describe("isNoviceTeachingGeneralDone", () => {
+  it("returns false when general is 0", () => {
+    const lobbyGet = {
+      playerInfo: { noviceTeaching: { general: 0 } },
+    } as unknown as LobbyGetDecoded;
+    expect(isNoviceTeachingGeneralDone(lobbyGet)).toBe(false);
+  });
+
+  it("returns true when general is 1", () => {
+    const lobbyGet = {
+      playerInfo: { noviceTeaching: { general: 1 } },
+    } as unknown as LobbyGetDecoded;
+    expect(isNoviceTeachingGeneralDone(lobbyGet)).toBe(true);
+  });
+
+  it("returns false when noviceTeaching is missing", () => {
+    const lobbyGet = {
+      playerInfo: { userID: "123" },
+    } as unknown as LobbyGetDecoded;
+    expect(isNoviceTeachingGeneralDone(lobbyGet)).toBe(false);
   });
 });

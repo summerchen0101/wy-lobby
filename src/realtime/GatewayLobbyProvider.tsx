@@ -75,6 +75,7 @@ import { LobbyHydrationGate } from "./LobbyHydrationGate";
 import { getAlertApi } from "../components/alert/alertImperative";
 import { translateGatewayError } from "../i18n/apiErrorMessage";
 import { getWordPlain } from "../wordData/getWord";
+import { isWithinIosOrientationGrace } from "../lib/iosOrientationStabilizer";
 import { mapListProductToShopPack } from "../features/shop/mapListProductToShopPack";
 import type { ShopPack } from "../features/shop/types";
 import type { RedeemOrdersPrefetch } from "./gatewayLobbyContext";
@@ -274,10 +275,15 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     null,
   );
   const lobbyWsBootstrapDoneRef = useRef(lobbyWsBootstrapDone);
+  const lobbyGamesRef = useRef<Game[] | null>(lobbyGames);
 
   useEffect(() => {
     lobbyWsBootstrapDoneRef.current = lobbyWsBootstrapDone;
   }, [lobbyWsBootstrapDone]);
+
+  useEffect(() => {
+    lobbyGamesRef.current = lobbyGames;
+  }, [lobbyGames]);
 
   useEffect(() => {
     return () => {
@@ -383,7 +389,9 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const runLobbyGetRequest = useCallback(
     async (request: GatewayWsRequestFn, options?: { bootstrap?: boolean }) => {
       const executeOnce = async () => {
-        if (wsLobbyEnabled) setLobbyLoading(true);
+        const showLoadingOverlay =
+          wsLobbyEnabled && lobbyGamesRef.current === null;
+        if (showLoadingOverlay) setLobbyLoading(true);
         try {
           const r = await request({
             type: GATEWAY_API_LOBBY_GET,
@@ -444,7 +452,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             }
           }
         } finally {
-          if (wsLobbyEnabled) setLobbyLoading(false);
+          if (showLoadingOverlay) setLobbyLoading(false);
           if (options?.bootstrap) setLobbyWsBootstrapDone(true);
         }
       };
@@ -567,13 +575,16 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
     const tick = () => {
       if (document.visibilityState !== "visible") return;
+      if (isWithinIosOrientationGrace()) return;
       if (gateActive && !lobbyWsBootstrapDoneRef.current) return;
       void refreshLobbyGet();
     };
 
     const id = window.setInterval(tick, wsLobbyGetPollMs);
     const onVisibility = () => {
-      if (document.visibilityState === "visible") void refreshLobbyGet();
+      if (document.visibilityState !== "visible") return;
+      if (isWithinIosOrientationGrace()) return;
+      void refreshLobbyGet();
     };
     document.addEventListener("visibilitychange", onVisibility);
 

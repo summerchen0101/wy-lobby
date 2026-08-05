@@ -1,3 +1,5 @@
+import { isWithinIosOrientationGrace } from "./iosOrientationStabilizer";
+
 const CHUNK_RELOAD_TS_KEY = "ffgt:chunk-reload-ts";
 const CHUNK_RELOAD_COOLDOWN_MS = 10_000;
 
@@ -44,6 +46,13 @@ function errorMessage(error: unknown): string {
  */
 export function reloadForStaleChunk(reason: string): boolean {
   if (typeof window === "undefined") return false;
+
+  if (isWithinIosOrientationGrace()) {
+    console.warn(
+      `[chunk-load] skipped reload (${reason}); ios orientation grace`,
+    );
+    return false;
+  }
 
   const remainingMs = chunkReloadCooldownRemainingMs();
   if (remainingMs > 0) {
