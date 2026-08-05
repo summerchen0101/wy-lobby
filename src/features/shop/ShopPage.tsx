@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { useAlert } from "../../components/alert/alertContext";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
 import { isThirdPartyPaymentEnabled } from "../../lib/env";
-import { usePaymentCallbackListener } from "../payment/usePaymentCallbackListener";
+import { navigateToThirdPartyPayment } from "../../lib/thirdPartyPaymentNavigation";
 import {
   GATEWAY_API_BUY_PRODUCT,
   GATEWAY_API_MEGA_ACCOUNT_BINDING,
@@ -30,8 +31,29 @@ import type {
 } from "./types";
 import { useWordData } from "../../wordData/useWordData";
 import { formatVipPoints } from "../lobby/vipHelpers";
-import { DAILY_LOGIN_AUTO_CLOSE_MS } from "../dailyLogin/dailyLoginFlow";
 import { shopCoinPileSrc } from "./shopCoinPile";
+import { ShopPurchaseRewardAnimation } from "./ShopPurchaseRewardAnimation";
+import {
+  dispatchShopRewardDevPreview,
+  installShopRewardDevMock,
+  parseShopRewardDevQuery,
+  SHOP_REWARD_DEV_MOCK_PACK,
+  SHOP_REWARD_DEV_PREVIEW_EVENT,
+  type ShopRewardDevPreviewDetail,
+} from "./shopRewardDevMock";
+import {
+  clearPendingShopOrder,
+  createPendingShopOrder,
+  isPaymentPushFailure,
+  persistPendingShopOrder,
+  readPendingShopOrder,
+  shouldAcceptPaymentComplete,
+  type PendingShopOrder,
+} from "./shopPaymentSession";
+import {
+  parseShopPaymentState,
+  stripShopPaymentStateParam,
+} from "./shopPaymentReturn";
 import "./ShopPage.css";
 import "../lobby/SessionPageDecor.css";
 
@@ -43,6 +65,8 @@ const BUY_PRODUCT_PAYMENT_TYPE = 0;
 
 export function ShopPage() {
   const w = useWordData();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { show } = useAlert();
   const { token, user, mergeUser } = useAuth();
   const {
@@ -61,8 +85,15 @@ export function ShopPage() {
   const [protectNeedSms, setProtectNeedSms] = useState(false);
   const [bindingBusy, setBindingBusy] = useState(false);
   const [bindingError, setBindingError] = useState<string | null>(null);
-  const [flying, setFlying] = useState(false);
+  const [rewardAnimPack, setRewardAnimPack] = useState<ShopPack | null>(null);
+  const [pendingOrder, setPendingOrder] = useState<PendingShopOrder | null>(() =>
+    readPendingShopOrder(),
+  );
   const successCloseTimerRef = useRef<number | null>(null);
+  const completionHandledRef = useRef(false);
+  const processedPaymentReturnRef = useRef<string | null>(null);
+  const processedDevRewardQueryRef = useRef<string | null>(null);
+  const rewardAnimNavigateRef = useRef(true);
 
   useEffect(() => {
     if (!token || !gatewayRequestReady) return;
@@ -71,6 +102,7 @@ export function ShopPage() {
 
   const packs = shopPacks ?? [];
   const listLoading = Boolean(token) && shopPacks === null;
+  const paymentMonitoringActive = Boolean(pendingOrder);
 
   const clearSuccessCloseTimer = useCallback(() => {
     if (successCloseTimerRef.current != null) {
@@ -79,7 +111,7 @@ export function ShopPage() {
     }
   }, []);
 
-  const closeCheckout = useCallback(() => {
+  const resetCheckoutUi = useCallback(() => {
     clearSuccessCloseTimer();
     setCheckoutPack(null);
     setCheckoutStep("loading");
@@ -87,43 +119,123 @@ export function ShopPage() {
     setBuyError(null);
     setProtectNeedSms(false);
     setBindingError(null);
-    setFlying(false);
   }, [clearSuccessCloseTimer]);
 
-  const handlePaymentCallback = useCallback(
-    (payload: { state: 1 | 2 }) => {
-      if (checkoutStep !== "payment" || !paymentUrl) return;
-      if (payload.state === 2) {
-        closeCheckout();
-        show("Payment was not completed.", { variant: "info" });
+  const closeCheckout = useCallback(() => {
+    resetCheckoutUi();
+    clearPendingShopOrder();
+    setPendingOrder(null);
+    completionHandledRef.current = false;
+  }, [resetCheckoutUi]);
+
+  const dismissCheckoutOverlay = useCallback(() => {
+    resetCheckoutUi();
+  }, [resetCheckoutUi]);
+
+  const dismissPendingPaymentSilently = useCallback(() => {
+    completionHandledRef.current = false;
+    clearPendingShopOrder();
+    setPendingOrder(null);
+    resetCheckoutUi();
+  }, [resetCheckoutUi]);
+
+  const handlePaymentSuccess = useCallback(() => {
+    if (!shouldAcceptPaymentComplete(completionHandledRef.current)) return;
+    completionHandledRef.current = true;
+    const pending = pendingOrder ?? readPendingShopOrder();
+    if (!pending) return;
+    clearPendingShopOrder();
+    setPendingOrder(null);
+    setPaymentUrl(null);
+    rewardAnimNavigateRef.current = true;
+    setCheckoutPack(pending.pack);
+    setCheckoutStep("success");
+  }, [pendingOrder]);
+
+  useEffect(() => {
+    const raw = searchParams.get("paymentState");
+    if (raw == null) return;
+
+    const fingerprint = searchParams.toString();
+    if (processedPaymentReturnRef.current === fingerprint) return;
+    processedPaymentReturnRef.current = fingerprint;
+
+    const paymentState = parseShopPaymentState(raw);
+    const nextParams = stripShopPaymentStateParam(searchParams);
+    setSearchParams(nextParams, { replace: true });
+
+    if (paymentState !== 1) {
+      dismissPendingPaymentSilently();
+      return;
+    }
+
+    handlePaymentSuccess();
+  }, [
+    searchParams,
+    setSearchParams,
+    dismissPendingPaymentSilently,
+    handlePaymentSuccess,
+  ]);
+
+  useEffect(() => {
+    if (!paymentMonitoringActive) return;
+    return subscribePaymentFinish((push) => {
+      if (isPaymentPushFailure(push)) {
+        dismissPendingPaymentSilently();
         return;
       }
-      setPaymentUrl(null);
-      setCheckoutStep("success");
-    },
-    [checkoutStep, paymentUrl, closeCheckout, show],
-  );
+      handlePaymentSuccess();
+    });
+  }, [
+    paymentMonitoringActive,
+    subscribePaymentFinish,
+    dismissPendingPaymentSilently,
+    handlePaymentSuccess,
+  ]);
 
-  usePaymentCallbackListener(
-    "shop",
-    checkoutStep === "payment" && !!paymentUrl,
-    handlePaymentCallback,
+  const applyShopRewardDevPreview = useCallback(
+    (detail: ShopRewardDevPreviewDetail) => {
+      const pack = detail.pack ?? SHOP_REWARD_DEV_MOCK_PACK;
+      const navigateAfter = detail.navigateAfter ?? false;
+      rewardAnimNavigateRef.current = navigateAfter;
+      if (detail.mode === "success") {
+        setCheckoutPack(pack);
+        setCheckoutStep("success");
+        return;
+      }
+      setRewardAnimPack(pack);
+    },
+    [],
   );
 
   useEffect(() => {
-    if (checkoutStep !== "payment" || !paymentUrl) return;
-    return subscribePaymentFinish((push) => {
-      const err = String(push.errorMsg ?? "").trim();
-      const reason = String(push.reason ?? "").trim();
-      if (err || reason) {
-        closeCheckout();
-        show(err || reason, { variant: "info" });
-        return;
-      }
-      setPaymentUrl(null);
-      setCheckoutStep("success");
-    });
-  }, [checkoutStep, paymentUrl, subscribePaymentFinish, closeCheckout, show]);
+    if (!import.meta.env.DEV) return;
+    installShopRewardDevMock();
+    const onPreview = (e: Event) => {
+      applyShopRewardDevPreview(
+        (e as CustomEvent<ShopRewardDevPreviewDetail>).detail,
+      );
+    };
+    window.addEventListener(SHOP_REWARD_DEV_PREVIEW_EVENT, onPreview);
+    return () =>
+      window.removeEventListener(SHOP_REWARD_DEV_PREVIEW_EVENT, onPreview);
+  }, [applyShopRewardDevPreview]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const raw = searchParams.get("devShopReward");
+    const mode = parseShopRewardDevQuery(raw);
+    if (!mode) return;
+
+    const fingerprint = searchParams.toString();
+    if (processedDevRewardQueryRef.current === fingerprint) return;
+    processedDevRewardQueryRef.current = fingerprint;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("devShopReward");
+    setSearchParams(nextParams, { replace: true });
+    dispatchShopRewardDevPreview({ mode, navigateAfter: false });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (checkoutStep !== "protect") return;
@@ -140,15 +252,11 @@ export function ShopPage() {
 
   const openThirdPartyPaymentPage = useCallback(
     (url: string) => {
-      const trimmed = url.trim();
-      if (!trimmed) return false;
       if (!isThirdPartyPaymentEnabled()) {
         notifyPaymentBlocked();
         return false;
       }
-      const tab = window.open(trimmed, "_blank");
-      if (!tab) console.warn("[shop] payment window.open blocked");
-      return true;
+      return navigateToThirdPartyPayment(url);
     },
     [notifyPaymentBlocked],
   );
@@ -166,12 +274,11 @@ export function ShopPage() {
         closeCheckout();
         return;
       }
+      completionHandledRef.current = false;
       setCheckoutStep("loading");
       setBuyBusy(true);
       setBuyError(null);
-      let paymentTab: Window | null = null;
       try {
-        paymentTab = window.open("about:blank", "_blank");
         const r = await req({
           type: GATEWAY_API_BUY_PRODUCT,
           data: encodeBuyProductRequestBytes(
@@ -182,7 +289,6 @@ export function ShopPage() {
         });
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
-          paymentTab?.close();
           setBuyError(
             translateGatewayError(
               code,
@@ -194,28 +300,20 @@ export function ShopPage() {
         }
         const raw = r.data;
         if (!(raw instanceof Uint8Array) || raw.byteLength === 0) {
-          paymentTab?.close();
           setBuyError("Empty purchase response");
           return;
         }
-        const { paymentURL: url } = decodeBuyProductResponseBytes(raw);
+        const { orderID, paymentURL: url } = decodeBuyProductResponseBytes(raw);
         if (!url?.trim()) {
-          paymentTab?.close();
           setBuyError("No payment URL returned");
           return;
         }
         const trimmed = url.trim();
-        if (paymentTab && !paymentTab.closed) {
-          try {
-            paymentTab.location.href = trimmed;
-          } catch {
-            paymentTab.close();
-          }
-        }
-        setPaymentUrl(trimmed);
-        setCheckoutStep("payment");
+        const pending = createPendingShopOrder(orderID, pack);
+        persistPendingShopOrder(pending);
+        setPendingOrder(pending);
+        navigateToThirdPartyPayment(trimmed);
       } catch (e) {
-        paymentTab?.close();
         setBuyError(e instanceof Error ? e.message : "Purchase failed");
       } finally {
         setBuyBusy(false);
@@ -231,7 +329,7 @@ export function ShopPage() {
       setPaymentUrl(null);
       setProtectNeedSms(false);
       setBindingError(null);
-      setFlying(false);
+      completionHandledRef.current = false;
       setCheckoutPack(p);
       if (!isPhoneBound(user)) {
         setCheckoutStep("protect");
@@ -338,22 +436,54 @@ export function ShopPage() {
     closeCheckout();
   }, [closeCheckout]);
 
-  const handleStartSuccessFly = useCallback(() => {
-    setFlying(true);
-  }, []);
+  const handlePaymentOverlayClose = useCallback(() => {
+    dismissCheckoutOverlay();
+  }, [dismissCheckoutOverlay]);
 
-  const handleSuccessFlyComplete = useCallback(async () => {
-    setFlying(false);
+  const handlePlayNowFromSuccess = useCallback(() => {
+    const pack = checkoutPack;
+    if (!pack) return;
+    clearSuccessCloseTimer();
+    const navigateAfter = rewardAnimNavigateRef.current;
+    resetCheckoutUi();
+    rewardAnimNavigateRef.current = navigateAfter;
+    setRewardAnimPack(pack);
+  }, [checkoutPack, clearSuccessCloseTimer, resetCheckoutUi]);
+
+  const handleRewardAnimationComplete = useCallback(async () => {
+    setRewardAnimPack(null);
+    const shouldNavigate = rewardAnimNavigateRef.current;
+    rewardAnimNavigateRef.current = true;
+    if (!shouldNavigate) return;
     try {
       await refreshLobbyGet();
     } catch {
       /* balance refresh best-effort */
     }
-    clearSuccessCloseTimer();
-    successCloseTimerRef.current = window.setTimeout(() => {
-      closeCheckout();
-    }, DAILY_LOGIN_AUTO_CLOSE_MS);
-  }, [refreshLobbyGet, clearSuccessCloseTimer, closeCheckout]);
+    navigate("/");
+  }, [refreshLobbyGet, navigate]);
+
+  const handleCheckoutClose = useCallback(() => {
+    if (checkoutStep === "loading") {
+      handleLoadingClose();
+      return;
+    }
+    if (checkoutStep === "payment") {
+      handlePaymentOverlayClose();
+      return;
+    }
+    if (checkoutStep === "success") {
+      handlePlayNowFromSuccess();
+      return;
+    }
+    closeCheckout();
+  }, [
+    checkoutStep,
+    handleLoadingClose,
+    handlePaymentOverlayClose,
+    handlePlayNowFromSuccess,
+    closeCheckout,
+  ]);
 
   return (
     <div className="shop-page page-container session-page session-page--pattern">
@@ -375,11 +505,13 @@ export function ShopPage() {
                 key={p.id}
                 className={
                   "shop-page__card shop-page__card--clickable" +
-                  (checkoutPack ? " shop-page__card--disabled" : "")
+                  (checkoutPack || rewardAnimPack
+                    ? " shop-page__card--disabled"
+                    : "")
                 }
                 role="button"
-                tabIndex={checkoutPack ? -1 : 0}
-                aria-disabled={checkoutPack ? true : undefined}
+                tabIndex={checkoutPack || rewardAnimPack ? -1 : 0}
+                aria-disabled={checkoutPack || rewardAnimPack ? true : undefined}
                 onClick={() => onPackClick(p)}
                 onKeyDown={(e) => onPackKeyDown(e, p)}>
                 <div className="shop-page__card-mid">
@@ -457,7 +589,6 @@ export function ShopPage() {
         <ShopCheckoutOverlay
           open
           step={checkoutStep}
-          pack={checkoutPack}
           buyBusy={buyBusy}
           buyError={buyError}
           paymentUrl={paymentUrl}
@@ -470,17 +601,19 @@ export function ShopPage() {
               phone: user?.phone,
             } satisfies ShopBindingPrefill
           }
-          flying={flying}
-          onClose={
-            checkoutStep === "loading" ? handleLoadingClose : closeCheckout
-          }
+          onClose={handleCheckoutClose}
           onBackFromProtect={closeCheckout}
           onBackToProtectForm={handleBackToProtectForm}
           onBindingSubmit={handleBindingSubmit}
           onBindingSuccessConfirm={handleBindingSuccessConfirm}
           onOpenPaymentPage={openThirdPartyPaymentPage}
-          onStartSuccessFly={handleStartSuccessFly}
-          onSuccessFlyComplete={handleSuccessFlyComplete}
+          onPlayNow={handlePlayNowFromSuccess}
+        />
+      ) : null}
+      {rewardAnimPack ? (
+        <ShopPurchaseRewardAnimation
+          pack={rewardAnimPack}
+          onComplete={handleRewardAnimationComplete}
         />
       ) : null}
     </div>

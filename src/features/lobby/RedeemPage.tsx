@@ -4,6 +4,7 @@ import { InfoPopover } from "../../components/InfoPopover";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import { CURRENCY_ICON_SC } from "../../lib/currencyIcons";
+import { navigateToThirdPartyPayment } from "../../lib/thirdPartyPaymentNavigation";
 import { openZendeskOrFallback } from "../../lib/zendeskSupport";
 import {
   formatScFromRaw,
@@ -27,7 +28,15 @@ import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { redeemScBalancesFromLobby } from "./redeemBalances";
 import { RedeemNotifyPill } from "./RedeemNotifyPill";
 import { useRedeemPillMessages } from "./useRedeemPillMessages";
-import { RedeemMethodModal } from "./RedeemMethodModal";
+import { RedeemMethodModal, type RedeemMethodModalResume } from "./RedeemMethodModal";
+import {
+  clearPendingRedeemOrder,
+  readPendingRedeemOrder,
+} from "./redeemPaymentSession";
+import {
+  clearPaymentCallbackPayload,
+  readPaymentCallbackPayload,
+} from "../payment/paymentCallbackStorage";
 import {
   RedeemBindingModal,
   type RedeemBindingMode,
@@ -123,7 +132,7 @@ function RedeemHistoryRow({
         <button
           type="button"
           className="redeem-page__history-link"
-          onClick={() => window.open(orderUrl, "_blank", "noopener,noreferrer")}>
+          onClick={() => navigateToThirdPartyPayment(orderUrl)}>
           {linkLabel}
         </button>
       ) : (
@@ -179,6 +188,8 @@ export function RedeemPage() {
   const pillMessages = useRedeemPillMessages(pillExtras);
 
   const [methodModalOpen, setMethodModalOpen] = useState(false);
+  const [methodModalResume, setMethodModalResume] =
+    useState<RedeemMethodModalResume | null>(null);
   const [bindingModalOpen, setBindingModalOpen] = useState(false);
   const [bindingMode, setBindingMode] = useState<RedeemBindingMode>("full");
   const [ordersPage, setOrdersPage] = useState(0);
@@ -296,6 +307,39 @@ export function RedeemPage() {
     await refreshLobbyGet();
     await fetchOrders(0);
   }, [gatewayRequestReady, fetchOrders, refreshLobbyGet]);
+
+  useEffect(() => {
+    const pending = readPendingRedeemOrder();
+    if (!pending) return;
+
+    const callback = readPaymentCallbackPayload("redeem");
+    if (callback) {
+      clearPaymentCallbackPayload("redeem");
+      clearPendingRedeemOrder();
+      if (callback.state === 1) {
+        void refetchOrdersAfterWithdraw();
+        setMethodModalResume({
+          kind: "success",
+          orderUid: pending.withdrawOrderUID,
+          amount: pending.pickAmount,
+        });
+        setMethodModalOpen(true);
+      } else {
+        show("Redemption was not completed.", { variant: "error" });
+      }
+      return;
+    }
+
+    if (pending.paymentUrl) {
+      setMethodModalResume({
+        kind: "payment",
+        withdrawOrderUID: pending.withdrawOrderUID,
+        pickAmount: pending.pickAmount,
+        paymentUrl: pending.paymentUrl,
+      });
+      setMethodModalOpen(true);
+    }
+  }, [refetchOrdersAfterWithdraw, show]);
 
   const handleCancelOrder = useCallback(
     async (redeemOrderUID: string) => {
@@ -572,10 +616,15 @@ export function RedeemPage() {
 
       <RedeemMethodModal
         open={methodModalOpen}
-        onClose={() => setMethodModalOpen(false)}
+        onClose={() => {
+          setMethodModalOpen(false);
+          setMethodModalResume(null);
+        }}
         onOrderCreated={refetchOrdersAfterWithdraw}
         redeemableAmountRaw={redeemableAmount}
         lobbyGet={lobbyGet}
+        resume={methodModalResume}
+        onResumeConsumed={() => setMethodModalResume(null)}
       />
     </section>
   );
