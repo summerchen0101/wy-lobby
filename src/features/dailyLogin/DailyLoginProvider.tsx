@@ -536,7 +536,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       return;
     }
     enterDismissible();
-  }, [claimCreditReward, enterDismissible, claimedDailyToday, claimDay, userId, vipLevel]);
+  }, [claimCreditReward, enterDismissible, claimedDailyToday, claimDay, userId]);
 
   useEffect(() => {
     completeClaimFlowRef.current = completeClaimFlow;

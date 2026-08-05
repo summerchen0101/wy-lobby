@@ -7,11 +7,13 @@ import {
 } from "./paymentCallbackStorage";
 import "./PaymentCallbackPage.css";
 
-type Props = {
+export type PaymentCallbackPageProps = {
   channel: PaymentCallbackChannel;
   returnPath: string;
   returnLabel: string;
 };
+
+type Props = PaymentCallbackPageProps;
 
 export function PaymentCallbackPage({
   channel,

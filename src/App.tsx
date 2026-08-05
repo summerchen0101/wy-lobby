@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { lazyRoute } from "./lib/lazyRoute";
+import type { PaymentCallbackPageProps } from "./features/payment/PaymentCallbackPage";
+import { lazyRoute, lazyRouteWithProps } from "./lib/lazyRoute";
 import { Navigate, Route, BrowserRouter, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthProvider";
 import { OAuthReturnHandler } from "./auth/OAuthReturnHandler";
@@ -67,7 +68,7 @@ const RedeemPage = lazyRoute(() =>
 const ShopPage = lazyRoute(() =>
   import("./features/shop/ShopPage").then((m) => ({ default: m.ShopPage })),
 );
-const PaymentCallbackPage = lazyRoute(() =>
+const PaymentCallbackPage = lazyRouteWithProps<PaymentCallbackPageProps>(() =>
   import("./features/payment/PaymentCallbackPage").then((m) => ({
     default: m.PaymentCallbackPage,
   })),

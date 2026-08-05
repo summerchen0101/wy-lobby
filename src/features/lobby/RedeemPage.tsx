@@ -112,7 +112,6 @@ function RedeemHistoryRow({
         {(p, triggerRef) => (
           <button
             ref={triggerRef}
-            type="button"
             className="redeem-page__history-icon"
             aria-label="Order create date"
             {...p}>

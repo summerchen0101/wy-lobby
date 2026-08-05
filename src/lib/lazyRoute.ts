@@ -14,3 +14,17 @@ export function lazyRoute<T extends ComponentType<unknown>>(
     }),
   );
 }
+
+export function lazyRouteWithProps<Props extends object>(
+  factory: () => Promise<{ default: ComponentType<Props> }>,
+): LazyExoticComponent<ComponentType<Props>> {
+  return lazy(() =>
+    factory().catch((error: unknown) => {
+      if (isChunkLoadError(error)) {
+        reloadForStaleChunk("lazy-import");
+        return new Promise<{ default: ComponentType<Props> }>(() => {});
+      }
+      throw error;
+    }),
+  ) as LazyExoticComponent<ComponentType<Props>>;
+}
