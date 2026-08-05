@@ -7,7 +7,10 @@ import {
   isWelcomeVoiceGateOpen,
   LOBBY_WELCOME_VOICE_GATE_EVENT,
 } from "../../lib/lobbyWelcomeVoiceGate";
-import { isNoviceTeachingGeneralDone } from "../../realtime/lobbyDecode";
+import {
+  isNoviceTeachingGeneralDone,
+  shouldShowNoviceTeachingGeneralTutorial,
+} from "../../realtime/lobbyDecode";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { NewbieVideoTutorialOverlay } from "./NewbieVideoTutorialOverlay";
 import { submitNoviceTeachingGeneralDone } from "./submitNoviceTeachingGeneralDone";
@@ -45,19 +48,30 @@ export function NewbieTutorialGate() {
       window.removeEventListener(LOBBY_WELCOME_VOICE_GATE_EVENT, sync);
   }, []);
 
+  useEffect(() => {
+    if (completedLocally || isNoviceTeachingGeneralDone(lobbyGet)) {
+      setOpen(false);
+    }
+  }, [completedLocally, lobbyGet]);
+
   useLayoutEffect(() => {
     if (!ready || !user) {
       setOpen(false);
       return;
     }
     if (geoStatus === "checking" || needsLobbyHydrationOverlay) {
+      setOpen(false);
+      return;
+    }
+    if (!lobbyGet) {
+      setOpen(false);
       return;
     }
     if (!isWelcomeVoiceGateOpen()) {
       setOpen(false);
       return;
     }
-    if (completedLocally || isNoviceTeachingGeneralDone(lobbyGet)) {
+    if (completedLocally || !shouldShowNoviceTeachingGeneralTutorial(lobbyGet)) {
       setOpen(false);
       return;
     }

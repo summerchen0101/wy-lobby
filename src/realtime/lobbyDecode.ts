@@ -47,20 +47,43 @@ function numFromWire(v: unknown): number | undefined {
     const n = Number(v);
     if (Number.isFinite(n)) return n;
   }
+  if (
+    v &&
+    typeof v === "object" &&
+    "toString" in v &&
+    typeof (v as { toString: () => string }).toString === "function"
+  ) {
+    const n = Number((v as { toString: () => string }).toString());
+    if (Number.isFinite(n)) return n;
+  }
   return undefined;
+}
+
+/** LOBBY_GET `playerInfo.noviceTeaching.general`；無欄位時為 `undefined`。 */
+export function noviceTeachingGeneralFromLobbyGet(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): number | undefined {
+  const p = lobbyGet?.playerInfo;
+  if (!p || typeof p !== "object") return undefined;
+  const nt = (p as { noviceTeaching?: { general?: unknown } | null })
+    .noviceTeaching;
+  if (!nt || typeof nt !== "object") return undefined;
+  return numFromWire((nt as { general?: unknown }).general);
 }
 
 /** LOBBY_GET `playerInfo.noviceTeaching.general`：0 = 尚未完成一般新手教學。 */
 export function isNoviceTeachingGeneralDone(
   lobbyGet: LobbyGetDecoded | null | undefined,
 ): boolean {
-  const p = lobbyGet?.playerInfo;
-  if (!p || typeof p !== "object") return false;
-  const nt = (p as { noviceTeaching?: { general?: unknown } | null })
-    .noviceTeaching;
-  if (!nt || typeof nt !== "object") return false;
-  const general = numFromWire((nt as { general?: unknown }).general);
+  const general = noviceTeachingGeneralFromLobbyGet(lobbyGet);
   return general !== undefined && general !== 0;
+}
+
+/** 僅在 LOBBY_GET 已帶入且 `general === 0` 時顯示一般新手教學。 */
+export function shouldShowNoviceTeachingGeneralTutorial(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): boolean {
+  return noviceTeachingGeneralFromLobbyGet(lobbyGet) === 0;
 }
 
 /** megaman.GameLabel 數值（若 toObject 未轉成字串則用此對應） */

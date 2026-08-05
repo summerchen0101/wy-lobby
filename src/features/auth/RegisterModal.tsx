@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { buildAppMetaForAuthRequest, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
+import { buildAppMetaForAuthRequest, getOrCreateWebDeviceId } from '../../lib/appMeta'
 import { useAuth } from '../../auth/useAuth'
 import { resolvePostLoginRedirect } from '../../auth/loginEntry'
 import {
@@ -67,7 +67,6 @@ function buildSignUpRequest(params: {
 }): SignUpRequest {
   const em = params.email.trim()
   return {
-    nickname: nicknameFromEmail(em),
     password: params.password,
     rePassword: params.rePassword,
     answer: '',

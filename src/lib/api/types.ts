@@ -44,7 +44,6 @@ export type AuthResponse = {
  * 與 v1 註冊 `POST /api/v1/signup` 對齊。第一輪 `answer` 可空字串；需驗證時再送同結構並帶上驗證碼。
  */
 export type SignUpRequest = {
-  nickname: string;
   password: string;
   rePassword: string;
   /** 郵件驗證碼等；首送可 `''` */
@@ -72,7 +71,7 @@ export type PasswordResetInfoRequest = {
   code: string;
 };
 
-/** 向後相容：註冊表單仍用 `account` 當主要識別時，在送出前可映射到 `email` / `nickname` */
+/** 向後相容別名；暱稱由後端註冊時自動產生，不需在 request 帶 `nickname`。 */
 export type RegisterBody = SignUpRequest;
 
 export type Game = {
