@@ -42,6 +42,7 @@ import {
   type RedeemBindingMode,
 } from "./RedeemBindingModal";
 import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
+import { fetchRedeemPlayerBindingFromGateway } from "./redeemBindingGate";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import {
   resolveMinRedeemDisplay,
@@ -382,6 +383,41 @@ export function RedeemPage() {
     setOrdersPage((p) => Math.min(totalPages - 1, p + 1));
   }, [totalPages]);
 
+  const handleNewRedeemClick = useCallback(async () => {
+    const binding = redeemPlayerBindingFromLobby(lobbyGet);
+    if (!binding.hasCellPhone) {
+      setBindingMode("full");
+      setBindingModalOpen(true);
+      return;
+    }
+    if (!binding.hasAddress) {
+      setBindingMode("addressOnly");
+      setBindingModalOpen(true);
+      return;
+    }
+    if (!binding.hasFrontImage) {
+      await refreshLobbyGet();
+      const req = requestRef.current;
+      const refreshed =
+        req && gatewayRequestReady
+          ? await fetchRedeemPlayerBindingFromGateway(req)
+          : redeemPlayerBindingFromLobby(lobbyGet);
+      if (refreshed.hasFrontImage) {
+        setMethodModalOpen(true);
+        return;
+      }
+      setBindingMode("kycOnly");
+      setBindingModalOpen(true);
+      return;
+    }
+    setMethodModalOpen(true);
+  }, [
+    lobbyGet,
+    refreshLobbyGet,
+    requestRef,
+    gatewayRequestReady,
+  ]);
+
   const showPager = totalPages > 1;
 
   const cannotRedeem = redeemableAmount < resolveMinRedeemRaw(lobbyGet, user);
@@ -568,25 +604,7 @@ export function RedeemPage() {
               cannotRedeem
             }
             onClick={() => {
-              const binding = redeemPlayerBindingFromLobby(lobbyGet);
-              if (!binding.hasCellPhone) {
-                setBindingMode("full");
-                setBindingModalOpen(true);
-                return;
-              }
-              if (!binding.hasAddress) {
-                setBindingMode("addressOnly");
-                setBindingModalOpen(true);
-                return;
-              }
-              if (!binding.hasFrontImage) {
-                void refreshLobbyGet();
-                show("Verification in progress. Please try again later.", {
-                  variant: "info",
-                });
-                return;
-              }
-              setMethodModalOpen(true);
+              void handleNewRedeemClick();
             }}>
             {w(510485)}
           </button>

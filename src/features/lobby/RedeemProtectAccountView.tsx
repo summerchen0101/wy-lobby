@@ -9,15 +9,10 @@ import {
 import { IoChevronBack } from "react-icons/io5";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
-import {
-  GATEWAY_API_LOBBY_GET,
-  GATEWAY_API_MEGA_ACCOUNT_BINDING,
-} from "../../realtime/gatewayApi";
+import { GATEWAY_API_MEGA_ACCOUNT_BINDING } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
-import {
-  decodeLobbyGetResponseBytes,
-  redeemPlayerBindingFromLobby,
-} from "../../realtime/lobbyDecode";
+import { fetchRedeemPlayerBindingFromGateway } from "./redeemBindingGate";
+import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
 import {
   decodeMegaAccountBindingResponseBytes,
   encodeMegaAccountBindingRequestBytes,
@@ -49,7 +44,7 @@ const US_STATE_CODES =
 const PHONE_COUNTRY_CODES = ["1"] as const;
 const ADDRESS_COUNTRIES = ["US"] as const;
 
-export type RedeemBindingMode = "full" | "addressOnly";
+export type RedeemBindingMode = "full" | "addressOnly" | "kycOnly";
 
 type Step = "profile" | "kyc" | "sms" | "docv";
 
@@ -129,7 +124,7 @@ export function RedeemProtectAccountView({
 
   useEffect(() => {
     if (!open) return;
-    setStep("profile");
+    setStep(mode === "kycOnly" ? "kyc" : "profile");
     setBusy(false);
     setError(null);
     setSmsAnswer("");
@@ -162,7 +157,7 @@ export function RedeemProtectAccountView({
         setPhoneNumber(split.national);
       }
     }
-  }, [open, bindingPrefill?.email, bindingPrefill?.phone]);
+  }, [open, mode, bindingPrefill?.email, bindingPrefill?.phone]);
 
   useEffect(() => {
     if (!open) return;
@@ -180,25 +175,7 @@ export function RedeemProtectAccountView({
     if (!req || !gatewayRequestReady) {
       return redeemPlayerBindingFromLobby(null);
     }
-    try {
-      const r = await req({
-        type: GATEWAY_API_LOBBY_GET,
-        data: new Uint8Array(0),
-        debugLabel: "LOBBY_GET_REDEEM_DOCV",
-      });
-      const code = String(r.code ?? "");
-      if (!isGatewaySuccessCode(code)) {
-        return redeemPlayerBindingFromLobby(null);
-      }
-      const raw = r.data;
-      if (!(raw instanceof Uint8Array) || raw.byteLength === 0) {
-        return redeemPlayerBindingFromLobby(null);
-      }
-      const decoded = decodeLobbyGetResponseBytes(raw);
-      return redeemPlayerBindingFromLobby(decoded);
-    } catch {
-      return redeemPlayerBindingFromLobby(null);
-    }
+    return fetchRedeemPlayerBindingFromGateway(req);
   }, [requestRef, gatewayRequestReady]);
 
   const finalizeDocvVerification = useCallback(async () => {
@@ -498,6 +475,10 @@ export function RedeemProtectAccountView({
       return;
     }
     if (step === "kyc") {
+      if (mode === "kycOnly") {
+        onClose();
+        return;
+      }
       setStep("profile");
       setError(null);
       return;
