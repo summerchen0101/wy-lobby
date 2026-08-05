@@ -407,31 +407,45 @@ export function ShopPage() {
                       decoding="async"
                     />
                   </div>
-                  <p
-                    className="shop-page__bonus"
-                    aria-label={`Plus free SC ${p.bonusSc}`}>
-                    <span className="shop-page__bonus-free">+{w(105)}</span>
-                    <span className="shop-page__chip shop-page__chip--sc">
-                      <img
-                        src={CURRENCY_ICON_SC}
-                        alt=""
-                        width={24}
-                        height={24}
-                      />
-                    </span>
-                    <span className="shop-page__bonus-amt">{p.bonusSc}</span>
-                  </p>
-                  {p.vipExp > 0 ? (
+                  <div className="shop-page__card-spacer" aria-hidden="true" />
+                  <div className="shop-page__card-meta">
                     <p
-                      className="shop-page__vip"
-                      aria-label={`VIP points ${p.vipExp}`}>
-                      <span className="shop-page__vip-plus">+</span>
-                      <span className="shop-page__vip-amt">
-                        {formatVipPoints(p.vipExp)}
+                      className="shop-page__bonus"
+                      aria-label={`Plus free SC ${p.bonusSc}`}>
+                      <span className="shop-page__bonus-free">+{w(105)}</span>
+                      <span className="shop-page__chip shop-page__chip--sc">
+                        <img
+                          src={CURRENCY_ICON_SC}
+                          alt=""
+                          width={24}
+                          height={24}
+                        />
                       </span>
-                      <span className="shop-page__vip-label">{w(510760)}</span>
+                      <span className="shop-page__bonus-amt">{p.bonusSc}</span>
                     </p>
-                  ) : null}
+                    <p
+                      className={
+                        p.vipExp > 0
+                          ? "shop-page__vip"
+                          : "shop-page__vip shop-page__vip--placeholder"
+                      }
+                      aria-hidden={p.vipExp <= 0 ? true : undefined}
+                      aria-label={
+                        p.vipExp > 0 ? `VIP points ${p.vipExp}` : undefined
+                      }>
+                      {p.vipExp > 0 ? (
+                        <>
+                          <span className="shop-page__vip-plus">+</span>
+                          <span className="shop-page__vip-amt">
+                            {formatVipPoints(p.vipExp)}
+                          </span>
+                          <span className="shop-page__vip-label">
+                            {w(510760)}
+                          </span>
+                        </>
+                      ) : null}
+                    </p>
+                  </div>
                 </div>
                 <span className="shop-page__price-pill">{p.price}</span>
               </li>
