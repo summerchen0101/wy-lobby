@@ -137,7 +137,8 @@
 }
 
 .auth-form__field-error {
-  margin: 0.15rem 0 0.35rem;
+  margin: calc(-0.1rem - 1.5px) 0 0;
+  padding-left: var(--space-3);
   color: #ff8a8a;
   font-size: var(--text-small);
   line-height: 1.3;

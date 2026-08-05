@@ -220,7 +220,6 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
               >
                 {w(6)}:
               </label>
-              <AuthFieldError message={emailFieldErrors.email} variant="modal" />
               <input
                 id={emailId}
                 className="auth-modal__input auth-modal__input--register"
@@ -236,6 +235,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 required
                 aria-invalid={Boolean(emailFieldErrors.email)}
               />
+              <AuthFieldError message={emailFieldErrors.email} variant="modal" />
               {error ? <p className="auth-modal__error">{error}</p> : null}
               <button type="submit" className="auth-modal__submit" disabled={submitting}>
                 {submitting ? '…' : w(30)}
@@ -256,7 +256,6 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
               >
                 {w(35)}:
               </label>
-              <AuthFieldError message={resetFieldErrors.code} variant="modal" />
               <input
                 id={codeId}
                 className="auth-modal__input auth-modal__input--register"
@@ -273,13 +272,13 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 required
                 aria-invalid={Boolean(resetFieldErrors.code)}
               />
+              <AuthFieldError message={resetFieldErrors.code} variant="modal" />
               <label
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={pwdId}
               >
                 {w(37)}:
               </label>
-              <AuthFieldError message={resetFieldErrors.password} variant="modal" />
               <div className="auth-modal__password-wrap">
                 <input
                   id={pwdId}
@@ -308,13 +307,13 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                   {showPassword ? <IconEyeClosed /> : <IconEyeOpen />}
                 </button>
               </div>
+              <AuthFieldError message={resetFieldErrors.password} variant="modal" />
               <label
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={pwd2Id}
               >
                 {w(21)}:
               </label>
-              <AuthFieldError message={resetFieldErrors.passwordConfirm} variant="modal" />
               <div className="auth-modal__password-wrap">
                 <input
                   id={pwd2Id}
@@ -342,6 +341,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                   {showPasswordConfirm ? <IconEyeClosed /> : <IconEyeOpen />}
                 </button>
               </div>
+              <AuthFieldError message={resetFieldErrors.passwordConfirm} variant="modal" />
               {error ? <p className="auth-modal__error">{error}</p> : null}
               <button type="submit" className="auth-modal__submit" disabled={submitting}>
                 {submitting ? '…' : w(41)}

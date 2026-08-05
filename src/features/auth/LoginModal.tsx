@@ -190,7 +190,6 @@ export function LoginModal({
               >
                 {w(6)}:
               </label>
-              <AuthFieldError message={fieldErrors.account} variant="modal" />
               <AuthClearableInputWrap
                 variant="modal"
                 value={account}
@@ -216,13 +215,13 @@ export function LoginModal({
                   aria-invalid={Boolean(fieldErrors.account)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.account} variant="modal" />
               <label
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={passwordId}
               >
                 {w(8)}:
               </label>
-              <AuthFieldError message={fieldErrors.password} variant="modal" />
               <AuthClearableInputWrap
                 variant="modal"
                 modalWrap="password"
@@ -262,6 +261,7 @@ export function LoginModal({
                   aria-invalid={Boolean(fieldErrors.password)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.password} variant="modal" />
               <p className="auth-modal__forgot-password">
                 {w(11)}{" "}
                 <button

@@ -128,7 +128,6 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
               <label className="phone-verify-modal__otp-label" htmlFor={otpId}>
                 {w(35)}
               </label>
-              <AuthFieldError message={fieldErrors.code} variant="modal" />
               <div className="phone-verify-modal__input-wrap">
                 <input
                   id={otpId}
@@ -153,6 +152,7 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
                   {resendLeft > 0 ? w(40, resendLeft) : w(39)}
                 </button>
               </div>
+              <AuthFieldError message={fieldErrors.code} variant="modal" />
             </div>
 
             {error ? <p className="auth-modal__error">{error}</p> : null}

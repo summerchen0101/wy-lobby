@@ -216,7 +216,6 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={emailId}>
               {w(6)}:
             </label>
-            <AuthFieldError message={fieldErrors.email} variant="modal" />
             <AuthClearableInputWrap
               variant="modal"
               value={email}
@@ -241,11 +240,11 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 aria-invalid={Boolean(fieldErrors.email)}
               />
             </AuthClearableInputWrap>
+            <AuthFieldError message={fieldErrors.email} variant="modal" />
 
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={passwordId}>
               {w(8)}:
             </label>
-            <AuthFieldError message={fieldErrors.password} variant="modal" />
             <AuthClearableInputWrap
               variant="modal"
               modalWrap="password"
@@ -284,11 +283,11 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 aria-invalid={Boolean(fieldErrors.password)}
               />
             </AuthClearableInputWrap>
+            <AuthFieldError message={fieldErrors.password} variant="modal" />
 
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={password2Id}>
               {w(21)}:
             </label>
-            <AuthFieldError message={fieldErrors.passwordConfirm} variant="modal" />
             <AuthClearableInputWrap
               variant="modal"
               modalWrap="password"
@@ -327,6 +326,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 aria-invalid={Boolean(fieldErrors.passwordConfirm)}
               />
             </AuthClearableInputWrap>
+            <AuthFieldError message={fieldErrors.passwordConfirm} variant="modal" />
 
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={referralId}>
               {w(26)}

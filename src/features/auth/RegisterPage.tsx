@@ -141,7 +141,6 @@ export function RegisterPage() {
                 <label className="auth-form__label" htmlFor="reg-code">
                   {w(35)}
                 </label>
-                <AuthFieldError message={otpFieldErrors.code} variant="page" />
                 <AuthClearableInputWrap
                   variant="page"
                   value={answer}
@@ -166,6 +165,7 @@ export function RegisterPage() {
                     aria-invalid={Boolean(otpFieldErrors.code)}
                   />
                 </AuthClearableInputWrap>
+                <AuthFieldError message={otpFieldErrors.code} variant="page" />
               </div>
               {error ? <p className="auth-form__error">{error}</p> : null}
               <div className="auth-form__actions">
@@ -192,7 +192,6 @@ export function RegisterPage() {
               <label className="auth-form__label" htmlFor="reg-email">
                 {w(6)}
               </label>
-              <AuthFieldError message={fieldErrors.email} variant="page" />
               <AuthClearableInputWrap
                 variant="page"
                 value={email}
@@ -217,12 +216,12 @@ export function RegisterPage() {
                   aria-invalid={Boolean(fieldErrors.email)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.email} variant="page" />
             </div>
             <div className="auth-form__field">
               <label className="auth-form__label" htmlFor="reg-password">
                 {w(8)}
               </label>
-              <AuthFieldError message={fieldErrors.password} variant="page" />
               <AuthClearableInputWrap
                 variant="page"
                 value={password}
@@ -249,12 +248,12 @@ export function RegisterPage() {
                   aria-invalid={Boolean(fieldErrors.password)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.password} variant="page" />
             </div>
             <div className="auth-form__field">
               <label className="auth-form__label" htmlFor="reg-password2">
                 {w(21)}
               </label>
-              <AuthFieldError message={fieldErrors.passwordConfirm} variant="page" />
               <AuthClearableInputWrap
                 variant="page"
                 value={password2}
@@ -281,6 +280,7 @@ export function RegisterPage() {
                   aria-invalid={Boolean(fieldErrors.passwordConfirm)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.passwordConfirm} variant="page" />
             </div>
             {error ? <p className="auth-form__error">{error}</p> : null}
             <div className="auth-form__actions">

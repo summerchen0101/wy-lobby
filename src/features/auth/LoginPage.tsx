@@ -86,7 +86,6 @@ export function LoginPage() {
               <label className="auth-form__label" htmlFor="login-account">
                 {w(6)}
               </label>
-              <AuthFieldError message={fieldErrors.account} variant="page" />
               <AuthClearableInputWrap
                 variant="page"
                 value={account}
@@ -110,12 +109,12 @@ export function LoginPage() {
                   aria-invalid={Boolean(fieldErrors.account)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.account} variant="page" />
             </div>
             <div className="auth-form__field">
               <label className="auth-form__label" htmlFor="login-password">
                 {w(8)}
               </label>
-              <AuthFieldError message={fieldErrors.password} variant="page" />
               <AuthClearableInputWrap
                 variant="page"
                 value={password}
@@ -140,6 +139,7 @@ export function LoginPage() {
                   aria-invalid={Boolean(fieldErrors.password)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.password} variant="page" />
             </div>
             {error ? <p className="auth-form__error">{error}</p> : null}
             <div className="auth-form__actions">
