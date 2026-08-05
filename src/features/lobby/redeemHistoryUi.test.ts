@@ -6,6 +6,8 @@ import {
   withdrawHistoryShowsCancel,
   withdrawHistoryShowsRemark,
 } from "./redeemHistoryUi";
+import { getActiveLocale } from "../../i18n/getActiveLocale";
+import { DISPLAY_TZ } from "../../lib/displayTimezone";
 import { WITHDRAW_ORDER_PAYMENT_STATUS } from "../../realtime/withdrawLobbyWire";
 
 describe("redeemHistoryUi", () => {
@@ -42,9 +44,20 @@ describe("redeemHistoryUi", () => {
     );
   });
 
-  it("formats create date from epoch ms", () => {
-    const label = formatWithdrawCreatedAt("1700000000000");
-    expect(label).not.toBe("—");
+  it("formats create date from epoch ms in Eastern Time", () => {
+    const ms = 1700000000000;
+    const label = formatWithdrawCreatedAt(String(ms));
+    const expectedEt = new Intl.DateTimeFormat(getActiveLocale(), {
+      timeZone: DISPLAY_TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(new Date(ms));
+    expect(label).toBe(expectedEt);
   });
 
   it("prefixes fiat link amount with dollar sign", () => {

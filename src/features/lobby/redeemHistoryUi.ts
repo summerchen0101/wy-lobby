@@ -1,3 +1,5 @@
+import { getActiveLocale } from "../../i18n/getActiveLocale";
+import { DISPLAY_TZ } from "../../lib/displayTimezone";
 import { WITHDRAW_ORDER_PAYMENT_STATUS } from "../../realtime/withdrawLobbyWire";
 
 export type WithdrawHistoryStatusTone =
@@ -42,7 +44,8 @@ export function formatWithdrawCreatedAt(msRaw: string): string {
   const ms = Number(t);
   if (!Number.isFinite(ms) || ms <= 0) return "—";
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(getActiveLocale(), {
+      timeZone: DISPLAY_TZ,
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
