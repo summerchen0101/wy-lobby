@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
 import { isGatewayWsSuppressedRoute } from "../../lib/gatewayWsRoute";
+import { isLobbySessionEvicted } from "../../lib/dismissLobbySessionOverlays";
 import { usePrimaryAppTab } from "../../lib/primaryAppTab";
 import {
   isWelcomeVoiceGateOpen,
@@ -42,6 +43,7 @@ export function DailyLoginGate() {
   useEffect(() => {
     const userId = user?.id?.trim() ?? "";
     if (!ready || !userId || userId === "0") return;
+    if (isLobbySessionEvicted()) return;
     if (!isPrimaryAppTab) return;
     if (isDailyLoginAutoPopupBlockedRoute(location.pathname)) return;
     if (!isWsLobbyGamesEnabled()) return;

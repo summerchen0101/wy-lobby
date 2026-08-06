@@ -9,6 +9,7 @@ import {
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { isGatewayWsSuppressedRoute } from "../lib/gatewayWsRoute";
+import { dismissLobbySessionOverlays } from "../lib/dismissLobbySessionOverlays";
 import { usePrimaryAppTab } from "../lib/primaryAppTab";
 import type { Game } from "../lib/api/types";
 import { useWallet } from "../wallet/walletContext";
@@ -79,6 +80,13 @@ import { isWithinIosOrientationGrace } from "../lib/iosOrientationStabilizer";
 import { mapListProductToShopPack } from "../features/shop/mapListProductToShopPack";
 import type { ShopPack } from "../features/shop/types";
 import type { RedeemOrdersPrefetch } from "./gatewayLobbyContext";
+
+function hasLobbyHydrationCache(
+  lobbyGames: Game[] | null,
+  lobbyGet: LobbyGetDecoded | null,
+): boolean {
+  return lobbyGames !== null || lobbyGet !== null;
+}
 
 const LOBBY_WS_TIMEOUT_RETRY_MSG = "Lobby data timed out, retrying…";
 const LOBBY_WS_TIMEOUT_USER_MSG =
@@ -276,6 +284,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   );
   const lobbyWsBootstrapDoneRef = useRef(lobbyWsBootstrapDone);
   const lobbyGamesRef = useRef<Game[] | null>(lobbyGames);
+  const lobbyGetRef = useRef<LobbyGetDecoded | null>(lobbyGet);
 
   useEffect(() => {
     lobbyWsBootstrapDoneRef.current = lobbyWsBootstrapDone;
@@ -284,6 +293,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     lobbyGamesRef.current = lobbyGames;
   }, [lobbyGames]);
+
+  useEffect(() => {
+    lobbyGetRef.current = lobbyGet;
+  }, [lobbyGet]);
 
   useEffect(() => {
     return () => {
@@ -316,6 +329,12 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!gateActive) return;
     if (!wsAuthScope) return;
+    if (
+      hasLobbyHydrationCache(lobbyGamesRef.current, lobbyGetRef.current)
+    ) {
+      setLobbyWsBootstrapDone(true);
+      return;
+    }
     setLobbyWsBootstrapDone(false);
     lastWsClosedMetaRef.current = undefined;
   }, [gateActive, wsAuthScope]);
@@ -697,7 +716,14 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             s === "connecting" &&
             lastWsClosedMetaRef.current?.shutdownReason === "transport";
           if (!skipBootstrapReset && !skipConnectingBootstrapBlock) {
-            setLobbyWsBootstrapDone(false);
+            if (
+              !hasLobbyHydrationCache(
+                lobbyGamesRef.current,
+                lobbyGetRef.current,
+              )
+            ) {
+              setLobbyWsBootstrapDone(false);
+            }
           }
         }
       }
@@ -772,6 +798,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         }
         if (userKickLockRef.current) return;
         userKickLockRef.current = true;
+        dismissLobbySessionOverlays();
         if (gateActive) setLobbyWsBootstrapDone(true);
         const api = getAlertApi();
         if (api) {
@@ -926,7 +953,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   });
 
   const needsLobbyHydrationOverlay =
-    gateActive && Boolean(token?.trim()) && !lobbyWsBootstrapDone;
+    gateActive &&
+    Boolean(token?.trim()) &&
+    !lobbyWsBootstrapDone &&
+    !hasLobbyHydrationCache(lobbyGames, lobbyGet);
 
   const value = useMemo<GatewayLobbyContextValue>(
     () => ({

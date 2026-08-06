@@ -37,6 +37,10 @@ import {
 } from "../lib/lobbySound";
 import { clearCachedDailyLoginActivity } from "../features/dailyLogin/dailyLoginCache";
 import { clearDailyLoginAutoPopupSession } from "../features/dailyLogin/dailyLoginSession";
+import {
+  clearLobbySessionEviction,
+  dismissLobbySessionOverlays,
+} from "../lib/dismissLobbySessionOverlays";
 import { markFreshLoginWelcomeVoicePending } from "../lib/lobbyWelcomeVoiceGate";
 
 function getInitialToken(): string | null {
@@ -77,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const prevTokenRef = useRef<string | null | undefined>(undefined);
 
   const applyAuthResponse = useCallback((res: AuthResponse) => {
+    clearLobbySessionEviction();
     persistAuthResponse(res);
     setToken(res.accessToken);
     const u = resolveUserAfterAuth(res);
@@ -85,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    dismissLobbySessionOverlays();
     clearDailyLoginAutoPopupSession();
     clearCachedDailyLoginActivity();
     clearStoredSession();
@@ -108,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleClientVersionRequired = useCallback(
     () => {
+      dismissLobbySessionOverlays();
       clearStoredSession();
       setToken(null);
       setUser(null);
@@ -150,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       expiresIn?: number;
       user?: User | null | undefined;
     }) => {
+      clearLobbySessionEviction();
       persistAuthResponse(res);
       setToken(res.accessToken);
       if (res.user) {

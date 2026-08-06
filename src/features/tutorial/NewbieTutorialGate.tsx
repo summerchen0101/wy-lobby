@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuth } from "../../auth/useAuth";
 import { forceSafariRepaint } from "../../lib/forceSafariRepaint";
+import {
+  isLobbySessionEvicted,
+  LOBBY_SESSION_OVERLAYS_DISMISS_EVENT,
+} from "../../lib/dismissLobbySessionOverlays";
 import { useGeo } from "../geo/geoContext";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
 import {
@@ -49,6 +53,13 @@ export function NewbieTutorialGate() {
   }, []);
 
   useEffect(() => {
+    const onDismiss = () => setOpen(false);
+    window.addEventListener(LOBBY_SESSION_OVERLAYS_DISMISS_EVENT, onDismiss);
+    return () =>
+      window.removeEventListener(LOBBY_SESSION_OVERLAYS_DISMISS_EVENT, onDismiss);
+  }, []);
+
+  useEffect(() => {
     if (completedLocally || isNoviceTeachingGeneralDone(lobbyGet)) {
       setOpen(false);
     }
@@ -56,6 +67,10 @@ export function NewbieTutorialGate() {
 
   useLayoutEffect(() => {
     if (!ready || !user) {
+      setOpen(false);
+      return;
+    }
+    if (isLobbySessionEvicted()) {
       setOpen(false);
       return;
     }

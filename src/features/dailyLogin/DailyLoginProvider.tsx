@@ -55,6 +55,9 @@ import {
   computeCanDismissModal,
   resolveDailyLoginPrimaryAction,
 } from "./dailyLoginFlow";
+import {
+  LOBBY_SESSION_OVERLAYS_DISMISS_EVENT,
+} from "../../lib/dismissLobbySessionOverlays";
 
 function translateDailyLoginClaimError(
   code: string,
@@ -292,6 +295,32 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
     setPostClaimDismissible(false);
     setModalOpen(false);
   }, [clearAutoCloseTimer]);
+
+  const forceCloseModal = useCallback(() => {
+    clearAutoCloseTimer();
+    setPostClaimDismissible(false);
+    setClaiming(false);
+    setFlying(false);
+    setModalOpen(false);
+  }, [clearAutoCloseTimer]);
+
+  useEffect(() => {
+    if (!userId) {
+      forceCloseModal();
+    }
+  }, [userId, forceCloseModal]);
+
+  useEffect(() => {
+    const onDismiss = () => {
+      forceCloseModal();
+    };
+    window.addEventListener(LOBBY_SESSION_OVERLAYS_DISMISS_EVENT, onDismiss);
+    return () =>
+      window.removeEventListener(
+        LOBBY_SESSION_OVERLAYS_DISMISS_EVENT,
+        onDismiss,
+      );
+  }, [forceCloseModal]);
 
   const enterDismissible = useCallback(() => {
     show(claimSummaryRef.current, { variant: "success" });

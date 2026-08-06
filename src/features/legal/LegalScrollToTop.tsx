@@ -1,16 +1,29 @@
 import { ArrowUp } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 
 const SHOW_AFTER_SCROLL_PX = 240
 const SCROLL_DURATION_MS = 260
+
+function resetDocumentScrollTop() {
+  window.scrollTo(0, 0)
+  document.documentElement.scrollTop = 0
+  document.body.scrollTop = 0
+}
 
 function easeOutCubic(progress: number) {
   return 1 - (1 - progress) ** 3
 }
 
 export function LegalScrollToTop() {
+  const { pathname } = useLocation()
   const [visible, setVisible] = useState(false)
   const scrollFrameRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    resetDocumentScrollTop()
+    setVisible(false)
+  }, [pathname])
 
   useEffect(() => {
     const onScroll = () => {
@@ -33,7 +46,10 @@ export function LegalScrollToTop() {
     }
 
     const startY = window.scrollY
-    if (startY <= 0) return
+    if (startY <= 0) {
+      resetDocumentScrollTop()
+      return
+    }
 
     const startTime = performance.now()
 
