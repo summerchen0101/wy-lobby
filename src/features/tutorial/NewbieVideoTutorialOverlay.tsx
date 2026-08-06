@@ -16,6 +16,41 @@ type Props = {
   onComplete: () => void;
 };
 
+type VideoFrameRect = {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+};
+
+function measureTopCenterContainedVideoFrame(
+  containerWidth: number,
+  containerHeight: number,
+  videoWidth: number,
+  videoHeight: number,
+): VideoFrameRect | null {
+  if (
+    containerWidth <= 0 ||
+    containerHeight <= 0 ||
+    videoWidth <= 0 ||
+    videoHeight <= 0
+  ) {
+    return null;
+  }
+  const scale = Math.min(
+    containerWidth / videoWidth,
+    containerHeight / videoHeight,
+  );
+  const width = videoWidth * scale;
+  const height = videoHeight * scale;
+  return {
+    top: 0,
+    left: (containerWidth - width) / 2,
+    width,
+    height,
+  };
+}
+
 function releaseVideos(videos: readonly (HTMLVideoElement | null)[]) {
   for (const video of videos) {
     if (!video) continue;
@@ -127,6 +162,7 @@ async function playTutorialVideo(
 }
 
 export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
+  const stackRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const resumePlayOnTapRef = useRef(false);
   const soundUnlockedRef = useRef(false);
@@ -135,6 +171,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
   const [awaitingClick, setAwaitingClick] = useState(false);
   const [needsTapToResume, setNeedsTapToResume] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [videoFrame, setVideoFrame] = useState<VideoFrameRect | null>(null);
 
   const activeClip = NEWBIE_VIDEO_TUTORIAL_CLIPS[index];
   const lastClip = index >= NEWBIE_VIDEO_TUTORIAL_CLIPS.length - 1;
@@ -148,6 +185,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     setAwaitingClick(false);
     setNeedsTapToResume(false);
     setLoadFailed(false);
+    setVideoFrame(null);
     resumePlayOnTapRef.current = false;
     soundUnlockedRef.current = false;
   }, [open]);
@@ -177,6 +215,23 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     });
   }, []);
 
+  const syncVideoFrame = useCallback(() => {
+    const stack = stackRef.current;
+    const video = videoRefs.current[index];
+    if (!stack || !video) {
+      setVideoFrame(null);
+      return;
+    }
+    setVideoFrame(
+      measureTopCenterContainedVideoFrame(
+        stack.clientWidth,
+        stack.clientHeight,
+        video.videoWidth,
+        video.videoHeight,
+      ),
+    );
+  }, [index]);
+
   const tryPlayActive = useCallback(async (fromUserGesture = false) => {
     const video = videoRefs.current[index];
     if (!video) return false;
@@ -203,6 +258,20 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     pauseAllExcept(index);
     void tryPlayActive();
   }, [open, index, pauseAllExcept, tryPlayActive]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    syncVideoFrame();
+    const stack = stackRef.current;
+    if (!stack) return;
+    const observer = new ResizeObserver(() => syncVideoFrame());
+    observer.observe(stack);
+    window.addEventListener("resize", syncVideoFrame);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", syncVideoFrame);
+    };
+  }, [open, index, activeVideoReady, syncVideoFrame]);
 
   useEffect(() => {
     if (!open) return;
@@ -267,7 +336,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
       aria-label="New player tutorial"
       onClick={onTap}
       onContextMenu={(e) => e.preventDefault()}>
-      <div className="newbie-video-tutorial__stack">
+      <div ref={stackRef} className="newbie-video-tutorial__stack">
         {NEWBIE_VIDEO_TUTORIAL_CLIPS.map((clip, i) => {
           const active = i === index;
           const videoReady = activeVideoReady || showResumeHint;
@@ -292,10 +361,33 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
               draggable={false}
               controlsList="nodownload nofullscreen noremoteplayback"
               aria-hidden={!active || !videoReady}
+              onLoadedMetadata={active ? syncVideoFrame : undefined}
               onEnded={active ? onActiveVideoEnded : undefined}
             />
           );
         })}
+        {videoFrame ? (
+          <div
+            className="newbie-video-tutorial__video-frame"
+            style={{
+              top: videoFrame.top,
+              left: videoFrame.left,
+              width: videoFrame.width,
+              height: videoFrame.height,
+            }}
+          >
+            <button
+              type="button"
+              className="newbie-video-tutorial__skip"
+              onClick={(e) => {
+                e.stopPropagation();
+                finish();
+              }}
+            >
+              Skip
+            </button>
+          </div>
+        ) : null}
       </div>
       {showBootHint ? (
         <p className="newbie-video-tutorial__hint" aria-live="polite">
@@ -307,16 +399,6 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
           Tap to continue
         </p>
       ) : null}
-      <button
-        type="button"
-        className="newbie-video-tutorial__skip"
-        onClick={(e) => {
-          e.stopPropagation();
-          finish();
-        }}
-      >
-        Skip
-      </button>
     </div>,
     document.body,
   );

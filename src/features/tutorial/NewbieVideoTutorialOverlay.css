@@ -77,11 +77,18 @@
   }
 }
 
+.newbie-video-tutorial__video-frame {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
 .newbie-video-tutorial__skip {
   position: absolute;
-  top: max(0.85rem, var(--safe-top));
-  right: max(0.85rem, var(--page-pad-inline));
-  z-index: 3;
+  bottom: max(0.65rem, calc(var(--safe-bottom) * 0.35));
+  right: max(0.65rem, var(--page-pad-inline), var(--safe-right));
+  z-index: 1;
   margin: 0;
   padding: 0.45rem 0.85rem;
   border: 1px solid rgb(255 255 255 / 35%);
@@ -94,5 +101,6 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
+  pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
 }
