@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuth } from "../../auth/useAuth";
 import { forceSafariRepaint } from "../../lib/forceSafariRepaint";
+import { isIOSWebKit } from "../../lib/iosGameFullscreen";
 import {
   isLobbySessionEvicted,
   LOBBY_SESSION_OVERLAYS_DISMISS_EVENT,
@@ -16,6 +17,10 @@ import {
   shouldShowNoviceTeachingGeneralTutorial,
 } from "../../realtime/lobbyDecode";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
+import {
+  markNewbieTutorialCompletedThisSession,
+  syncNewbieTutorialSessionUser,
+} from "./tutorialOverlayState";
 import { NewbieVideoTutorialOverlay } from "./NewbieVideoTutorialOverlay";
 import { submitNoviceTeachingGeneralDone } from "./submitNoviceTeachingGeneralDone";
 
@@ -35,6 +40,7 @@ export function NewbieTutorialGate() {
   const wasOpenRef = useRef(false);
 
   useEffect(() => {
+    syncNewbieTutorialSessionUser(user?.id);
     setCompletedLocally(false);
   }, [user?.id]);
 
@@ -82,7 +88,8 @@ export function NewbieTutorialGate() {
       setOpen(false);
       return;
     }
-    if (!isWelcomeVoiceGateOpen()) {
+    // iOS autoplay / BFCache can leave the welcome-voice gate stuck closed; don't block tutorial.
+    if (!isIOSWebKit() && !isWelcomeVoiceGateOpen()) {
       setOpen(false);
       return;
     }
@@ -102,6 +109,7 @@ export function NewbieTutorialGate() {
   ]);
 
   const handleTutorialComplete = useCallback(() => {
+    markNewbieTutorialCompletedThisSession();
     setCompletedLocally(true);
     setOpen(false);
 

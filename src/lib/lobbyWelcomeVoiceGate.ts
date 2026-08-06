@@ -18,3 +18,8 @@ export function setWelcomeVoiceGateOpen(open: boolean): void {
 export function markFreshLoginWelcomeVoicePending(): void {
   setWelcomeVoiceGateOpen(false);
 }
+
+/** iOS BFCache／歡迎語 hang 後 gate 可能卡在 false；歡迎語未在播時強制重開。 */
+export function reopenWelcomeVoiceGateIfIdle(): void {
+  setWelcomeVoiceGateOpen(true);
+}

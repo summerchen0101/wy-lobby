@@ -65,11 +65,14 @@
   .daily-login-overlay,
   .invite-friends-terms-modal-overlay,
   .beggar-envelope-overlay,
-  .newbie-tutorial-overlay,
-  .newbie-video-tutorial {
+  .newbie-tutorial-overlay {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: rgb(0 0 0 / 82%);
+  }
+
+  .newbie-video-tutorial--mobile.newbie-video-tutorial--playing {
+    background: #000;
   }
 
   /* 大廳專用 fixed 霧面（LobbyPage.css）；iOS 改 absolute，避免轉屏 compositor crash */

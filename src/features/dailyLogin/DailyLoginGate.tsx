@@ -10,6 +10,15 @@ import {
   LOBBY_WELCOME_VOICE_GATE_EVENT,
 } from "../../lib/lobbyWelcomeVoiceGate";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
+import {
+  shouldShowNoviceTeachingGeneralTutorial,
+  type LobbyGetDecoded,
+} from "../../realtime/lobbyDecode";
+import {
+  isNewbieTutorialCompletedThisSession,
+  isTutorialOverlayOpen,
+  TUTORIAL_OVERLAY_STATE_EVENT,
+} from "../tutorial/tutorialOverlayState";
 import { useDailyLoginActivity } from "./dailyLoginContext";
 import { shouldAutoPopupDailyLogin } from "./dailyLoginLogic";
 import {
@@ -25,19 +34,36 @@ function isDailyLoginAutoPopupBlockedRoute(pathname: string): boolean {
   );
 }
 
+function isNewbieTutorialBlockingDailyLogin(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): boolean {
+  if (isNewbieTutorialCompletedThisSession()) return false;
+  if (isTutorialOverlayOpen()) return true;
+  return shouldShowNoviceTeachingGeneralTutorial(lobbyGet);
+}
+
 export function DailyLoginGate() {
   const { ready, user } = useAuth();
   const location = useLocation();
   const isPrimaryAppTab = usePrimaryAppTab();
-  const { gatewayRequestReady, needsLobbyHydrationOverlay } = useGatewayLobby();
+  const { gatewayRequestReady, needsLobbyHydrationOverlay, lobbyGet } =
+    useGatewayLobby();
   const { viewModel, loading, openModal } = useDailyLoginActivity();
   const [welcomeVoiceGateVersion, setWelcomeVoiceGateVersion] = useState(0);
+  const [tutorialOverlayVersion, setTutorialOverlayVersion] = useState(0);
 
   useEffect(() => {
     const sync = () => setWelcomeVoiceGateVersion((v) => v + 1);
     window.addEventListener(LOBBY_WELCOME_VOICE_GATE_EVENT, sync);
     return () =>
       window.removeEventListener(LOBBY_WELCOME_VOICE_GATE_EVENT, sync);
+  }, []);
+
+  useEffect(() => {
+    const sync = () => setTutorialOverlayVersion((v) => v + 1);
+    window.addEventListener(TUTORIAL_OVERLAY_STATE_EVENT, sync);
+    return () =>
+      window.removeEventListener(TUTORIAL_OVERLAY_STATE_EVENT, sync);
   }, []);
 
   useEffect(() => {
@@ -49,6 +75,7 @@ export function DailyLoginGate() {
     if (!isWsLobbyGamesEnabled()) return;
     if (!gatewayRequestReady || needsLobbyHydrationOverlay) return;
     if (!isWelcomeVoiceGateOpen()) return;
+    if (isNewbieTutorialBlockingDailyLogin(lobbyGet)) return;
     if (loading || !shouldAutoPopupDailyLogin(viewModel)) return;
     if (wasDailyLoginAutoPopupShown(userId)) return;
 
@@ -64,6 +91,8 @@ export function DailyLoginGate() {
     loading,
     viewModel,
     welcomeVoiceGateVersion,
+    tutorialOverlayVersion,
+    lobbyGet,
     openModal,
   ]);
 

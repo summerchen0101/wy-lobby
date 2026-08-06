@@ -175,6 +175,18 @@ export async function resumeLobbyBgm(audio: HTMLAudioElement): Promise<void> {
 
 let welcomeVoice: HTMLAudioElement | null = null;
 let welcomeVoicePendingRetry = false;
+let tutorialSoundUnlockedFromLoginGesture = false;
+
+export function markTutorialSoundUnlockedFromLoginGesture(): void {
+  tutorialSoundUnlockedFromLoginGesture = true;
+}
+
+/** 登入／註冊按鈕手勢後，新手教學第一段可嘗試開聲音（iOS）。 */
+export function consumeTutorialSoundUnlockedFromLoginGesture(): boolean {
+  const unlocked = tutorialSoundUnlockedFromLoginGesture;
+  tutorialSoundUnlockedFromLoginGesture = false;
+  return unlocked;
+}
 
 function getWelcomeVoiceAudio(): HTMLAudioElement {
   if (!welcomeVoice) {
@@ -208,6 +220,7 @@ function waitForAudioEnded(audio: HTMLAudioElement): Promise<void> {
  * 須在 await login/register/signUp 之前呼叫。
  */
 export function kickstartLobbyWelcomeVoiceFromUserGesture(): void {
+  markTutorialSoundUnlockedFromLoginGesture();
   if (!isLobbySoundEnabled()) return;
   const a = getWelcomeVoiceAudio();
   a.src = pickAlternatingWelcomeVoiceSrc();
@@ -224,6 +237,13 @@ export function isLobbyWelcomeVoiceStarted(): boolean {
   if (!a?.src) return false;
   if (welcomeVoicePendingRetry) return false;
   return !a.ended;
+}
+
+/** kickstart 於登入 API 期間已播完；勿再無手勢重播（iOS autoplay 會擋）。 */
+export function isLobbyWelcomeVoiceAlreadyComplete(): boolean {
+  const a = welcomeVoice;
+  if (!a?.src || welcomeVoicePendingRetry) return false;
+  return a.ended;
 }
 
 /** 等已在播放（或 kickstart）的歡迎語播完。 */
