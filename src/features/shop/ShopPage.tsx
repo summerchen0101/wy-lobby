@@ -22,7 +22,7 @@ import {
 } from "../../lib/socure/socureDevice";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { isPhoneBound } from "./isPhoneBound";
-import { translateGatewayError } from "../../i18n/apiErrorMessage";
+import { translateShopGatewayError } from "./shopGatewayError";
 import { ShopCheckoutOverlay, type CheckoutStep } from "./ShopCheckoutOverlay";
 import type {
   ShopBindingFormPayload,
@@ -290,7 +290,7 @@ export function ShopPage() {
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
           setBuyError(
-            translateGatewayError(
+            translateShopGatewayError(
               code,
               r.errMessage,
               `Purchase failed (${code})`,
@@ -391,7 +391,11 @@ export function ShopPage() {
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
           setBindingError(
-            translateGatewayError(code, r.errMessage, `Binding failed (${code})`),
+            translateShopGatewayError(
+              code,
+              r.errMessage,
+              `Binding failed (${code})`,
+            ),
           );
           return;
         }
