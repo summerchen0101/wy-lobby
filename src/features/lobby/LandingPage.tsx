@@ -1275,7 +1275,8 @@ export function LandingPage() {
               <div
                 className={
                   "lobby-games-filter-strip" +
-                  (providerMenuOpen ? " is-provider-menu-open" : "")
+                  (providerMenuOpen ? " is-provider-menu-open" : "") +
+                  (lobbySearchExpanded ? " is-search-expanded" : "")
                 }>
                 <div
                   className={
@@ -1329,39 +1330,6 @@ export function LandingPage() {
                     ) : null}
                   </div>
                 </div>
-                {thirdPartyGamesEnabled ? (
-                  <div className="lobby-provider-tab">
-                    <button
-                      ref={providerTabBtnRef}
-                      id={lobbyTabDomId("providers")}
-                      type="button"
-                      className={
-                        "lobby-game-filter__tab lobby-game-filter__tab--providers" +
-                        (lobbyFilter === "providers" || providerMenuOpen
-                          ? " is-active"
-                          : "") +
-                        (providerMenuOpen ? " is-menu-open" : "")
-                      }
-                      role="tab"
-                      aria-selected={
-                        lobbyFilter === "providers" || providerMenuOpen
-                      }
-                      aria-controls="lobby-games-panel"
-                      aria-haspopup="listbox"
-                      aria-expanded={providerMenuOpen}
-                      tabIndex={
-                        lobbyFilter === "providers" || providerMenuOpen ? 0 : -1
-                      }
-                      onClick={onProvidersTabClick}>
-                      <span>PROVIDERS</span>
-                      <ChevronDown
-                        className="lobby-provider-tab__chevron"
-                        strokeWidth={2.5}
-                        aria-hidden
-                      />
-                    </button>
-                  </div>
-                ) : null}
                 <div
                   ref={setLobbyGameFilterContainerRef}
                   className="lobby-game-filter"
@@ -1372,6 +1340,39 @@ export function LandingPage() {
                   onPointerUp={onLobbyGameFilterPointerUp}
                   onPointerCancel={onLobbyGameFilterPointerCancel}
                   onLostPointerCapture={onLobbyGameFilterLostPointerCapture}>
+                  {thirdPartyGamesEnabled ? (
+                    <div className="lobby-provider-tab">
+                      <button
+                        ref={providerTabBtnRef}
+                        id={lobbyTabDomId("providers")}
+                        type="button"
+                        className={
+                          "lobby-game-filter__tab lobby-game-filter__tab--providers" +
+                          (lobbyFilter === "providers" || providerMenuOpen
+                            ? " is-active"
+                            : "") +
+                          (providerMenuOpen ? " is-menu-open" : "")
+                        }
+                        role="tab"
+                        aria-selected={
+                          lobbyFilter === "providers" || providerMenuOpen
+                        }
+                        aria-controls="lobby-games-panel"
+                        aria-haspopup="listbox"
+                        aria-expanded={providerMenuOpen}
+                        tabIndex={
+                          lobbyFilter === "providers" || providerMenuOpen ? 0 : -1
+                        }
+                        onClick={onProvidersTabClick}>
+                        <span>PROVIDERS</span>
+                        <ChevronDown
+                          className="lobby-provider-tab__chevron"
+                          strokeWidth={2.5}
+                          aria-hidden
+                        />
+                      </button>
+                    </div>
+                  ) : null}
                   {lobbyFilterTabsList.map(({ id, label }) =>
                     id === "providers" ? null : isProviderTabId(id) ? (
                       <button
