@@ -42,7 +42,6 @@ import {
 } from "./RedeemBindingModal";
 import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
 import {
-  fetchRedeemPlayerBindingFromGateway,
   redeemBindingPrefillFromLobby,
   resolveRedeemBindingNextStep,
 } from "./redeemBindingGate";

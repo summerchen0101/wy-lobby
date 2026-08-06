@@ -6,14 +6,16 @@ import {
   SHOP_REWARD_SC_COIN_SRC,
 } from "./shopCoinPile";
 import type { ShopPack } from "./types";
+import {
+  flyOriginRectFromPiles,
+  INITIAL_DELAY_MS,
+  PILE_ENTER_MS,
+  PILE_EXIT_MS,
+  PILE_EXIT_STAGGER_MS,
+  PILE_HOLD_MS,
+  PILE_STAGGER_MS,
+} from "./shopPurchaseRewardAnimationHelpers";
 import "./ShopPurchaseRewardAnimation.css";
-
-const INITIAL_DELAY_MS = 40;
-const PILE_ENTER_MS = 550;
-const PILE_STAGGER_MS = 280;
-const PILE_HOLD_MS = 400;
-const PILE_EXIT_MS = 450;
-const PILE_EXIT_STAGGER_MS = 220;
 
 type PilePhase = "hidden" | "enter" | "exit" | "done";
 
@@ -21,36 +23,6 @@ type Props = {
   pack: ShopPack;
   onComplete: () => void;
 };
-
-export function flyOriginRectFromPiles(
-  gc: DOMRect | undefined,
-  sc: DOMRect | undefined,
-): DOMRect | null {
-  if (!gc && !sc) return null;
-  if (gc && !sc) return gc;
-  if (!gc && sc) return sc;
-
-  const gcCx = gc.left + gc.width / 2;
-  const gcCy = gc.top + gc.height / 2;
-  const scCx = sc.left + sc.width / 2;
-  const scCy = sc.top + sc.height / 2;
-  const cx = (gcCx + scCx) / 2;
-  const cy = (gcCy + scCy) / 2;
-  const width = Math.max(gc.width, sc.width);
-  const height = Math.max(gc.height, sc.height);
-  const left = cx - width / 2;
-  const top = cy - height / 2;
-  return {
-    x: left,
-    y: top,
-    left,
-    top,
-    width,
-    height,
-    right: left + width,
-    bottom: top + height,
-  } as DOMRect;
-}
 
 function pileClassName(phase: PilePhase): string {
   const base = "shop-reward-anim__pile";
@@ -65,17 +37,6 @@ function coinRectFromPile(
 ): DOMRect | undefined {
   const img = pileEl?.querySelector("img.shop-reward-anim__coin-img");
   return img?.getBoundingClientRect();
-}
-
-export function shopPurchaseRewardFlyDelayMs(showSc: boolean): number {
-  const gcEnterAt = INITIAL_DELAY_MS;
-  const scEnterAt = showSc ? gcEnterAt + PILE_STAGGER_MS : null;
-  const lastEnterDoneAt =
-    (scEnterAt ?? gcEnterAt) + PILE_ENTER_MS;
-  const gcExitAt = lastEnterDoneAt + PILE_HOLD_MS;
-  const scExitAt = showSc ? gcExitAt + PILE_EXIT_STAGGER_MS : null;
-  const flyAt = (scExitAt ?? gcExitAt) + PILE_EXIT_MS;
-  return flyAt;
 }
 
 export function ShopPurchaseRewardAnimation({ pack, onComplete }: Props) {

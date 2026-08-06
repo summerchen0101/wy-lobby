@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   flyOriginRectFromPiles,
   shopPurchaseRewardFlyDelayMs,
-} from "./ShopPurchaseRewardAnimation";
+} from "./shopPurchaseRewardAnimationHelpers";
 
 describe("shopPurchaseRewardFlyDelayMs", () => {
   it("starts coin fly after sequential pile exit (GC only)", () => {
