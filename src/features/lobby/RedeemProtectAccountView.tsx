@@ -4,9 +4,11 @@ import {
   useCallback,
   useEffect,
   useId,
+  useRef,
   useState,
 } from "react";
 import { IoChevronBack } from "react-icons/io5";
+import { Plus } from "lucide-react";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import {
@@ -27,6 +29,7 @@ import {
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import {
   isValidUsPhoneDigits,
+  sanitizeUsPhoneInput,
   usPhoneValidationWordId,
 } from "../../lib/usPhoneValidation";
 import { getWord } from "../../wordData/getWord";
@@ -113,6 +116,9 @@ export function RedeemProtectAccountView({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [email, setEmail] = useState("");
+  const [phoneCountry, setPhoneCountry] = useState("1");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [dobMonth, setDobMonth] = useState("");
@@ -129,22 +135,45 @@ export function RedeemProtectAccountView({
   const [frontImage, setFrontImage] = useState<ImageBase64Payload | null>(null);
   const [backImage, setBackImage] = useState<ImageBase64Payload | null>(null);
 
-  const dobYears = Array.from({ length: 2007 - 1920 + 1 }, (_, i) => 2007 - i);
-  const dobDays = Array.from({ length: 31 }, (_, i) => i + 1);
-
   const pi = "shop-checkout__input shop-checkout__input--protect";
 
+  const emailReadOnly = Boolean(
+    bindingPrefill?.email?.trim() || user?.email?.trim(),
+  );
+  const phoneReadOnly = mode === "addressOnly";
+  const wasOpenRef = useRef(false);
+
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      wasOpenRef.current = false;
+      return;
+    }
+    const opening = !wasOpenRef.current;
+    wasOpenRef.current = true;
+    if (!opening) return;
+
     setStep("profile");
     setBusy(false);
     setError(null);
+
+    const pi = lobbyGet?.playerInfo as Record<string, unknown> | null | undefined;
+    const lobbyCellPhone =
+      typeof pi?.cellPhone === "string" && pi.cellPhone.trim()
+        ? pi.cellPhone.trim()
+        : "";
+    const contact = resolveBindingContact(bindingPrefill, user, lobbyCellPhone);
+    setEmail(contact.email);
+    setPhoneCountry(contact.countryCode);
+    setPhoneNumber(contact.phone);
+
+    const prefillAddress =
+      bindingPrefill?.address?.trim() || user?.address?.trim() || "";
     setFirstName("");
     setLastName("");
     setDobMonth("");
     setDobDay("");
     setDobYear("");
-    setAddress1("");
+    setAddress1(prefillAddress);
     setAddress2("");
     setCountry("US");
     setCity("");
@@ -154,7 +183,28 @@ export function RedeemProtectAccountView({
     setDocumentNumber("");
     setFrontImage(null);
     setBackImage(null);
-  }, [open, mode]);
+  }, [open, mode, bindingPrefill, user, lobbyGet]);
+
+  /** Lobby/user 晚到時只補空白欄位，不覆寫玩家已輸入內容。 */
+  useEffect(() => {
+    if (!open || !wasOpenRef.current) return;
+
+    const pi = lobbyGet?.playerInfo as Record<string, unknown> | null | undefined;
+    const lobbyCellPhone =
+      typeof pi?.cellPhone === "string" && pi.cellPhone.trim()
+        ? pi.cellPhone.trim()
+        : "";
+    const contact = resolveBindingContact(bindingPrefill, user, lobbyCellPhone);
+    const prefillAddress =
+      bindingPrefill?.address?.trim() || user?.address?.trim() || "";
+
+    setEmail((prev) => (prev.trim() ? prev : contact.email));
+    setPhoneCountry((prev) => prev || contact.countryCode);
+    setPhoneNumber((prev) =>
+      normalizePhoneDigits(prev) ? prev : contact.phone,
+    );
+    setAddress1((prev) => (prev.trim() ? prev : prefillAddress));
+  }, [open, bindingPrefill, user, lobbyGet]);
 
   const fetchBindingState = useCallback(async () => {
     const req = requestRef.current;
@@ -194,6 +244,21 @@ export function RedeemProtectAccountView({
   }, [address1, city, state, zip]);
 
   const validateProfile = useCallback((): boolean => {
+    if (!email.trim()) {
+      setError("Missing account email.");
+      return false;
+    }
+    const phoneDigits = normalizePhoneDigits(phoneNumber);
+    if (!phoneDigits) {
+      setError("Missing account phone number.");
+      return false;
+    }
+    const cc = phoneCountry.trim() || "1";
+    if (cc === "1" && !isValidUsPhoneDigits(phoneDigits)) {
+      const wordId = usPhoneValidationWordId(phoneDigits);
+      setError(wordId !== null ? getWord(wordId) : getWord(555));
+      return false;
+    }
     if (mode === "addressOnly") {
       return validateAddress();
     }
@@ -209,29 +274,12 @@ export function RedeemProtectAccountView({
       setError("Complete all required profile fields.");
       return false;
     }
-
-    const pi = lobbyGet?.playerInfo as Record<string, unknown> | null | undefined;
-    const lobbyCellPhone =
-      typeof pi?.cellPhone === "string" && pi.cellPhone.trim()
-        ? pi.cellPhone.trim()
-        : "";
-    const contact = resolveBindingContact(bindingPrefill, user, lobbyCellPhone);
-    if (!contact.email.trim()) {
-      setError("Missing account email.");
-      return false;
-    }
-    if (!contact.phone) {
-      setError("Missing account phone number.");
-      return false;
-    }
-    if (contact.countryCode === "1" && !isValidUsPhoneDigits(contact.phone)) {
-      const wordId = usPhoneValidationWordId(contact.phone);
-      setError(wordId !== null ? getWord(wordId) : getWord(555));
-      return false;
-    }
     return validateAddress();
   }, [
     mode,
+    email,
+    phoneCountry,
+    phoneNumber,
     firstName,
     lastName,
     dobMonth,
@@ -239,9 +287,6 @@ export function RedeemProtectAccountView({
     dobYear,
     documentType,
     documentNumber,
-    bindingPrefill,
-    user,
-    lobbyGet,
     validateAddress,
   ]);
 
@@ -261,17 +306,12 @@ export function RedeemProtectAccountView({
       return;
     }
 
-    const pi = lobbyGet?.playerInfo as Record<string, unknown> | null | undefined;
-    const lobbyCellPhone =
-      typeof pi?.cellPhone === "string" && pi.cellPhone.trim()
-        ? pi.cellPhone.trim()
-        : "";
-
-    const contact = resolveBindingContact(bindingPrefill, user, lobbyCellPhone);
+    const phoneDigits = normalizePhoneDigits(phoneNumber);
+    const countryCode = phoneCountry.trim() || "1";
 
     const birthday =
       mode === "full" && dobYear && dobMonth && dobDay
-        ? `${dobYear}-${dobMonth}-${dobDay}`
+        ? `${dobYear}-${dobMonth}-${String(dobDay).padStart(2, "0")}`
         : "";
     const line1 = address1.trim();
     const fullAddress = combineAddress(line1, address2);
@@ -282,9 +322,9 @@ export function RedeemProtectAccountView({
     try {
       const data = encodeMegaAccountBindingRequestBytes({
         userID: uid,
-        countryCode: contact.countryCode,
-        phone: contact.phone,
-        email: contact.email,
+        countryCode,
+        phone: phoneDigits,
+        email: email.trim(),
         answer: "",
         firstName: mode === "full" ? firstName.trim() : "",
         middleName: "",
@@ -331,7 +371,9 @@ export function RedeemProtectAccountView({
     gatewayRequestReady,
     user,
     mode,
-    bindingPrefill,
+    email,
+    phoneCountry,
+    phoneNumber,
     dobYear,
     dobMonth,
     dobDay,
@@ -347,7 +389,6 @@ export function RedeemProtectAccountView({
     zip,
     frontImage,
     backImage,
-    lobbyGet,
     finalizeBindingSuccess,
   ]);
 
@@ -562,7 +603,8 @@ export function RedeemProtectAccountView({
           name="dobMonth"
           aria-label="Month"
           value={dobMonth}
-          onChange={(e) => setDobMonth(e.target.value)}>
+          onChange={(e) => setDobMonth(e.target.value)}
+          disabled={busy}>
           <option value="">{w(111)}</option>
           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
             <option key={m} value={String(m).padStart(2, "0")}>
@@ -570,36 +612,105 @@ export function RedeemProtectAccountView({
             </option>
           ))}
         </select>
-        <select
+        <input
           id={`${idPrefix}-dob-d`}
-          className={`${pi} shop-checkout__select`}
+          className={pi}
           name="dobDay"
+          type="text"
+          inputMode="numeric"
+          autoComplete="bday-day"
           aria-label="Day"
+          placeholder={w(112)}
+          maxLength={2}
           value={dobDay}
-          onChange={(e) => setDobDay(e.target.value)}>
-          <option value="">{w(112)}</option>
-          {dobDays.map((d) => (
-            <option key={d} value={String(d).padStart(2, "0")}>
-              {d}
-            </option>
-          ))}
-        </select>
-        <select
+          onChange={(e) =>
+            setDobDay(e.target.value.replace(/\D/g, "").slice(0, 2))
+          }
+          disabled={busy}
+        />
+        <input
           id={`${idPrefix}-dob-y`}
-          className={`${pi} shop-checkout__select`}
+          className={pi}
           name="dobYear"
+          type="text"
+          inputMode="numeric"
+          autoComplete="bday-year"
           aria-label="Year"
+          placeholder={w(113)}
+          maxLength={4}
           value={dobYear}
-          onChange={(e) => setDobYear(e.target.value)}>
-          <option value="">{w(113)}</option>
-          {dobYears.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+          onChange={(e) =>
+            setDobYear(e.target.value.replace(/\D/g, "").slice(0, 4))
+          }
+          disabled={busy}
+        />
       </div>
     </div>
+  );
+
+  const renderContactFields = () => (
+    <>
+      <label className="shop-checkout__field" htmlFor={`${idPrefix}-email`}>
+        <input
+          id={`${idPrefix}-email`}
+          className={
+            pi +
+            " shop-checkout__input--email-prefill" +
+            (emailReadOnly ? " shop-checkout__input--readonly" : "")
+          }
+          name="email"
+          type="email"
+          autoComplete="email"
+          readOnly={emailReadOnly}
+          placeholder={emailReadOnly ? "" : w(510010)}
+          value={email}
+          onChange={(e) => {
+            if (emailReadOnly) return;
+            setEmail(e.target.value);
+          }}
+          disabled={busy}
+        />
+      </label>
+      <div className="shop-checkout__field shop-checkout__field--stack">
+        <span
+          className="shop-checkout__field-heading shop-checkout__field-heading--phone"
+          id={`${idPrefix}-phone-legend`}>
+          {w(114)}
+        </span>
+        <div
+          className="shop-checkout__row-phone"
+          role="group"
+          aria-labelledby={`${idPrefix}-phone-legend`}>
+          <input
+            id={`${idPrefix}-phone-cc`}
+            className={pi + " shop-checkout__input--code-readonly"}
+            name="phoneCountry"
+            type="text"
+            readOnly
+            tabIndex={-1}
+            aria-label="Country code"
+            value={phoneCountry}
+            disabled={busy}
+          />
+          <input
+            id={`${idPrefix}-phone-num`}
+            className={pi + " shop-checkout__input--grow"}
+            name="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel-national"
+            placeholder={w(115)}
+            value={phoneNumber}
+            readOnly={phoneReadOnly}
+            onChange={(e) => {
+              if (phoneReadOnly) return;
+              setPhoneNumber(sanitizeUsPhoneInput(e.target.value));
+            }}
+            disabled={busy}
+          />
+        </div>
+      </div>
+    </>
   );
 
   const renderNameFields = () => (
@@ -637,14 +748,17 @@ export function RedeemProtectAccountView({
       <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
         <p className="shop-checkout__protect-lead">{w(510454)}</p>
         <div className="shop-checkout__fields shop-checkout__fields--protect">
+          {renderContactFields()}
           {mode === "full" ? (
             <>
               {renderDobFields()}
               {renderNameFields()}
+              {renderAddressFields()}
+              {renderDocumentFields()}
             </>
-          ) : null}
-          {renderAddressFields()}
-          {mode === "full" ? renderDocumentFields() : null}
+          ) : (
+            renderAddressFields()
+          )}
         </div>
         {error ? (
           <p className="shop-checkout__pay-error" role="alert">
@@ -662,6 +776,38 @@ export function RedeemProtectAccountView({
     </form>
   );
 
+  const renderIdUploadSlot = (
+    side: "front" | "back",
+    captionWordId: number,
+    image: ImageBase64Payload | null,
+    inputId: string,
+  ) => (
+    <div className="redeem-protect__upload-slot">
+      <span className="redeem-protect__upload-caption">{w(captionWordId)}:</span>
+      <label
+        className={`redeem-protect__upload-box${image ? " redeem-protect__upload-box--filled" : ""}`}
+        htmlFor={inputId}>
+        {image ? (
+          <img
+            className="redeem-protect__upload-preview"
+            src={imagePreviewSrc(image) ?? undefined}
+            alt=""
+          />
+        ) : (
+          <Plus className="redeem-protect__upload-plus" strokeWidth={1.75} aria-hidden />
+        )}
+        <input
+          id={inputId}
+          className="redeem-protect__upload-input"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(e) => void handleImagePick(side, e)}
+        />
+      </label>
+    </div>
+  );
+
   const renderIdPhotoStep = () => (
     <form
       className="shop-checkout__card-form shop-checkout__protect-form"
@@ -670,48 +816,8 @@ export function RedeemProtectAccountView({
       <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
         <p className="shop-checkout__protect-lead">{w(510454)}</p>
         <div className="redeem-protect__upload-list">
-          <label
-            className={`redeem-protect__upload-box${frontImage ? " redeem-protect__upload-box--filled" : ""}`}
-            htmlFor={`${idPrefix}-front-img`}>
-            {frontImage ? (
-              <img
-                className="redeem-protect__upload-preview"
-                src={imagePreviewSrc(frontImage) ?? undefined}
-                alt=""
-              />
-            ) : (
-              <span className="redeem-protect__upload-label">{w(510509)}</span>
-            )}
-            <input
-              id={`${idPrefix}-front-img`}
-              className="redeem-protect__upload-input"
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => void handleImagePick("front", e)}
-            />
-          </label>
-          <label
-            className={`redeem-protect__upload-box${backImage ? " redeem-protect__upload-box--filled" : ""}`}
-            htmlFor={`${idPrefix}-back-img`}>
-            {backImage ? (
-              <img
-                className="redeem-protect__upload-preview"
-                src={imagePreviewSrc(backImage) ?? undefined}
-                alt=""
-              />
-            ) : (
-              <span className="redeem-protect__upload-label">{w(510510)}</span>
-            )}
-            <input
-              id={`${idPrefix}-back-img`}
-              className="redeem-protect__upload-input"
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => void handleImagePick("back", e)}
-            />
-          </label>
+          {renderIdUploadSlot("front", 510509, frontImage, `${idPrefix}-front-img`)}
+          {renderIdUploadSlot("back", 510510, backImage, `${idPrefix}-back-img`)}
         </div>
         {error ? (
           <p className="shop-checkout__pay-error" role="alert">
