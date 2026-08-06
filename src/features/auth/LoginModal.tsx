@@ -8,6 +8,7 @@ import {
 import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
+import { readLastLoginAccount } from "../../auth/lastLoginAccount";
 import { resolvePostLoginRedirect } from "../../auth/loginEntry";
 import { ApiError } from "../../lib/api/client";
 import { ClientVersionError } from "../../lib/api/clientVersionError";
@@ -76,7 +77,7 @@ export function LoginModal({
   const emailId = `${formId}-email`;
   const passwordId = `${formId}-password`;
 
-  const [account, setAccount] = useState("");
+  const [account, setAccount] = useState(() => readLastLoginAccount());
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);

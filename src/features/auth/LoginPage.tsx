@@ -1,6 +1,7 @@
 import { type FormEvent, useMemo, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
+import { readLastLoginAccount } from '../../auth/lastLoginAccount'
 import { resolvePostLoginRedirect } from '../../auth/loginEntry'
 import { MarketingTopBar } from '../../components/MarketingTopBar'
 import { ApiError } from '../../lib/api/client'
@@ -30,7 +31,7 @@ export function LoginPage() {
     q.set('redirect', rd)
     return `/forgot-password?${q.toString()}`
   }, [search])
-  const [account, setAccount] = useState('')
+  const [account, setAccount] = useState(() => readLastLoginAccount())
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({})

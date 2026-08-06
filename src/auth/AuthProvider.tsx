@@ -42,6 +42,7 @@ import {
   dismissLobbySessionOverlays,
 } from "../lib/dismissLobbySessionOverlays";
 import { markFreshLoginWelcomeVoicePending } from "../lib/lobbyWelcomeVoiceGate";
+import { saveLastLoginAccount } from "./lastLoginAccount";
 
 function getInitialToken(): string | null {
   return getStoredAccessToken();
@@ -271,6 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       kickstartLobbyWelcomeVoiceFromUserGesture();
       try {
         const res = await apiLogin({ account, password });
+        saveLastLoginAccount(account);
         const user = res.user ?? syntheticUserFromAccount(account);
         setSessionFromAuth({ ...res, user });
       } catch (err) {
