@@ -79,6 +79,7 @@ export function encodeListWithdrawOrdersRequestBytes(
 export type WithdrawOrderWireRow = {
   withdrawOrderUID: string;
   amount: string;
+  fee: string;
   withdrawOrderPaymentStatus: number;
   statusLabel: string;
   remark: string;
@@ -122,6 +123,7 @@ export function decodeListWithdrawOrdersResponseBytes(
     withdrawOrders?: Array<{
       withdrawOrderUID?: string;
       amount?: string | number;
+      fee?: string | number;
       withdrawOrderPaymentStatus?: string | number;
       remark?: string;
       createdAtTimestampMillisecond?: string | number;
@@ -135,6 +137,7 @@ export function decodeListWithdrawOrdersResponseBytes(
     return {
       withdrawOrderUID: String(row.withdrawOrderUID ?? ""),
       amount: String(row.amount ?? ""),
+      fee: String(row.fee ?? ""),
       withdrawOrderPaymentStatus: statusCode,
       statusLabel: withdrawOrderPaymentStatusToLabel(st),
       remark: String(row.remark ?? "").trim(),

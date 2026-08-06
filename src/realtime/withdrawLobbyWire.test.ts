@@ -68,6 +68,7 @@ describe("decodeListWithdrawOrdersResponseBytes", () => {
             {
               withdrawOrderUID: "wd-99",
               amount: "999",
+              fee: "0.15",
               withdrawOrderPaymentStatus: 3,
               createdAtTimestampMillisecond: "1700000000000",
               remark: "> 60 Minutes",
@@ -83,6 +84,7 @@ describe("decodeListWithdrawOrdersResponseBytes", () => {
     expect(orders[0]).toMatchObject({
       withdrawOrderUID: "wd-99",
       amount: "999",
+      fee: "0.15",
       withdrawOrderPaymentStatus: 3,
       remark: "> 60 Minutes",
       createdAtTimestampMillisecond: "1700000000000",

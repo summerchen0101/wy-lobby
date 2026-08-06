@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   formatRedeemHistoryLinkAmount,
+  formatRedeemHistoryRowLabel,
   formatWithdrawCreatedAt,
+  redeemHistoryFeeShouldDisplay,
   redeemHistoryStatusClassName,
   withdrawHistoryShowsCancel,
   withdrawHistoryShowsRemark,
@@ -63,5 +65,31 @@ describe("redeemHistoryUi", () => {
   it("prefixes fiat link amount with dollar sign", () => {
     expect(formatRedeemHistoryLinkAmount("999")).toBe("$999");
     expect(formatRedeemHistoryLinkAmount("$50")).toBe("$50");
+  });
+
+  it("includes fee in row label when fee is positive", () => {
+    const w = (id: number, ...args: string[]) =>
+      id === 510476 ? `${args[0]} ${args[1]}` : "";
+    expect(
+      formatRedeemHistoryRowLabel({
+        fiatAmount: "5",
+        feeWire: "0.15",
+        w,
+      }),
+    ).toBe("Redeem $5, Fee $0.15");
+  });
+
+  it("omits fee in row label when fee is zero or empty", () => {
+    const w = (id: number, ...args: string[]) =>
+      id === 510476 ? `${args[0]} ${args[1]}` : "";
+    expect(
+      formatRedeemHistoryRowLabel({
+        fiatAmount: "100",
+        feeWire: "0",
+        w,
+      }),
+    ).toBe("Redeem $100");
+    expect(redeemHistoryFeeShouldDisplay("0")).toBe(false);
+    expect(redeemHistoryFeeShouldDisplay("")).toBe(false);
   });
 });

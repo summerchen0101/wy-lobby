@@ -9,7 +9,6 @@ import { openZendeskOrFallback } from "../../lib/zendeskSupport";
 import {
   formatScFromRaw,
   formatScFromTruncatedHundredths,
-  formatWithdrawHistoryFiatAmount,
   MIN_REDEEM_SC_DISPLAY,
 } from "../../wallet/formatWalletAmount";
 import {
@@ -51,7 +50,7 @@ import {
   resolveMinRedeemRaw,
 } from "./redeemMinAmount";
 import {
-  formatRedeemHistoryLinkAmount,
+  formatRedeemHistoryRowLabel,
   formatWithdrawCreatedAt,
   redeemHistoryStatusClassName,
   withdrawHistoryShowsCancel,
@@ -99,12 +98,11 @@ function RedeemHistoryRow({
   onCancel,
   w,
 }: RedeemHistoryRowProps) {
-  const fiatAmount = formatWithdrawHistoryFiatAmount(row.amount);
-  const linkLabel = w(
-    510476,
-    "Redeem",
-    formatRedeemHistoryLinkAmount(fiatAmount),
-  );
+  const linkLabel = formatRedeemHistoryRowLabel({
+    fiatAmount: row.amount,
+    feeWire: row.fee,
+    w,
+  });
   const orderUrl = row.uuu.trim();
   const createdAtLabel = formatWithdrawCreatedAt(
     row.createdAtTimestampMillisecond,
@@ -383,6 +381,7 @@ export function RedeemPage() {
           show(translateGatewayError(code, r.errMessage), { variant: "error" });
           return;
         }
+        await refreshLobbyGet();
         await fetchOrders(ordersPage);
       } catch (e) {
         show(e instanceof Error ? e.message : "Cancel failed", {
@@ -392,7 +391,7 @@ export function RedeemPage() {
         setCancelBusyUid(null);
       }
     },
-    [requestRef, gatewayRequestReady, show, fetchOrders, ordersPage],
+    [requestRef, gatewayRequestReady, show, fetchOrders, ordersPage, refreshLobbyGet],
   );
 
   const pagerPrev = useCallback(() => {

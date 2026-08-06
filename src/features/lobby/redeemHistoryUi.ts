@@ -1,6 +1,7 @@
 import { getActiveLocale } from "../../i18n/getActiveLocale";
 import { DISPLAY_TZ } from "../../lib/displayTimezone";
 import { WITHDRAW_ORDER_PAYMENT_STATUS } from "../../realtime/withdrawLobbyWire";
+import { formatWithdrawHistoryFiatAmount } from "../../wallet/formatWalletAmount";
 
 export type WithdrawHistoryStatusTone =
   | "positive"
@@ -63,4 +64,29 @@ export function formatRedeemHistoryLinkAmount(fiatAmount: string): string {
   const t = fiatAmount.trim();
   if (!t || t === "—") return "—";
   return t.startsWith("$") ? t : `$${t}`;
+}
+
+export function redeemHistoryFeeShouldDisplay(feeWire: string): boolean {
+  const feeDisplay = formatWithdrawHistoryFiatAmount(feeWire);
+  if (feeDisplay === "—") return false;
+  const n = Number(feeDisplay.replace(/,/g, ""));
+  return Number.isFinite(n) && n > 0;
+}
+
+/** 對齊 APP：「Redeem $5, Fee $0.15」；無手續費時僅顯示 Redeem 金額。 */
+export function formatRedeemHistoryRowLabel(params: {
+  fiatAmount: string;
+  feeWire: string;
+  w: (id: number, ...args: string[]) => string;
+}): string {
+  const redeemPart = params.w(
+    510476,
+    "Redeem",
+    formatRedeemHistoryLinkAmount(params.fiatAmount),
+  );
+  if (!redeemHistoryFeeShouldDisplay(params.feeWire)) {
+    return redeemPart;
+  }
+  const feeDisplay = formatWithdrawHistoryFiatAmount(params.feeWire);
+  return `${redeemPart}, Fee ${formatRedeemHistoryLinkAmount(feeDisplay)}`;
 }
