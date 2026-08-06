@@ -10,29 +10,29 @@ export function flyOriginRectFromPiles(
   sc: DOMRect | undefined,
 ): DOMRect | null {
   if (!gc && !sc) return null;
-  if (gc && !sc) return gc;
-  if (!gc && sc) return sc;
-
-  const gcCx = gc.left + gc.width / 2;
-  const gcCy = gc.top + gc.height / 2;
-  const scCx = sc.left + sc.width / 2;
-  const scCy = sc.top + sc.height / 2;
-  const cx = (gcCx + scCx) / 2;
-  const cy = (gcCy + scCy) / 2;
-  const width = Math.max(gc.width, sc.width);
-  const height = Math.max(gc.height, sc.height);
-  const left = cx - width / 2;
-  const top = cy - height / 2;
-  return {
-    x: left,
-    y: top,
-    left,
-    top,
-    width,
-    height,
-    right: left + width,
-    bottom: top + height,
-  } as DOMRect;
+  if (gc && sc) {
+    const gcCx = gc.left + gc.width / 2;
+    const gcCy = gc.top + gc.height / 2;
+    const scCx = sc.left + sc.width / 2;
+    const scCy = sc.top + sc.height / 2;
+    const cx = (gcCx + scCx) / 2;
+    const cy = (gcCy + scCy) / 2;
+    const width = Math.max(gc.width, sc.width);
+    const height = Math.max(gc.height, sc.height);
+    const left = cx - width / 2;
+    const top = cy - height / 2;
+    return {
+      x: left,
+      y: top,
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+    } as DOMRect;
+  }
+  return gc ?? sc ?? null;
 }
 
 export function shopPurchaseRewardFlyDelayMs(showSc: boolean): number {
