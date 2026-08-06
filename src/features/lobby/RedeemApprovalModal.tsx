@@ -1,5 +1,6 @@
 import { useEffect, useId } from "react";
 import { createPortal } from "react-dom";
+import { CURRENCY_ICON_SC } from "../../lib/currencyIcons";
 import { useWordData } from "../../wordData/useWordData";
 import { formatScFromRawWireInteger } from "../../wallet/formatWalletAmount";
 import "./RedeemApprovalModal.css";
@@ -34,6 +35,37 @@ function formatApprovalFiatDisplay(amountsWire: string[]): string {
   return n === "—" ? "—" : `$${n}`;
 }
 
+function ApprovedTail({ single, text }: { single: boolean; text: string }) {
+  if (single) {
+    const marker = "approved!";
+    const lower = text.toLowerCase();
+    const idx = lower.indexOf(marker);
+    if (idx < 0) return <>{text}</>;
+    return (
+      <>
+        {text.slice(0, idx)}
+        <span className="redeem-approval-modal__approved">
+          {text.slice(idx, idx + marker.length)}
+        </span>
+        {text.slice(idx + marker.length)}
+      </>
+    );
+  }
+  const marker = "approved!";
+  const lower = text.toLowerCase();
+  const idx = lower.indexOf(marker);
+  if (idx < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <span className="redeem-approval-modal__approved">
+        {text.slice(idx, idx + marker.length)}
+      </span>
+      {text.slice(idx + marker.length)}
+    </>
+  );
+}
+
 export function RedeemApprovalModal({ open, amountsWire, onClose }: Props) {
   const w = useWordData();
   const titleId = useId();
@@ -65,13 +97,27 @@ export function RedeemApprovalModal({ open, amountsWire, onClose }: Props) {
         <h2 id={titleId} className="redeem-approval-modal__title">
           {w(510500)}
         </h2>
+        <div className="redeem-approval-modal__icon-wrap" aria-hidden>
+          <span className="redeem-approval-modal__icon-ring">
+            <img
+              className="redeem-approval-modal__icon"
+              src={CURRENCY_ICON_SC}
+              alt=""
+              width={48}
+              height={48}
+            />
+          </span>
+        </div>
         <div className="redeem-approval-modal__body">
           <p className="redeem-approval-modal__lead">
             {single ? w(510501) : w(510503)}
           </p>
           <p className="redeem-approval-modal__amount">{amountDisplay}</p>
           <p className="redeem-approval-modal__tail">
-            {single ? w(510502) : w(510504)}
+            <ApprovedTail
+              single={single}
+              text={single ? w(510502) : w(510504)}
+            />
           </p>
         </div>
         <button

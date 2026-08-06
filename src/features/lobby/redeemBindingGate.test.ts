@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { fetchRedeemPlayerBindingFromGateway } from "./redeemBindingGate";
+import {
+  fetchRedeemPlayerBindingFromGateway,
+  redeemBindingPrefillFromLobby,
+  resolveRedeemBindingNextStep,
+  translateRedeemBindingGatewayError,
+} from "./redeemBindingGate";
 import { decodeLobbyGetResponseBytes } from "../../realtime/lobbyDecode";
 import type { GatewayWsRequestFn } from "../../realtime/gatewayWs";
 import * as protobuf from "protobufjs/light.js";
@@ -13,12 +18,71 @@ function encodeLobbyGet(playerInfo: Record<string, unknown>): Uint8Array {
   return Uint8Array.from(LobbyGetResponseType.encode(msg).finish());
 }
 
+describe("resolveRedeemBindingNextStep", () => {
+  it("requires both phone and address empty for full binding", () => {
+    expect(
+      resolveRedeemBindingNextStep({
+        hasCellPhone: false,
+        hasAddress: false,
+        minTxWdrawRaw: undefined,
+      }),
+    ).toEqual({ kind: "full" });
+  });
+
+  it("opens address-only when phone exists but address is missing", () => {
+    expect(
+      resolveRedeemBindingNextStep({
+        hasCellPhone: true,
+        hasAddress: false,
+        minTxWdrawRaw: undefined,
+      }),
+    ).toEqual({ kind: "addressOnly" });
+  });
+
+  it("opens amount modal when phone and address exist (KYC complete)", () => {
+    expect(
+      resolveRedeemBindingNextStep({
+        hasCellPhone: true,
+        hasAddress: true,
+        minTxWdrawRaw: 50,
+      }),
+    ).toEqual({ kind: "amountModal" });
+  });
+});
+
+describe("redeemBindingPrefillFromLobby", () => {
+  it("falls back to LOBBY_GET cellPhone and address", () => {
+    expect(
+      redeemBindingPrefillFromLobby(
+        {
+          playerInfo: {
+            cellPhone: "15551234567",
+            address: "123 Main St",
+          },
+        },
+        { email: "a@b.com" },
+      ),
+    ).toEqual({
+      email: "a@b.com",
+      phone: "15551234567",
+      address: "123 Main St",
+    });
+  });
+});
+
+describe("translateRedeemBindingGatewayError", () => {
+  it("prefers server errMessage over WordData code mapping", () => {
+    expect(
+      translateRedeemBindingGatewayError("1222", "sms send still cooling..."),
+    ).toBe("sms send still cooling...");
+  });
+});
+
 describe("fetchRedeemPlayerBindingFromGateway", () => {
   it("returns binding state from a successful LOBBY_GET", async () => {
     const data = encodeLobbyGet({
       cellPhone: "15551234567",
       address: "123 Main St",
-      frontImage: "",
     });
     expect(
       decodeLobbyGetResponseBytes(data).playerInfo?.cellPhone,
@@ -32,7 +96,6 @@ describe("fetchRedeemPlayerBindingFromGateway", () => {
     const binding = await fetchRedeemPlayerBindingFromGateway(request);
     expect(binding.hasCellPhone).toBe(true);
     expect(binding.hasAddress).toBe(true);
-    expect(binding.hasFrontImage).toBe(false);
   });
 
   it("returns empty binding when gateway request fails", async () => {
@@ -42,7 +105,7 @@ describe("fetchRedeemPlayerBindingFromGateway", () => {
     })) as GatewayWsRequestFn;
 
     const binding = await fetchRedeemPlayerBindingFromGateway(request);
-    expect(binding.hasFrontImage).toBe(false);
+    expect(binding.hasAddress).toBe(false);
     expect(binding.hasCellPhone).toBe(false);
   });
 });

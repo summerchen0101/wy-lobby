@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type CSSProperties } from "react";
+import "./WithdrawMarqueePill.css";
 
 const PILL_CAROUSEL_INTERVAL_MS = 4000;
 const PILL_LINE_EM = 1.3;
@@ -15,9 +16,12 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
-type Props = { messages: string[] };
+type Props = {
+  messages: string[];
+  variant?: "redeem" | "lobby";
+};
 
-export function RedeemNotifyPill({ messages }: Props) {
+export function RedeemNotifyPill({ messages, variant = "redeem" }: Props) {
   const n = messages.length;
   const reduced = usePrefersReducedMotion();
   const labelId = useId();
@@ -34,7 +38,7 @@ export function RedeemNotifyPill({ messages }: Props) {
     setIndex(0);
     const id = window.setInterval(() => {
       setIndex((prev) =>
-        prev < n - 1 ? prev + 1 : prev === n - 1 ? n : prev
+        prev < n - 1 ? prev + 1 : prev === n - 1 ? n : prev,
       );
     }, PILL_CAROUSEL_INTERVAL_MS);
     return () => window.clearInterval(id);
@@ -43,6 +47,9 @@ export function RedeemNotifyPill({ messages }: Props) {
   if (n === 0) return null;
 
   const baseLabel = "Recent redemptions and prizes";
+  const pillClass =
+    "withdraw-marquee-pill" +
+    (variant === "lobby" ? " withdraw-marquee-pill--lobby" : "");
 
   const varStyle: CSSProperties = {
     "--redeem-pill-line-h": `${PILL_LINE_EM}em`,
@@ -51,18 +58,17 @@ export function RedeemNotifyPill({ messages }: Props) {
   if (n > 1 && reduced) {
     return (
       <>
-        <p id={labelId} className="redeem-page__notify-pill-sr">
+        <p id={labelId} className="withdraw-marquee-pill-sr">
           {baseLabel}
         </p>
         <div
-          className="redeem-page__notify-pill"
+          className={pillClass}
           style={varStyle}
           role="presentation"
           aria-labelledby={labelId}
-          aria-hidden
-        >
-          <div className="redeem-page__notify-pill-viewport">
-            <p className="redeem-page__notify-pill-line">{messages[0]}</p>
+          aria-hidden>
+          <div className="withdraw-marquee-pill-viewport">
+            <p className="withdraw-marquee-pill-line">{messages[0]}</p>
           </div>
         </div>
       </>
@@ -71,23 +77,20 @@ export function RedeemNotifyPill({ messages }: Props) {
 
   return (
     <>
-      <p id={labelId} className="redeem-page__notify-pill-sr">
+      <p id={labelId} className="withdraw-marquee-pill-sr">
         {baseLabel}
       </p>
       <div
-        className="redeem-page__notify-pill"
+        className={pillClass}
         style={varStyle}
         role="presentation"
         aria-labelledby={labelId}
-        aria-hidden
-      >
-        <div className="redeem-page__notify-pill-viewport">
+        aria-hidden>
+        <div className="withdraw-marquee-pill-viewport">
           <div
             className={
-              "redeem-page__notify-pill-track" +
-              (noTransition
-                ? " redeem-page__notify-pill-track--notrans"
-                : "")
+              "withdraw-marquee-pill-track" +
+              (noTransition ? " withdraw-marquee-pill-track--notrans" : "")
             }
             style={{
               transform: `translate3d(0, calc(-${index} * var(--redeem-pill-line-h, 1.3em)), 0)`,
@@ -103,10 +106,9 @@ export function RedeemNotifyPill({ messages }: Props) {
               requestAnimationFrame(() => {
                 requestAnimationFrame(() => setNoTransition(false));
               });
-            }}
-          >
+            }}>
             {slides.map((text, i) => (
-              <p key={i} className="redeem-page__notify-pill-line">
+              <p key={i} className="withdraw-marquee-pill-line">
                 {text}
               </p>
             ))}

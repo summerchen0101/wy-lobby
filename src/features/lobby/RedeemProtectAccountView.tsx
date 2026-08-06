@@ -3,7 +3,6 @@ import {
   useCallback,
   useEffect,
   useId,
-  useRef,
   useState,
 } from "react";
 import { IoChevronBack } from "react-icons/io5";
@@ -11,7 +10,10 @@ import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import { GATEWAY_API_MEGA_ACCOUNT_BINDING } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
-import { fetchRedeemPlayerBindingFromGateway } from "./redeemBindingGate";
+import {
+  fetchRedeemPlayerBindingFromGateway,
+  translateRedeemBindingGatewayError,
+} from "./redeemBindingGate";
 import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
 import {
   decodeMegaAccountBindingResponseBytes,
@@ -30,9 +32,7 @@ import {
 } from "../../lib/socure/socureDocv";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { splitPhoneForBindingForm } from "../shop/splitPhoneForBindingForm";
-import { getWord } from "../../wordData/getWord";
 import { useWordData } from "../../wordData/useWordData";
-import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import "../shop/ShopCheckout.css";
 import "./RedeemProtectAccountView.css";
 
@@ -44,13 +44,14 @@ const US_STATE_CODES =
 const PHONE_COUNTRY_CODES = ["1"] as const;
 const ADDRESS_COUNTRIES = ["US"] as const;
 
-export type RedeemBindingMode = "full" | "addressOnly" | "kycOnly";
+export type RedeemBindingMode = "full" | "addressOnly";
 
-type Step = "profile" | "kyc" | "sms" | "docv";
+type Step = "profile" | "docv";
 
 export type RedeemBindingPrefill = {
   email?: string;
   phone?: string;
+  address?: string;
 };
 
 type Props = {
@@ -87,16 +88,13 @@ export function RedeemProtectAccountView({
   const w = useWordData();
   const { show } = useAlert();
   const { user, mergeUser } = useAuth();
-  const { requestRef, gatewayRequestReady, refreshLobbyGet } = useGatewayLobby();
+  const { requestRef, gatewayRequestReady, refreshLobbyGet, lobbyGet } =
+    useGatewayLobby();
   const idPrefix = useId();
-  const docvLaunchedRef = useRef(false);
 
   const [step, setStep] = useState<Step>("profile");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [smsAnswer, setSmsAnswer] = useState("");
-  const [docvTransactionToken, setDocvTransactionToken] = useState("");
-  const [docvLaunching, setDocvLaunching] = useState(false);
 
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -114,23 +112,19 @@ export function RedeemProtectAccountView({
   const [state, setState] = useState("");
   const [zip, setZip] = useState("");
 
-  const [documentType, setDocumentType] = useState("1");
-  const [documentNumber, setDocumentNumber] = useState("");
-
   const dobYears = Array.from({ length: 2007 - 1920 + 1 }, (_, i) => 2007 - i);
   const dobDays = Array.from({ length: 31 }, (_, i) => i + 1);
 
   const pi = "shop-checkout__input shop-checkout__input--protect";
 
   useEffect(() => {
-    if (!open) return;
-    setStep(mode === "kycOnly" ? "kyc" : "profile");
+    if (!open) {
+      resetSocureDocv();
+      return;
+    }
+    setStep("profile");
     setBusy(false);
     setError(null);
-    setSmsAnswer("");
-    setDocvTransactionToken("");
-    setDocvLaunching(false);
-    docvLaunchedRef.current = false;
     setFirstName("");
     setMiddleName("");
     setLastName("");
@@ -146,8 +140,6 @@ export function RedeemProtectAccountView({
     setCity("");
     setState("");
     setZip("");
-    setDocumentType("1");
-    setDocumentNumber("");
 
     const rawPhone = bindingPrefill?.phone?.trim();
     if (rawPhone) {
@@ -164,12 +156,6 @@ export function RedeemProtectAccountView({
     void setSocureBindingNavigationContext();
   }, [open]);
 
-  useEffect(() => {
-    if (open) return;
-    resetSocureDocv();
-    docvLaunchedRef.current = false;
-  }, [open]);
-
   const fetchBindingState = useCallback(async () => {
     const req = requestRef.current;
     if (!req || !gatewayRequestReady) {
@@ -178,113 +164,71 @@ export function RedeemProtectAccountView({
     return fetchRedeemPlayerBindingFromGateway(req);
   }, [requestRef, gatewayRequestReady]);
 
-  const finalizeDocvVerification = useCallback(async () => {
-    setBusy(true);
-    try {
-      await refreshLobbyGet();
-      const binding = await fetchBindingState();
-      if (binding.hasFrontImage) {
-        onBound();
-        show(w(1209), {
-          variant: "success",
-        });
+  const finalizeBindingSuccess = useCallback(
+    async (fullAddress: string, boundPhone: string) => {
+      try {
+        if (boundPhone) mergeUser({ phone: boundPhone });
+        if (fullAddress) mergeUser({ address: fullAddress });
+        await refreshLobbyGet();
+        const binding = await fetchBindingState();
+        if (binding.hasCellPhone && binding.hasAddress) {
+          onBound();
+          show(w(1209), { variant: "success" });
+          return;
+        }
+        show(w(510512), { variant: "info" });
+        onClose();
+      } finally {
+        setBusy(false);
+      }
+    },
+    [mergeUser, refreshLobbyGet, fetchBindingState, onBound, show, onClose, w],
+  );
+
+  const beginDocvHandoff = useCallback(
+    async (
+      docvTransactionToken: string,
+      fullAddress: string,
+      boundPhone: string,
+    ) => {
+      setStep("docv");
+      setBusy(true);
+      setError(null);
+      resetSocureDocv();
+
+      const result = await launchSocureDocv(docvTransactionToken, {
+        disableSmsInput: true,
+        onError: () => {},
+      });
+
+      if (result.result === "success") {
+        await finalizeBindingSuccess(fullAddress, boundPhone);
         return;
       }
-      show("Verification in progress. Please try again later.", {
-        variant: "info",
-      });
-      onClose();
-    } finally {
-      setBusy(false);
-      setDocvLaunching(false);
-    }
-  }, [refreshLobbyGet, fetchBindingState, onBound, show, onClose, w]);
 
-  const beginDocvFlow = useCallback(
-    (token: string, fullAddress: string, boundPhone: string) => {
-      if (boundPhone) mergeUser({ phone: boundPhone });
-      mergeUser({ address: fullAddress });
-      docvLaunchedRef.current = false;
-      setDocvTransactionToken(token);
-      setStep("docv");
+      setError(result.errorMessage || "Identity verification failed.");
       setBusy(false);
     },
-    [mergeUser],
+    [finalizeBindingSuccess],
   );
 
   const handleBindingDecoded = useCallback(
     (
       decoded: MegaAccountBindingWireResult,
-      answer: string,
       fullAddress: string,
     ) => {
-      if (decoded.needSMSAnswer) {
-        setStep("sms");
-        if (answer.trim()) {
-          setError(getWord(1222));
-        }
-        setBusy(false);
+      const boundPhone = decoded.phoneNum.trim();
+      const docvToken = decoded.docvTransactionToken.trim();
+
+      if (docvToken) {
+        void beginDocvHandoff(docvToken, fullAddress, boundPhone);
         return;
       }
-      const token = decoded.docvTransactionToken;
-      if (!token) {
-        setError(getWord(1222));
-        setBusy(false);
-        return;
-      }
-      if (!isSocureDocvEnabled()) {
-        setError(
-          "Document verification is unavailable. Please refresh and try again.",
-        );
-        setBusy(false);
-        return;
-      }
-      beginDocvFlow(token, fullAddress, decoded.phoneNum.trim());
+
+      void finalizeBindingSuccess(fullAddress, boundPhone);
     },
-    [beginDocvFlow],
+    [beginDocvHandoff, finalizeBindingSuccess],
   );
-
-  useEffect(() => {
-    if (!open || step !== "docv" || !docvTransactionToken.trim()) return;
-    if (docvLaunchedRef.current) return;
-    docvLaunchedRef.current = true;
-
-    let cancelled = false;
-    setDocvLaunching(true);
-    setError(null);
-
-    void launchSocureDocv(docvTransactionToken, {
-      onProgress: () => {},
-      onSuccess: () => {
-        if (cancelled) return;
-        void finalizeDocvVerification();
-      },
-      onError: () => {
-        if (cancelled) return;
-        setDocvLaunching(false);
-        setBusy(false);
-        setError(getWord(1222));
-      },
-    }).then((result) => {
-      if (cancelled) return;
-      if (result.result === "error") {
-        setDocvLaunching(false);
-        setError(
-          result.errorMessage || "Failed to start document verification.",
-        );
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      resetSocureDocv();
-    };
-  }, [
-    open,
-    step,
-    docvTransactionToken,
-    finalizeDocvVerification,
-  ]);
 
   const validateAddress = useCallback((): boolean => {
     if (!address1.trim() || !city.trim() || !state.trim() || !zip.trim()) {
@@ -294,31 +238,28 @@ export function RedeemProtectAccountView({
     return true;
   }, [address1, city, state, zip]);
 
-  const goKyc = useCallback(() => {
+  const validateProfile = useCallback((): boolean => {
     if (mode === "addressOnly") {
-      if (!validateAddress()) return;
-    } else {
-      if (
-        !firstName.trim() ||
-        !lastName.trim() ||
-        !email.trim() ||
-        !phoneNumber.trim() ||
-        !dobMonth ||
-        !dobDay ||
-        !dobYear
-      ) {
-        setError("Complete all required profile fields.");
-        return;
-      }
-      const digits = phoneNumber.replace(/\D/g, "");
-      if (phoneCountry === "1" && digits.length !== 10) {
-        setError("US phone number must be 10 digits.");
-        return;
-      }
-      if (!validateAddress()) return;
+      return validateAddress();
     }
-    setError(null);
-    setStep("kyc");
+    if (
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !email.trim() ||
+      !phoneNumber.trim() ||
+      !dobMonth ||
+      !dobDay ||
+      !dobYear
+    ) {
+      setError("Complete all required profile fields.");
+      return false;
+    }
+    const digits = phoneNumber.replace(/\D/g, "");
+    if (phoneCountry === "1" && digits.length !== 10) {
+      setError("US phone number must be 10 digits.");
+      return false;
+    }
+    return validateAddress();
   }, [
     mode,
     firstName,
@@ -332,155 +273,149 @@ export function RedeemProtectAccountView({
     validateAddress,
   ]);
 
-  const submitBinding = useCallback(
-    async (answer: string) => {
-      const req = requestRef.current;
-      const uid = user?.id;
-      if (!req || !gatewayRequestReady) {
-        setError("Not connected to server.");
-        return;
-      }
-      if (!uid || !/^\d+$/.test(uid)) {
-        setError("Missing user id");
-        return;
-      }
-      if (!documentNumber.trim()) {
-        setError("Provide your document number.");
-        return;
-      }
+  const submitBinding = useCallback(async () => {
+    const req = requestRef.current;
+    const uid = user?.id;
+    if (!req || !gatewayRequestReady) {
+      setError("Not connected to server.");
+      return;
+    }
+    if (!uid || !/^\d+$/.test(uid)) {
+      setError("Missing user id");
+      return;
+    }
+    if (!isSocureDocvEnabled()) {
+      setError("Identity verification is unavailable.");
+      return;
+    }
 
-      const birthday =
-        mode === "full" && dobYear && dobMonth && dobDay
-          ? `${dobYear}-${dobMonth}-${dobDay}`
+    const pi = lobbyGet?.playerInfo as Record<string, unknown> | null | undefined;
+    const lobbyCellPhone =
+      typeof pi?.cellPhone === "string" && pi.cellPhone.trim()
+        ? pi.cellPhone.trim()
+        : "";
+
+    const savedPhone =
+      bindingPrefill?.phone?.trim() ||
+      user?.phone?.trim() ||
+      lobbyCellPhone;
+    const savedPhoneSplit = savedPhone
+      ? splitPhoneForBindingForm(savedPhone)
+      : null;
+
+    const birthday =
+      mode === "full" && dobYear && dobMonth && dobDay
+        ? `${dobYear}-${dobMonth}-${dobDay}`
+        : "";
+    const phone =
+      mode === "full"
+        ? normalizePhoneDigits(phoneNumber)
+        : savedPhone
+          ? normalizePhoneDigits(savedPhoneSplit?.national || savedPhone)
           : "";
-      const phone = mode === "full" ? normalizePhoneDigits(phoneNumber) : "";
-      const countryCode = mode === "full" ? phoneCountry.trim() : "";
-      const line1 = address1.trim();
-      const fullAddress = combineAddress(line1, address2);
+    const countryCode =
+      mode === "full"
+        ? phoneCountry.trim()
+        : savedPhoneSplit?.countryCode || "";
+    const line1 = address1.trim();
+    const fullAddress = combineAddress(line1, address2);
 
-      setBusy(true);
-      setError(null);
-      try {
-        const socureDiSessionToken = await getSocureDiSessionToken();
-        if (!socureDiSessionToken) {
-          setError(
-            "Device verification unavailable. Please refresh and try again.",
-          );
-          setBusy(false);
-          return;
-        }
-        const data = encodeMegaAccountBindingRequestBytes({
-          userID: uid,
-          countryCode,
-          phone,
-          email: mode === "full" ? email.trim() : (user?.email ?? ""),
-          answer,
-          firstName: mode === "full" ? firstName.trim() : "",
-          middleName: mode === "full" ? middleName.trim() : "",
-          lastName: mode === "full" ? lastName.trim() : "",
-          birthday,
-          address: fullAddress,
-          addressLine1: line1,
-          country: country.trim() || "US",
-          city: city.trim(),
-          state: state.trim(),
-          zip: zip.trim(),
-          language: "en",
-          documentType: Number(documentType) || 1,
-          documentNumber: documentNumber.trim(),
-          socureDiSessionToken,
-        });
-        const r = await req({
-          type: GATEWAY_API_MEGA_ACCOUNT_BINDING,
-          data,
-          debugLabel: "MEGA_ACCOUNT_BINDING_REDEEM",
-        });
-        const code = String(r.code ?? "");
-        if (!isGatewaySuccessCode(code)) {
-          setError(translateGatewayError(code, r.errMessage, `Binding failed (${code})`));
-          setBusy(false);
-          return;
-        }
-        const raw = r.data;
-        const decoded =
-          raw instanceof Uint8Array && raw.byteLength > 0
-            ? decodeMegaAccountBindingResponseBytes(raw)
-            : decodeMegaAccountBindingResponseBytes(new Uint8Array(0));
-        handleBindingDecoded(decoded, answer, fullAddress);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Binding failed");
+    setStep("docv");
+    setBusy(true);
+    setError(null);
+    try {
+      const socureDiSessionToken = await getSocureDiSessionToken();
+      if (!socureDiSessionToken) {
+        setError(
+          "Device verification unavailable. Please refresh and try again.",
+        );
         setBusy(false);
+        return;
       }
-    },
-    [
-      requestRef,
-      gatewayRequestReady,
-      user,
-      mode,
-      dobYear,
-      dobMonth,
-      dobDay,
-      phoneNumber,
-      phoneCountry,
-      email,
-      firstName,
-      middleName,
-      lastName,
-      address1,
-      address2,
-      country,
-      city,
-      state,
-      zip,
-      documentType,
-      documentNumber,
-      handleBindingDecoded,
-    ],
-  );
+      const data = encodeMegaAccountBindingRequestBytes({
+        userID: uid,
+        countryCode,
+        phone,
+        email: mode === "full" ? email.trim() : (user?.email ?? ""),
+        answer: "",
+        firstName: mode === "full" ? firstName.trim() : "",
+        middleName: mode === "full" ? middleName.trim() : "",
+        lastName: mode === "full" ? lastName.trim() : "",
+        birthday,
+        address: fullAddress,
+        addressLine1: line1,
+        country: country.trim() || "US",
+        city: city.trim(),
+        state: state.trim(),
+        zip: zip.trim(),
+        language: "en",
+        documentType: 0,
+        documentNumber: "",
+        frontImageContentType: "",
+        backImageContentType: "",
+        frontImageBase64: "",
+        backImageBase64: "",
+        socureDiSessionToken,
+      });
+      const r = await req({
+        type: GATEWAY_API_MEGA_ACCOUNT_BINDING,
+        data,
+        debugLabel: "MEGA_ACCOUNT_BINDING_REDEEM",
+      });
+      const code = String(r.code ?? "");
+      if (!isGatewaySuccessCode(code)) {
+        setError(translateRedeemBindingGatewayError(code, r.errMessage));
+        setBusy(false);
+        return;
+      }
+      const raw = r.data;
+      const decoded =
+        raw instanceof Uint8Array && raw.byteLength > 0
+          ? decodeMegaAccountBindingResponseBytes(raw)
+          : decodeMegaAccountBindingResponseBytes(new Uint8Array(0));
+      handleBindingDecoded(decoded, fullAddress);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Binding failed");
+      setBusy(false);
+    }
+  }, [
+    requestRef,
+    gatewayRequestReady,
+    user,
+    mode,
+    bindingPrefill,
+    dobYear,
+    dobMonth,
+    dobDay,
+    phoneNumber,
+    phoneCountry,
+    email,
+    firstName,
+    middleName,
+    lastName,
+    address1,
+    address2,
+    country,
+    city,
+    state,
+    zip,
+    lobbyGet,
+    handleBindingDecoded,
+  ]);
 
   const handleProfileSubmit = (e: FormEvent) => {
     e.preventDefault();
-    goKyc();
-  };
-
-  const handleKycSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    void submitBinding("");
-  };
-
-  const handleSmsSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const code = smsAnswer.trim();
-    if (!code) {
-      setError(getWord(106));
-      return;
-    }
-    void submitBinding(code);
+    if (!validateProfile()) return;
+    setError(null);
+    void submitBinding();
   };
 
   const handleHeaderBack = () => {
     if (step === "docv") {
       resetSocureDocv();
-      docvLaunchedRef.current = false;
-      setDocvTransactionToken("");
-      setDocvLaunching(false);
-      setStep("kyc");
-      setError(null);
-      return;
-    }
-    if (step === "sms") {
-      setStep("kyc");
-      setError(null);
-      setSmsAnswer("");
-      return;
-    }
-    if (step === "kyc") {
-      if (mode === "kycOnly") {
-        onClose();
-        return;
-      }
       setStep("profile");
       setError(null);
+      setBusy(false);
       return;
     }
     onClose();
@@ -500,9 +435,7 @@ export function RedeemProtectAccountView({
           disabled={busy}
         />
       </label>
-      <p className="redeem-protect__addr-hint">
-        {w(510458)}
-      </p>
+      <p className="redeem-protect__addr-hint">{w(510458)}</p>
       <label className="shop-checkout__field" htmlFor={`${idPrefix}-addr2`}>
         <input
           id={`${idPrefix}-addr2`}
@@ -597,9 +530,7 @@ export function RedeemProtectAccountView({
       onSubmit={handleProfileSubmit}
       noValidate>
       <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
-        <p className="shop-checkout__protect-lead">
-          {w(510454)}
-        </p>
+        <p className="shop-checkout__protect-lead">{w(510454)}</p>
         <div className="shop-checkout__fields shop-checkout__fields--protect">
           {mode === "full" ? (
             <>
@@ -621,7 +552,7 @@ export function RedeemProtectAccountView({
                     className={pi}
                     name="middleName"
                     autoComplete="additional-name"
-                    placeholder="MiddleName"
+                    placeholder={w(510511)}
                     value={middleName}
                     onChange={(e) => setMiddleName(e.target.value)}
                   />
@@ -749,132 +680,37 @@ export function RedeemProtectAccountView({
             {error}
           </p>
         ) : null}
-        <p className="shop-checkout__footer-hint">
-          {w(510466)}
-        </p>
+        <p className="shop-checkout__footer-hint">{w(510466)}</p>
         <button
           type="submit"
           className="shop-checkout__submit shop-checkout__submit--blue"
           disabled={busy}>
-          {busy ? "Please wait…" : w(510467)}
+          {busy ? "Please wait…" : w(510506)}
         </button>
       </fieldset>
     </form>
   );
 
-  const renderKycForm = () => (
-    <form
-      className="shop-checkout__card-form shop-checkout__protect-form"
-      onSubmit={handleKycSubmit}
-      noValidate>
-      <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
-        <p className="shop-checkout__protect-lead">
-          {w(510454)}
-        </p>
-        <div className="shop-checkout__fields shop-checkout__fields--protect">
-          <div className="redeem-protect__row2">
-            <select
-              id={`${idPrefix}-doctype`}
-              className={`${pi} shop-checkout__select`}
-              name="documentType"
-              value={documentType}
-              onChange={(e) => setDocumentType(e.target.value)}>
-              <option value="1">Driver license</option>
-              <option value="2">Passport</option>
-              <option value="3">State ID</option>
-            </select>
-            <input
-              id={`${idPrefix}-docnum`}
-              className={pi}
-              name="documentNumber"
-              placeholder="number"
-              value={documentNumber}
-              onChange={(e) => setDocumentNumber(e.target.value)}
-            />
-          </div>
-        </div>
-        {error ? (
-          <p className="shop-checkout__pay-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <p className="shop-checkout__footer-hint">
-          You will verify your ID with our secure document capture flow on the
-          next step.
-        </p>
-        <button
-          type="submit"
-          className="shop-checkout__submit shop-checkout__submit--blue"
-          disabled={busy}>
-          {busy ? "Please wait…" : w(510467)}
-        </button>
-      </fieldset>
-    </form>
-  );
-
-  const renderSmsForm = () => (
-    <form
-      className="shop-checkout__card-form shop-checkout__protect-form"
-      onSubmit={handleSmsSubmit}
-      noValidate>
-      <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
-        <p className="shop-checkout__protect-lead">
-          {w(118)}
-        </p>
-        <div className="shop-checkout__fields shop-checkout__fields--protect">
-          <label className="shop-checkout__field" htmlFor={`${idPrefix}-sms`}>
-            <span className="shop-checkout__label-text shop-checkout__label-text--protect">
-              SMS code
-            </span>
-            <input
-              id={`${idPrefix}-sms`}
-              className={pi}
-              name="smsAnswer"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="Code"
-              value={smsAnswer}
-              onChange={(e) => setSmsAnswer(e.target.value)}
-            />
-          </label>
-        </div>
-        {error ? (
-          <p className="shop-checkout__pay-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <button
-          type="submit"
-          className="shop-checkout__submit shop-checkout__submit--blue shop-checkout__submit--protect-sms"
-          disabled={busy}>
-          {busy ? "Please wait…" : w(510467)}
-        </button>
-      </fieldset>
-    </form>
-  );
+  const docvContainerId = SOCURE_DOCV_CONTAINER_SELECTOR.replace(/^#/, "");
 
   const renderDocvStep = () => (
     <div className="shop-checkout__card-form shop-checkout__protect-form">
-      <p className="shop-checkout__protect-lead">
-        Verify your identity with a photo of your ID.
-      </p>
-      <p className="redeem-protect__docv-hint">
-        Follow the prompts below. On mobile you may continue in a new browser
-        tab to capture your document.
-      </p>
+      <p className="shop-checkout__protect-lead">{w(510454)}</p>
+      <p className="redeem-protect__docv-hint">{w(510466)}</p>
+      {busy ? (
+        <p className="redeem-protect__docv-hint" aria-live="polite">
+          Please wait…
+        </p>
+      ) : null}
       <div
-        id={SOCURE_DOCV_CONTAINER_SELECTOR.slice(1)}
+        id={docvContainerId}
         className="redeem-protect__docv-root"
-        aria-busy={docvLaunching || busy}
+        aria-busy={busy}
       />
       {error ? (
         <p className="shop-checkout__pay-error" role="alert">
           {error}
         </p>
-      ) : null}
-      {docvLaunching || busy ? (
-        <p className="shop-checkout__footer-hint">Starting verification…</p>
       ) : null}
     </div>
   );
@@ -894,27 +730,17 @@ export function RedeemProtectAccountView({
           id="redeem-protect-dialog-title">
           {w(510453)}
         </h2>
-        {step === "sms" || step === "docv" ? (
-          <span className="app-modal__head-spacer" aria-hidden />
-        ) : (
-          <button
-            type="button"
-            className="app-modal__close"
-            onClick={onClose}
-            aria-label="Close">
-            ×
-          </button>
-        )}
+        <button
+          type="button"
+          className="app-modal__close"
+          onClick={onClose}
+          aria-label="Close">
+          ×
+        </button>
       </header>
       <hr className="app-modal__rule shop-checkout__head-rule" />
       <div className="redeem-protect__form-wrap">
-        {step === "profile"
-          ? renderProfileForm()
-          : step === "kyc"
-            ? renderKycForm()
-            : step === "sms"
-              ? renderSmsForm()
-              : renderDocvStep()}
+        {step === "profile" ? renderProfileForm() : renderDocvStep()}
       </div>
     </>
   );

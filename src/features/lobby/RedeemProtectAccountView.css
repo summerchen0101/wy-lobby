@@ -1,8 +1,33 @@
 .redeem-protect__form-wrap {
-  padding: 0 1.15rem 1.35rem;
+  padding: 0 0.7rem 0.9rem;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+}
+
+.redeem-protect__form-wrap .shop-checkout__card-form {
+  padding: 0.2rem 0.35rem 0.75rem;
+}
+
+.redeem-protect__form-wrap .shop-checkout__protect-form {
+  padding-top: 0.2rem;
+}
+
+.redeem-protect__form-wrap .shop-checkout__protect-lead {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.redeem-protect__form-wrap .shop-checkout__footer-hint {
+  margin: 0.45rem 0 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.redeem-protect__form-wrap .shop-checkout__fields--protect {
+  margin-top: 0.25rem;
+  gap: 0.5rem;
 }
 
 .redeem-protect__row3-names {
@@ -28,9 +53,9 @@
 }
 
 .redeem-protect__addr-hint {
-  margin: 0.15rem 0 0.35rem;
-  font-size: 0.62rem;
-  line-height: 1.4;
+  margin: 0.1rem 0 0.25rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
   color: var(--crown-locale-green);
   font-weight: 500;
 }
@@ -38,6 +63,7 @@
 .redeem-protect__upload-list {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.6rem;
 }
 
@@ -46,7 +72,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 7rem;
+  box-sizing: border-box;
+  width: 88%;
+  max-width: 100%;
+  min-height: 9.1rem;
   border-radius: 0.35rem;
   background: #fff;
   color: #888;

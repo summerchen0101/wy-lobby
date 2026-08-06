@@ -91,7 +91,10 @@ import {
   lobbyTrackLoadRootMargin,
 } from "../../lib/lobbyIosTuning";
 import { LobbyGamesScroller } from "./LobbyGamesScroller";
+import { RedeemNotifyPill } from "./RedeemNotifyPill";
+import { useWithdrawSuccessMarquee } from "./useWithdrawSuccessMarquee";
 import "./LobbyPage.css";
+import "./WithdrawMarqueePill.css";
 
 const LOBBY_SLOTS_ALL_SUBSECTION_LABEL = "Mega X Widescreen Exclusive";
 
@@ -448,6 +451,7 @@ export function LandingPage() {
     requestRef,
     refreshLobbyGet,
   } = useGatewayLobby();
+  const withdrawMarqueeMessages = useWithdrawSuccessMarquee();
 
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const thirdPartyGamesEnabled = isThirdPartyGamesEnabled();
@@ -1248,6 +1252,10 @@ export function LandingPage() {
           <LobbyHeroBanner
             videoSrc={sessionHeroVideoSrc}
             posterSrc={sessionHeroPosterSrc}>
+            <RedeemNotifyPill
+              messages={withdrawMarqueeMessages}
+              variant="lobby"
+            />
             {liveJackpotAmounts ? (
               <LobbyJackpotStrip
                 wallet={activeWallet}

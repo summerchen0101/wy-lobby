@@ -172,10 +172,10 @@ export function buildPaymentCallbackUrl(state: 1 | 2): string {
   return `${base}${path.startsWith("/") ? path : `/${path}`}?state=${state}`;
 }
 
+/** 提現第三方完成導回 `/redeem?paymentState=1|2`。 */
 export function buildRedeemCallbackUrl(state: 1 | 2): string {
   const base = callbackOrigin();
-  const path = redeemCallbackPath().replace(/\/+$/, "");
-  return `${base}${path.startsWith("/") ? path : `/${path}`}?state=${state}`;
+  return `${base}/redeem?paymentState=${state}`;
 }
 
 export function buildGameCallbackUrl(state: 1 | 2): string {

@@ -49,6 +49,10 @@ interface ImportMetaEnv {
    * 搭配 `window.__ffgtDevBeggarEnvelope` 在 console 測試。
    */
   readonly VITE_DEV_WALLET_GET_SUBSIDY?: string;
+  /**
+   * 僅 dev：提領核准彈窗 WALLET_GET mock。逗號分隔 wire SC，如 `1000000` 或 `500000,1200000`。
+   */
+  readonly VITE_DEV_WALLET_GET_REDEEM_SC_LIST?: string;
   /** 寫入 Gateway RequestBasic.clientVer */
   readonly VITE_CLIENT_VER?: string;
   /**

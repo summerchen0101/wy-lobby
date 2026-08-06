@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { InfoPopover } from "../../components/InfoPopover";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
@@ -8,7 +8,6 @@ import { navigateToThirdPartyPayment } from "../../lib/thirdPartyPaymentNavigati
 import { openZendeskOrFallback } from "../../lib/zendeskSupport";
 import {
   formatScFromRaw,
-  formatScFromRawWireInteger,
   formatScFromTruncatedHundredths,
   formatWithdrawHistoryFiatAmount,
   MIN_REDEEM_SC_DISPLAY,
@@ -27,7 +26,7 @@ import {
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { redeemScBalancesFromLobby } from "./redeemBalances";
 import { RedeemNotifyPill } from "./RedeemNotifyPill";
-import { useRedeemPillMessages } from "./useRedeemPillMessages";
+import { useWithdrawSuccessMarquee } from "./useWithdrawSuccessMarquee";
 import { RedeemMethodModal, type RedeemMethodModalResume } from "./RedeemMethodModal";
 import {
   clearPendingRedeemOrder,
@@ -42,7 +41,11 @@ import {
   type RedeemBindingMode,
 } from "./RedeemBindingModal";
 import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
-import { fetchRedeemPlayerBindingFromGateway } from "./redeemBindingGate";
+import {
+  fetchRedeemPlayerBindingFromGateway,
+  redeemBindingPrefillFromLobby,
+  resolveRedeemBindingNextStep,
+} from "./redeemBindingGate";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import {
   resolveMinRedeemDisplay,
@@ -55,8 +58,14 @@ import {
   withdrawHistoryShowsCancel,
   withdrawHistoryShowsRemark,
 } from "./redeemHistoryUi";
+import { dispatchRedeemWithdrawReturnSuccess } from "./redeemApprovalWalletGet";
+import {
+  parseRedeemPaymentState,
+  stripRedeemPaymentStateParam,
+} from "./redeemPaymentReturn";
 import { useWordData } from "../../wordData/useWordData";
 import "./RedeemPage.css";
+import "./WithdrawMarqueePill.css";
 import "./SessionPageDecor.css";
 
 const SC_INLINE_PX = 18;
@@ -167,26 +176,17 @@ export function RedeemPage() {
   const w = useWordData();
   const { show } = useAlert();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const processedPaymentReturnRef = useRef<string | null>(null);
   const {
     requestRef,
     lobbyGet,
     gatewayRequestReady,
     refreshLobbyGet,
-    subscribeWithdrawSuccessPush,
     redeemOrdersPrefetch,
   } = useGatewayLobby();
 
-  const [pillExtras, setPillExtras] = useState<string[]>([]);
-  useEffect(() => {
-    return subscribeWithdrawSuccessPush((p) => {
-      setPillExtras((prev) => {
-        const line = `${p.nickname} redeemed ${formatScFromRawWireInteger(p.actualAmountWire)} SC`;
-        return [line, ...prev].slice(0, 24);
-      });
-    });
-  }, [subscribeWithdrawSuccessPush]);
-
-  const pillMessages = useRedeemPillMessages(pillExtras);
+  const pillMessages = useWithdrawSuccessMarquee();
 
   const [methodModalOpen, setMethodModalOpen] = useState(false);
   const [methodModalResume, setMethodModalResume] =
@@ -309,25 +309,46 @@ export function RedeemPage() {
     await fetchOrders(0);
   }, [gatewayRequestReady, fetchOrders, refreshLobbyGet]);
 
+  const handleRedeemPaymentReturn = useCallback(
+    async (paymentState: 1 | 2) => {
+      clearPaymentCallbackPayload("redeem");
+      clearPendingRedeemOrder();
+      setMethodModalOpen(false);
+      setMethodModalResume(null);
+
+      if (paymentState === 1) {
+        await refetchOrdersAfterWithdraw();
+        dispatchRedeemWithdrawReturnSuccess();
+        return;
+      }
+
+      show("Redemption failed. Please try again.", { variant: "error" });
+    },
+    [refetchOrdersAfterWithdraw, show],
+  );
+
+  useEffect(() => {
+    const raw = searchParams.get("paymentState");
+    if (raw == null) return;
+
+    const fingerprint = searchParams.toString();
+    if (processedPaymentReturnRef.current === fingerprint) return;
+    processedPaymentReturnRef.current = fingerprint;
+
+    const paymentState = parseRedeemPaymentState(raw);
+    setSearchParams(stripRedeemPaymentStateParam(searchParams), { replace: true });
+
+    if (paymentState == null) return;
+    void handleRedeemPaymentReturn(paymentState);
+  }, [searchParams, setSearchParams, handleRedeemPaymentReturn]);
+
   useEffect(() => {
     const pending = readPendingRedeemOrder();
     if (!pending) return;
 
     const callback = readPaymentCallbackPayload("redeem");
     if (callback) {
-      clearPaymentCallbackPayload("redeem");
-      clearPendingRedeemOrder();
-      if (callback.state === 1) {
-        void refetchOrdersAfterWithdraw();
-        setMethodModalResume({
-          kind: "success",
-          orderUid: pending.withdrawOrderUID,
-          amount: pending.pickAmount,
-        });
-        setMethodModalOpen(true);
-      } else {
-        show("Redemption was not completed.", { variant: "error" });
-      }
+      void handleRedeemPaymentReturn(callback.state);
       return;
     }
 
@@ -340,7 +361,7 @@ export function RedeemPage() {
       });
       setMethodModalOpen(true);
     }
-  }, [refetchOrdersAfterWithdraw, show]);
+  }, [handleRedeemPaymentReturn]);
 
   const handleCancelOrder = useCallback(
     async (redeemOrderUID: string) => {
@@ -385,38 +406,19 @@ export function RedeemPage() {
 
   const handleNewRedeemClick = useCallback(async () => {
     const binding = redeemPlayerBindingFromLobby(lobbyGet);
-    if (!binding.hasCellPhone) {
+    const next = resolveRedeemBindingNextStep(binding);
+    if (next.kind === "full") {
       setBindingMode("full");
       setBindingModalOpen(true);
       return;
     }
-    if (!binding.hasAddress) {
+    if (next.kind === "addressOnly") {
       setBindingMode("addressOnly");
       setBindingModalOpen(true);
       return;
     }
-    if (!binding.hasFrontImage) {
-      await refreshLobbyGet();
-      const req = requestRef.current;
-      const refreshed =
-        req && gatewayRequestReady
-          ? await fetchRedeemPlayerBindingFromGateway(req)
-          : redeemPlayerBindingFromLobby(lobbyGet);
-      if (refreshed.hasFrontImage) {
-        setMethodModalOpen(true);
-        return;
-      }
-      setBindingMode("kycOnly");
-      setBindingModalOpen(true);
-      return;
-    }
     setMethodModalOpen(true);
-  }, [
-    lobbyGet,
-    refreshLobbyGet,
-    requestRef,
-    gatewayRequestReady,
-  ]);
+  }, [lobbyGet]);
 
   const showPager = totalPages > 1;
 
@@ -626,10 +628,7 @@ export function RedeemPage() {
           setBindingModalOpen(false);
           setMethodModalOpen(true);
         }}
-        bindingPrefill={{
-          email: user?.email,
-          phone: user?.phone,
-        }}
+        bindingPrefill={redeemBindingPrefillFromLobby(lobbyGet, user)}
       />
 
       <RedeemMethodModal

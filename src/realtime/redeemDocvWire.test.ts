@@ -30,30 +30,27 @@ describe("decodeMegaAccountBindingResponseBytes", () => {
 });
 
 describe("redeemPlayerBindingFromLobby", () => {
-  it("reports hasFrontImage when playerInfo.frontImage is set", () => {
+  it("reports hasAddress when playerInfo.address is set", () => {
     const lobbyGet = {
       playerInfo: {
         cellPhone: "1-5551234567",
         address: "123 Main St",
-        frontImage: "https://cdn.example/id-front.jpg",
       },
     } as unknown as LobbyGetDecoded;
     expect(redeemPlayerBindingFromLobby(lobbyGet)).toEqual({
       hasCellPhone: true,
       hasAddress: true,
-      hasFrontImage: true,
       minTxWdrawRaw: undefined,
     });
   });
 
-  it("reports hasFrontImage false when frontImage is empty", () => {
+  it("reports hasAddress false when address is empty", () => {
     const lobbyGet = {
       playerInfo: {
         cellPhone: "1-5551234567",
-        address: "123 Main St",
-        frontImage: "",
+        address: "",
       },
     } as unknown as LobbyGetDecoded;
-    expect(redeemPlayerBindingFromLobby(lobbyGet).hasFrontImage).toBe(false);
+    expect(redeemPlayerBindingFromLobby(lobbyGet).hasAddress).toBe(false);
   });
 });

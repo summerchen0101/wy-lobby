@@ -32,6 +32,7 @@ import {
   createPendingRedeemOrder,
   persistPendingRedeemOrder,
 } from "./redeemPaymentSession";
+import { dispatchRedeemWithdrawReturnSuccess } from "./redeemApprovalWalletGet";
 import type { LobbyGetDecoded } from "../../realtime/lobbyDecode";
 import { useWordData } from "../../wordData/useWordData";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
@@ -197,21 +198,20 @@ export function RedeemMethodModal({
       if (step !== "payment" || !paymentUrl) return;
       if (payload.state === 2) {
         clearPendingRedeemOrder();
-        show("Redemption was not completed.", { variant: "error" });
+        show("Redemption failed. Please try again.", { variant: "error" });
         setPaymentUrl(null);
         setStep("amount");
         return;
       }
-      void finalizeSuccessFlow(successOrderUid || "—", pickAmount);
+      clearPendingRedeemOrder();
+      setPaymentUrl(null);
+      void (async () => {
+        await onOrderCreated?.();
+        dispatchRedeemWithdrawReturnSuccess();
+        onClose();
+      })();
     },
-    [
-      step,
-      paymentUrl,
-      show,
-      finalizeSuccessFlow,
-      successOrderUid,
-      pickAmount,
-    ],
+    [step, paymentUrl, show, onOrderCreated, onClose],
   );
 
   usePaymentCallbackListener(
