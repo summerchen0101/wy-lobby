@@ -3,6 +3,30 @@
   max-width: 26rem;
 }
 
+/** 註冊／登入：標題固定、內容可捲動、底部切換連結始終可見 */
+.app-modal.auth-modal.app-modal--col {
+  max-height: min(90dvh, calc(640px + 30px));
+}
+
+@media (min-width: 48rem) {
+  .app-modal.auth-modal.app-modal--col {
+    max-height: min(90dvh, calc(40rem + 30px));
+  }
+}
+
+.auth-modal__scroll-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: var(--space-1);
+}
+
+.auth-modal__footer--pinned {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 0 var(--space-5) var(--space-2);
+}
+
 /** Reset default `<fieldset>` chrome when using `disabled` to lock forms during submit */
 .auth-form-fieldset-reset {
   border: 0;

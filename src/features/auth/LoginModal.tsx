@@ -145,7 +145,7 @@ export function LoginModal({
   return createPortal(
     <div className="app-modal-overlay" role="presentation">
       <div
-        className="app-modal app-modal--scroll-y auth-modal auth-modal--login"
+        className="app-modal app-modal--col auth-modal auth-modal--login"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -165,7 +165,7 @@ export function LoginModal({
           </h2>
         </div>
         <hr className="app-modal__rule" />
-        <div className="app-modal__body">
+        <div className="app-modal__body auth-modal__scroll-body">
           <AuthSocialButtons
             mode="signin"
             searchParams={searchParams}
@@ -284,17 +284,17 @@ export function LoginModal({
               </button>
             </fieldset>
           </form>
-          <p className="auth-modal__footer">
-            {w(31)}{" "}
-            <button
-              type="button"
-              className="auth-modal__footer-link"
-              onClick={onSwitchRegister}
-            >
-              {w(18)}
-            </button>
-          </p>
         </div>
+        <p className="auth-modal__footer auth-modal__footer--pinned">
+          {w(31)}{" "}
+          <button
+            type="button"
+            className="auth-modal__footer-link"
+            onClick={onSwitchRegister}
+          >
+            {w(18)}
+          </button>
+        </p>
       </div>
     </div>,
     document.body,

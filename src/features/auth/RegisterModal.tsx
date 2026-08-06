@@ -183,7 +183,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   return createPortal(
     <div className="app-modal-overlay" role="presentation" onClick={onClose}>
       <div
-        className="app-modal app-modal--scroll-y auth-modal auth-modal--register"
+        className="app-modal app-modal--col auth-modal auth-modal--register"
         role="dialog"
         aria-modal="true"
         aria-labelledby="register-modal-title"
@@ -198,7 +198,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
           </h2>
         </div>
         <hr className="app-modal__rule" />
-        <div className="app-modal__body">
+        <div className="app-modal__body auth-modal__scroll-body">
           <AuthSocialButtons
             mode="signup"
             searchParams={searchParams}
@@ -352,13 +352,13 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             </button>
             </fieldset>
           </form>
-          <p className="auth-modal__footer">
-            {w(24)}{' '}
-            <button type="button" className="auth-modal__footer-link" onClick={onSwitchLogin}>
-              {w(25)}
-            </button>
-          </p>
         </div>
+        <p className="auth-modal__footer auth-modal__footer--pinned">
+          {w(24)}{' '}
+          <button type="button" className="auth-modal__footer-link" onClick={onSwitchLogin}>
+            {w(25)}
+          </button>
+        </p>
       </div>
     </div>,
     document.body,
