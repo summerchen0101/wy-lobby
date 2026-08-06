@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildShopBindingPayload,
   computeShopBindingInvalidFields,
+  formatShopBindingValidationError,
   normalizePhoneDigitsForSubmit,
 } from "./shopBindingPayload";
 
@@ -82,5 +83,29 @@ describe("shopBindingPayload", () => {
       true,
     );
     expect(missing.has("phoneNumber")).toBe(true);
+  });
+
+  it("formatShopBindingValidationError uses word 555 for short US phone", () => {
+    const fields = { ...baseFields, phoneNumber: "921634145" };
+    const missing = computeShopBindingInvalidFields(fields, true);
+    expect(formatShopBindingValidationError(fields, missing)).toBe(
+      "Phone number must be at least 10 numbers",
+    );
+  });
+
+  it("formatShopBindingValidationError uses word 557 for invalid US phone format", () => {
+    const fields = { ...baseFields, phoneNumber: "0123456789" };
+    const missing = computeShopBindingInvalidFields(fields, true);
+    expect(formatShopBindingValidationError(fields, missing)).toBe(
+      "Please enter a valid US phone number",
+    );
+  });
+
+  it("formatShopBindingValidationError uses Missing label for empty phone", () => {
+    const fields = { ...baseFields, phoneNumber: "" };
+    const missing = computeShopBindingInvalidFields(fields, true);
+    expect(formatShopBindingValidationError(fields, missing)).toBe(
+      "Missing: PHONE NUMBER",
+    );
   });
 });

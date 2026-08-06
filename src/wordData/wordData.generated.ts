@@ -115,6 +115,7 @@ export const WORD_DATA: Readonly<Record<number, string>> = {
   554: "Invalid referral code. Please check and enter again.",
   555: "Phone number must be at least 10 numbers",
   556: "Verify failed, please contact customer service",
+  557: "Please enter a valid US phone number",
   1000: "ENTRY LEVEL",
   1001: "VIP LEVEL 1",
   1002: "VIP LEVEL 2",

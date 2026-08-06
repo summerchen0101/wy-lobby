@@ -1,3 +1,8 @@
+import {
+  extractPhoneDigits,
+  isValidUsPhoneDigits,
+  usPhoneValidationWordId,
+} from "../../lib/usPhoneValidation";
 import { getWord } from "../../wordData/getWord";
 import type { ShopBindingFormPayload } from "./types";
 
@@ -57,22 +62,41 @@ export function computeShopBindingInvalidFields(
   const s = new Set<ShopBindingFieldKey>();
   if (!emailReadOnly && !fields.email.trim()) s.add("email");
   if (!fields.phoneCountry.trim()) s.add("phoneCountry");
-  const digits = fields.phoneNumber.replace(/\D/g, "");
+  const digits = extractPhoneDigits(fields.phoneNumber);
   if (!fields.phoneNumber.trim() || digits.length === 0) s.add("phoneNumber");
-  else if (fields.phoneCountry === "1" && digits.length !== 10) {
+  else if (fields.phoneCountry === "1" && !isValidUsPhoneDigits(digits)) {
     s.add("phoneNumber");
   }
   return s;
 }
 
-export function formatShopBindingMissingLabels(
+function formatShopBindingInvalidFieldMessage(
+  key: ShopBindingFieldKey,
+  fields: ShopBindingFormFields,
+): string {
+  if (key === "phoneNumber") {
+    const digits = extractPhoneDigits(fields.phoneNumber);
+    if (
+      fields.phoneNumber.trim() &&
+      digits.length > 0 &&
+      fields.phoneCountry === "1"
+    ) {
+      const wordId = usPhoneValidationWordId(digits);
+      if (wordId !== null) return getWord(wordId);
+    }
+  }
+  return `Missing: ${getWord(FIELD_LABEL_IDS[key])}`;
+}
+
+export function formatShopBindingValidationError(
+  fields: ShopBindingFormFields,
   keys: Set<ShopBindingFieldKey>,
 ): string {
-  const labels = SCROLL_ORDER.filter((k) => keys.has(k)).map(
-    (k) => getWord(FIELD_LABEL_IDS[k]),
+  const messages = SCROLL_ORDER.filter((k) => keys.has(k)).map((k) =>
+    formatShopBindingInvalidFieldMessage(k, fields),
   );
-  if (labels.length === 0) return getWord(106);
-  return `Missing: ${labels.join(", ")}`;
+  if (messages.length === 0) return getWord(106);
+  return messages.join(" ");
 }
 
 export function shopBindingFieldDomSuffix(key: ShopBindingFieldKey): string {

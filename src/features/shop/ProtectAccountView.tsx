@@ -7,13 +7,14 @@ import {
   type FormEvent,
 } from "react";
 import { IoChevronBack } from "react-icons/io5";
+import { sanitizeUsPhoneInput } from "../../lib/usPhoneValidation";
 import { getWord } from "../../wordData/getWord";
 import { useWordData } from "../../wordData/useWordData";
 import { splitPhoneForBindingForm } from "./splitPhoneForBindingForm";
 import {
   buildShopBindingPayload,
   computeShopBindingInvalidFields,
-  formatShopBindingMissingLabels,
+  formatShopBindingValidationError,
   shopBindingFieldDomSuffix,
   type ShopBindingFieldKey,
   type ShopBindingFormFields,
@@ -185,7 +186,7 @@ export function ProtectAccountView({
     if (missing.size > 0) {
       scrollInvalidIntoViewAfterSubmit.current = true;
       setInvalidFields(missing);
-      setLocalError(formatShopBindingMissingLabels(missing));
+      setLocalError(formatShopBindingValidationError(formFields(), missing));
       return;
     }
     await onSubmit(buildShopBindingPayload(formFields(), ""));
@@ -330,7 +331,7 @@ export function ProtectAccountView({
                       value={phoneNumber}
                       aria-invalid={inv("phoneNumber")}
                       onChange={(e) => {
-                        setPhoneNumber(e.target.value);
+                        setPhoneNumber(sanitizeUsPhoneInput(e.target.value));
                         removeInvalid("phoneNumber");
                       }}
                     />

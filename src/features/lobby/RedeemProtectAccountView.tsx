@@ -25,6 +25,11 @@ import {
   encodeMegaAccountBindingRequestBytes,
 } from "../../realtime/shopLobbyWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
+import {
+  isValidUsPhoneDigits,
+  usPhoneValidationWordId,
+} from "../../lib/usPhoneValidation";
+import { getWord } from "../../wordData/getWord";
 import { splitPhoneForBindingForm } from "../shop/splitPhoneForBindingForm";
 import { useWordData } from "../../wordData/useWordData";
 import {
@@ -219,8 +224,9 @@ export function RedeemProtectAccountView({
       setError("Missing account phone number.");
       return false;
     }
-    if (contact.countryCode === "1" && contact.phone.length !== 10) {
-      setError("US phone number must be 10 digits.");
+    if (contact.countryCode === "1" && !isValidUsPhoneDigits(contact.phone)) {
+      const wordId = usPhoneValidationWordId(contact.phone);
+      setError(wordId !== null ? getWord(wordId) : getWord(555));
       return false;
     }
     return validateAddress();
