@@ -63,17 +63,11 @@ function translateDailyLoginClaimError(
   code: string,
   errMessage?: string | null,
 ): string {
-  const serverMsg = errMessage?.trim();
-  if (serverMsg) return serverMsg;
-  const translated = translateGatewayError(
+  return translateGatewayError(
     code,
     errMessage,
     `Claim failed (${code})`,
   );
-  if (code === "400001") {
-    return "This reward is not ready to collect yet.";
-  }
-  return translated;
 }
 
 type GatewayRequestFn = NonNullable<
