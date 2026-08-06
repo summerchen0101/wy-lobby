@@ -93,3 +93,24 @@
     height: clamp(22rem, 42vw, 45rem);
   }
 }
+
+/* Jackpot + withdraw marquee stacked at hero bottom (see docs/大廳兌換跑馬燈) */
+.lobby-hero-banner__bottom-stack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  pointer-events: none;
+}
+
+.lobby-hero-banner__bottom-stack .lobby-jackpot-strip {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  padding-bottom: 0.35rem;
+}

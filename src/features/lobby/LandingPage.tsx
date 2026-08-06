@@ -1251,17 +1251,18 @@ export function LandingPage() {
           <LobbyHeroBanner
             videoSrc={sessionHeroVideoSrc}
             posterSrc={sessionHeroPosterSrc}>
-            {liveJackpotAmounts ? (
-              <LobbyJackpotStrip
-                wallet={activeWallet}
-                amounts={liveJackpotAmounts}
-                variant="live"
-              />
-            ) : null}
+            <div className="lobby-hero-banner__bottom-stack">
+              {liveJackpotAmounts ? (
+                <LobbyJackpotStrip
+                  wallet={activeWallet}
+                  amounts={liveJackpotAmounts}
+                  variant="live"
+                />
+              ) : null}
+              <LobbyWithdrawMarquee messages={withdrawMarqueeMessages} />
+            </div>
           </LobbyHeroBanner>
         </section>
-
-        <LobbyWithdrawMarquee messages={withdrawMarqueeMessages} />
 
         <section
           id={LOBBY_GAMES_SECTION_ID}

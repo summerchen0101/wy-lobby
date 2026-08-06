@@ -21,11 +21,11 @@
   position: relative;
   overflow: hidden;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: 100%;
-  min-height: 1.75rem;
-  padding-block: 0.35rem;
+  min-height: 1.5rem;
+  padding-block: 0.15rem 0.7rem;
 }
 
 .lobby-withdraw-marquee__line {
@@ -49,7 +49,8 @@
 .lobby-withdraw-marquee__line--in {
   opacity: 0;
   transform: translate3d(0, 0, 0) scale(0.62);
-  animation: lobby-withdraw-marquee-enter 0.36s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: lobby-withdraw-marquee-enter 0.36s cubic-bezier(0.16, 1, 0.3, 1)
+    both;
 }
 
 .lobby-withdraw-marquee__line--hold {
@@ -58,7 +59,8 @@
 }
 
 .lobby-withdraw-marquee__line--out {
-  animation: lobby-withdraw-marquee-exit 0.36s cubic-bezier(0.4, 0, 0.9, 0.6) forwards;
+  animation: lobby-withdraw-marquee-exit 0.36s cubic-bezier(0.4, 0, 0.9, 0.6)
+    forwards;
 }
 
 @keyframes lobby-withdraw-marquee-enter {
