@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
+import { clearStaleSafariRepaintTransform } from '../../lib/forceSafariRepaint'
 import { useWallet } from '../../wallet/walletContext'
 import { SessionFooter } from './SessionFooter'
 import { SessionHeader } from './SessionHeader'
@@ -11,8 +13,22 @@ type SessionChromeShellProps = {
   headerOverHero?: boolean
 }
 
+/** Session tab 切換時重置捲動，並清掉會讓 fixed chrome 失效的 Safari repaint transform。 */
+function useSessionChromeRouteSync() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    clearStaleSafariRepaintTransform()
+    window.scrollTo(0, 0)
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+  }, [pathname])
+}
+
 export function SessionChromeShell({ children, headerOverHero = false }: SessionChromeShellProps) {
   const { activeWallet } = useWallet()
+  useSessionChromeRouteSync()
+
   return (
     <div
       className={

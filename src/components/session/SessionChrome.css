@@ -419,7 +419,9 @@
 
 @supports (-webkit-touch-callout: none) {
   .session-footer {
-    transform: translate3d(0, 0, 0);
+    /* 勿對 fixed footer 加 transform，Safari 會改以父層為定位基準而掉出視窗底部 */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
 
   .session-footer::after {

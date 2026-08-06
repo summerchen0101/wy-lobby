@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { NavLink } from 'react-router-dom'
 import { useGatewayLobby } from '../../realtime/useGatewayLobby'
 import {
@@ -23,7 +24,7 @@ export function SessionFooter() {
   const { activeWallet } = useWallet()
   const { refreshLobbyGet } = useGatewayLobby()
 
-  return (
+  const footer = (
     <nav
       className="session-footer"
       data-active-wallet={activeWallet}
@@ -70,4 +71,7 @@ export function SessionFooter() {
       </ul>
     </nav>
   )
+
+  if (typeof document === 'undefined') return footer
+  return createPortal(footer, document.body)
 }
