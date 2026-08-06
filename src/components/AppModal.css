@@ -40,6 +40,17 @@
   overflow: hidden;
 }
 
+.app-modal--redeem-binding {
+  /* Native <select> menus mis-anchor when ancestors clip with overflow:hidden. */
+  overflow: visible;
+}
+
+.app-modal--redeem-binding .redeem-protect__form-wrap {
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: min(70dvh, 32rem);
+}
+
 .app-modal__header {
   position: relative;
   display: flex;

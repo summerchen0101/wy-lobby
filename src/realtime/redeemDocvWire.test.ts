@@ -40,6 +40,7 @@ describe("redeemPlayerBindingFromLobby", () => {
     expect(redeemPlayerBindingFromLobby(lobbyGet)).toEqual({
       hasCellPhone: true,
       hasAddress: true,
+      hasFrontImage: false,
       minTxWdrawRaw: undefined,
     });
   });

@@ -1,8 +1,20 @@
 .redeem-protect__form-wrap {
   padding: 0 0.7rem 0.9rem;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.redeem-protect__form-wrap .shop-checkout__field--stack:focus-within {
+  position: relative;
+  z-index: 2;
+}
+
+.redeem-protect__form-wrap .shop-checkout__select:focus {
+  position: relative;
+  z-index: 3;
 }
 
 .redeem-protect__form-wrap .shop-checkout__card-form {

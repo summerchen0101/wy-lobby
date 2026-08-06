@@ -1,4 +1,5 @@
 import {
+  type ChangeEvent,
   type FormEvent,
   useCallback,
   useEffect,
@@ -8,6 +9,10 @@ import {
 import { IoChevronBack } from "react-icons/io5";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
+import {
+  readImageFileAsBase64,
+  type ImageBase64Payload,
+} from "../../lib/readImageFileAsBase64";
 import { GATEWAY_API_MEGA_ACCOUNT_BINDING } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
@@ -18,35 +23,23 @@ import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
 import {
   decodeMegaAccountBindingResponseBytes,
   encodeMegaAccountBindingRequestBytes,
-  type MegaAccountBindingWireResult,
 } from "../../realtime/shopLobbyWire";
-import {
-  getSocureDiSessionToken,
-  setSocureBindingNavigationContext,
-} from "../../lib/socure/socureDevice";
-import {
-  isSocureDocvEnabled,
-  launchSocureDocv,
-  resetSocureDocv,
-  SOCURE_DOCV_CONTAINER_SELECTOR,
-} from "../../lib/socure/socureDocv";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { splitPhoneForBindingForm } from "../shop/splitPhoneForBindingForm";
 import { useWordData } from "../../wordData/useWordData";
+import {
+  REDEEM_DOCUMENT_TYPES,
+  US_STATES,
+} from "./redeemKycFormConstants";
 import "../shop/ShopCheckout.css";
 import "./RedeemProtectAccountView.css";
 
-const US_STATE_CODES =
-  "AL,AK,AZ,AR,CA,CO,CT,DE,FL,GA,HI,ID,IL,IN,IA,KS,KY,LA,ME,MD,MA,MI,MN,MS,MO,MT,NE,NV,NH,NJ,NM,NY,NC,ND,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VT,VA,WA,WV,WI,WY,DC".split(
-    ",",
-  );
-
-const PHONE_COUNTRY_CODES = ["1"] as const;
 const ADDRESS_COUNTRIES = ["US"] as const;
+const LICENSE_ID_PLACEHOLDER = "License ID";
 
 export type RedeemBindingMode = "full" | "addressOnly";
 
-type Step = "profile" | "docv";
+type Step = "profile" | "idPhotos";
 
 export type RedeemBindingPrefill = {
   email?: string;
@@ -78,6 +71,25 @@ function combineAddress(line1: string, line2: string): string {
   return `${a}, ${b}`;
 }
 
+function resolveBindingContact(
+  bindingPrefill: RedeemBindingPrefill | undefined,
+  user: { email?: string | null; phone?: string | null } | null | undefined,
+  lobbyCellPhone: string,
+): { email: string; phone: string; countryCode: string } {
+  const email =
+    bindingPrefill?.email?.trim() || user?.email?.trim() || "";
+  const savedPhone =
+    bindingPrefill?.phone?.trim() || user?.phone?.trim() || lobbyCellPhone;
+  const split = savedPhone ? splitPhoneForBindingForm(savedPhone) : null;
+  return {
+    email,
+    phone: savedPhone
+      ? normalizePhoneDigits(split?.national || savedPhone)
+      : "",
+    countryCode: split?.countryCode || "1",
+  };
+}
+
 export function RedeemProtectAccountView({
   open,
   mode,
@@ -97,11 +109,7 @@ export function RedeemProtectAccountView({
   const [error, setError] = useState<string | null>(null);
 
   const [firstName, setFirstName] = useState("");
-  const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phoneCountry, setPhoneCountry] = useState("1");
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [dobMonth, setDobMonth] = useState("");
   const [dobDay, setDobDay] = useState("");
   const [dobYear, setDobYear] = useState("");
@@ -111,6 +119,10 @@ export function RedeemProtectAccountView({
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [zip, setZip] = useState("");
+  const [documentType, setDocumentType] = useState("");
+  const [documentNumber, setDocumentNumber] = useState("");
+  const [frontImage, setFrontImage] = useState<ImageBase64Payload | null>(null);
+  const [backImage, setBackImage] = useState<ImageBase64Payload | null>(null);
 
   const dobYears = Array.from({ length: 2007 - 1920 + 1 }, (_, i) => 2007 - i);
   const dobDays = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -118,19 +130,12 @@ export function RedeemProtectAccountView({
   const pi = "shop-checkout__input shop-checkout__input--protect";
 
   useEffect(() => {
-    if (!open) {
-      resetSocureDocv();
-      return;
-    }
+    if (!open) return;
     setStep("profile");
     setBusy(false);
     setError(null);
     setFirstName("");
-    setMiddleName("");
     setLastName("");
-    setEmail(bindingPrefill?.email?.trim() ?? "");
-    setPhoneCountry("1");
-    setPhoneNumber("");
     setDobMonth("");
     setDobDay("");
     setDobYear("");
@@ -140,21 +145,11 @@ export function RedeemProtectAccountView({
     setCity("");
     setState("");
     setZip("");
-
-    const rawPhone = bindingPrefill?.phone?.trim();
-    if (rawPhone) {
-      const split = splitPhoneForBindingForm(rawPhone);
-      if (split.national) {
-        setPhoneCountry(split.countryCode);
-        setPhoneNumber(split.national);
-      }
-    }
-  }, [open, mode, bindingPrefill?.email, bindingPrefill?.phone]);
-
-  useEffect(() => {
-    if (!open) return;
-    void setSocureBindingNavigationContext();
-  }, [open]);
+    setDocumentType("");
+    setDocumentNumber("");
+    setFrontImage(null);
+    setBackImage(null);
+  }, [open, mode]);
 
   const fetchBindingState = useCallback(async () => {
     const req = requestRef.current;
@@ -171,7 +166,7 @@ export function RedeemProtectAccountView({
         if (fullAddress) mergeUser({ address: fullAddress });
         await refreshLobbyGet();
         const binding = await fetchBindingState();
-        if (binding.hasCellPhone && binding.hasAddress) {
+        if (binding.hasFrontImage) {
           onBound();
           show(w(1209), { variant: "success" });
           return;
@@ -183,51 +178,6 @@ export function RedeemProtectAccountView({
       }
     },
     [mergeUser, refreshLobbyGet, fetchBindingState, onBound, show, onClose, w],
-  );
-
-  const beginDocvHandoff = useCallback(
-    async (
-      docvTransactionToken: string,
-      fullAddress: string,
-      boundPhone: string,
-    ) => {
-      setStep("docv");
-      setBusy(true);
-      setError(null);
-      resetSocureDocv();
-
-      const result = await launchSocureDocv(docvTransactionToken, {
-        disableSmsInput: true,
-        onError: () => {},
-      });
-
-      if (result.result === "success") {
-        await finalizeBindingSuccess(fullAddress, boundPhone);
-        return;
-      }
-
-      setError(result.errorMessage || "Identity verification failed.");
-      setBusy(false);
-    },
-    [finalizeBindingSuccess],
-  );
-
-  const handleBindingDecoded = useCallback(
-    (
-      decoded: MegaAccountBindingWireResult,
-      fullAddress: string,
-    ) => {
-      const boundPhone = decoded.phoneNum.trim();
-      const docvToken = decoded.docvTransactionToken.trim();
-
-      if (docvToken) {
-        void beginDocvHandoff(docvToken, fullAddress, boundPhone);
-        return;
-      }
-
-      void finalizeBindingSuccess(fullAddress, boundPhone);
-    },
-    [beginDocvHandoff, finalizeBindingSuccess],
   );
 
   const validateAddress = useCallback((): boolean => {
@@ -245,17 +195,31 @@ export function RedeemProtectAccountView({
     if (
       !firstName.trim() ||
       !lastName.trim() ||
-      !email.trim() ||
-      !phoneNumber.trim() ||
       !dobMonth ||
       !dobDay ||
-      !dobYear
+      !dobYear ||
+      !documentType ||
+      !documentNumber.trim()
     ) {
       setError("Complete all required profile fields.");
       return false;
     }
-    const digits = phoneNumber.replace(/\D/g, "");
-    if (phoneCountry === "1" && digits.length !== 10) {
+
+    const pi = lobbyGet?.playerInfo as Record<string, unknown> | null | undefined;
+    const lobbyCellPhone =
+      typeof pi?.cellPhone === "string" && pi.cellPhone.trim()
+        ? pi.cellPhone.trim()
+        : "";
+    const contact = resolveBindingContact(bindingPrefill, user, lobbyCellPhone);
+    if (!contact.email.trim()) {
+      setError("Missing account email.");
+      return false;
+    }
+    if (!contact.phone) {
+      setError("Missing account phone number.");
+      return false;
+    }
+    if (contact.countryCode === "1" && contact.phone.length !== 10) {
       setError("US phone number must be 10 digits.");
       return false;
     }
@@ -264,12 +228,14 @@ export function RedeemProtectAccountView({
     mode,
     firstName,
     lastName,
-    email,
-    phoneNumber,
-    phoneCountry,
     dobMonth,
     dobDay,
     dobYear,
+    documentType,
+    documentNumber,
+    bindingPrefill,
+    user,
+    lobbyGet,
     validateAddress,
   ]);
 
@@ -284,8 +250,8 @@ export function RedeemProtectAccountView({
       setError("Missing user id");
       return;
     }
-    if (!isSocureDocvEnabled()) {
-      setError("Identity verification is unavailable.");
+    if (!frontImage || !backImage) {
+      setError("Upload both sides of your ID.");
       return;
     }
 
@@ -295,51 +261,27 @@ export function RedeemProtectAccountView({
         ? pi.cellPhone.trim()
         : "";
 
-    const savedPhone =
-      bindingPrefill?.phone?.trim() ||
-      user?.phone?.trim() ||
-      lobbyCellPhone;
-    const savedPhoneSplit = savedPhone
-      ? splitPhoneForBindingForm(savedPhone)
-      : null;
+    const contact = resolveBindingContact(bindingPrefill, user, lobbyCellPhone);
 
     const birthday =
       mode === "full" && dobYear && dobMonth && dobDay
         ? `${dobYear}-${dobMonth}-${dobDay}`
         : "";
-    const phone =
-      mode === "full"
-        ? normalizePhoneDigits(phoneNumber)
-        : savedPhone
-          ? normalizePhoneDigits(savedPhoneSplit?.national || savedPhone)
-          : "";
-    const countryCode =
-      mode === "full"
-        ? phoneCountry.trim()
-        : savedPhoneSplit?.countryCode || "";
     const line1 = address1.trim();
     const fullAddress = combineAddress(line1, address2);
+    const parsedDocumentType = Number(documentType);
 
-    setStep("docv");
     setBusy(true);
     setError(null);
     try {
-      const socureDiSessionToken = await getSocureDiSessionToken();
-      if (!socureDiSessionToken) {
-        setError(
-          "Device verification unavailable. Please refresh and try again.",
-        );
-        setBusy(false);
-        return;
-      }
       const data = encodeMegaAccountBindingRequestBytes({
         userID: uid,
-        countryCode,
-        phone,
-        email: mode === "full" ? email.trim() : (user?.email ?? ""),
+        countryCode: contact.countryCode,
+        phone: contact.phone,
+        email: contact.email,
         answer: "",
         firstName: mode === "full" ? firstName.trim() : "",
-        middleName: mode === "full" ? middleName.trim() : "",
+        middleName: "",
         lastName: mode === "full" ? lastName.trim() : "",
         birthday,
         address: fullAddress,
@@ -349,13 +291,13 @@ export function RedeemProtectAccountView({
         state: state.trim(),
         zip: zip.trim(),
         language: "en",
-        documentType: 0,
-        documentNumber: "",
-        frontImageContentType: "",
-        backImageContentType: "",
-        frontImageBase64: "",
-        backImageBase64: "",
-        socureDiSessionToken,
+        documentType: mode === "full" ? parsedDocumentType : 0,
+        documentNumber: mode === "full" ? documentNumber.trim() : "",
+        frontImageContentType: frontImage.contentType,
+        backImageContentType: backImage.contentType,
+        frontImageBase64: frontImage.base64,
+        backImageBase64: backImage.base64,
+        socureDiSessionToken: "",
       });
       const r = await req({
         type: GATEWAY_API_MEGA_ACCOUNT_BINDING,
@@ -373,7 +315,7 @@ export function RedeemProtectAccountView({
         raw instanceof Uint8Array && raw.byteLength > 0
           ? decodeMegaAccountBindingResponseBytes(raw)
           : decodeMegaAccountBindingResponseBytes(new Uint8Array(0));
-      handleBindingDecoded(decoded, fullAddress);
+      void finalizeBindingSuccess(fullAddress, decoded.phoneNum.trim());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Binding failed");
       setBusy(false);
@@ -387,11 +329,9 @@ export function RedeemProtectAccountView({
     dobYear,
     dobMonth,
     dobDay,
-    phoneNumber,
-    phoneCountry,
-    email,
+    documentType,
+    documentNumber,
     firstName,
-    middleName,
     lastName,
     address1,
     address2,
@@ -399,20 +339,53 @@ export function RedeemProtectAccountView({
     city,
     state,
     zip,
+    frontImage,
+    backImage,
     lobbyGet,
-    handleBindingDecoded,
+    finalizeBindingSuccess,
   ]);
 
   const handleProfileSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!validateProfile()) return;
     setError(null);
+    setStep("idPhotos");
+  };
+
+  const validateIdPhotos = useCallback((): boolean => {
+    if (!frontImage || !backImage) {
+      setError("Upload both sides of your ID.");
+      return false;
+    }
+    return true;
+  }, [frontImage, backImage]);
+
+  const handleIdPhotosSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!validateIdPhotos()) return;
+    setError(null);
     void submitBinding();
   };
 
+  const handleImagePick = async (
+    side: "front" | "back",
+    e: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const payload = await readImageFileAsBase64(file);
+      if (side === "front") setFrontImage(payload);
+      else setBackImage(payload);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not read image.");
+    }
+  };
+
   const handleHeaderBack = () => {
-    if (step === "docv") {
-      resetSocureDocv();
+    if (step === "idPhotos") {
       setStep("profile");
       setError(null);
       setBusy(false);
@@ -420,6 +393,9 @@ export function RedeemProtectAccountView({
     }
     onClose();
   };
+
+  const imagePreviewSrc = (payload: ImageBase64Payload | null) =>
+    payload ? `data:${payload.contentType};base64,${payload.base64}` : null;
 
   const renderAddressFields = () => (
     <>
@@ -503,9 +479,9 @@ export function RedeemProtectAccountView({
             onChange={(e) => setState(e.target.value)}
             disabled={busy}>
             <option value="">{w(510464)}</option>
-            {US_STATE_CODES.map((code) => (
+            {US_STATES.map(({ code, name }) => (
               <option key={code} value={code}>
-                {code}
+                {name}
               </option>
             ))}
           </select>
@@ -524,6 +500,129 @@ export function RedeemProtectAccountView({
     </>
   );
 
+  const renderDocumentFields = () => (
+    <div className="shop-checkout__field shop-checkout__field--stack">
+      <span
+        className="shop-checkout__field-heading"
+        id={`${idPrefix}-doc-legend`}>
+        {w(510508)}
+      </span>
+      <div
+        className="redeem-protect__row2"
+        role="group"
+        aria-labelledby={`${idPrefix}-doc-legend`}>
+        <select
+          id={`${idPrefix}-doc-type`}
+          className={`${pi} shop-checkout__select`}
+          name="documentType"
+          value={documentType}
+          onChange={(e) => setDocumentType(e.target.value)}
+          disabled={busy}>
+          <option value="">{w(510508)}</option>
+          {REDEEM_DOCUMENT_TYPES.map(({ value, label }) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <input
+          id={`${idPrefix}-doc-num`}
+          className={pi}
+          name="documentNumber"
+          autoComplete="off"
+          placeholder={LICENSE_ID_PLACEHOLDER}
+          value={documentNumber}
+          onChange={(e) => setDocumentNumber(e.target.value)}
+          disabled={busy}
+        />
+      </div>
+    </div>
+  );
+
+  const renderDobFields = () => (
+    <div className="shop-checkout__field shop-checkout__field--stack">
+      <span
+        className="shop-checkout__field-heading"
+        id={`${idPrefix}-dob-legend`}>
+        {w(110)}
+      </span>
+      <div
+        className="shop-checkout__row3"
+        role="group"
+        aria-labelledby={`${idPrefix}-dob-legend`}>
+        <select
+          id={`${idPrefix}-dob-m`}
+          className={`${pi} shop-checkout__select`}
+          name="dobMonth"
+          aria-label="Month"
+          value={dobMonth}
+          onChange={(e) => setDobMonth(e.target.value)}>
+          <option value="">{w(111)}</option>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+            <option key={m} value={String(m).padStart(2, "0")}>
+              {m}
+            </option>
+          ))}
+        </select>
+        <select
+          id={`${idPrefix}-dob-d`}
+          className={`${pi} shop-checkout__select`}
+          name="dobDay"
+          aria-label="Day"
+          value={dobDay}
+          onChange={(e) => setDobDay(e.target.value)}>
+          <option value="">{w(112)}</option>
+          {dobDays.map((d) => (
+            <option key={d} value={String(d).padStart(2, "0")}>
+              {d}
+            </option>
+          ))}
+        </select>
+        <select
+          id={`${idPrefix}-dob-y`}
+          className={`${pi} shop-checkout__select`}
+          name="dobYear"
+          aria-label="Year"
+          value={dobYear}
+          onChange={(e) => setDobYear(e.target.value)}>
+          <option value="">{w(113)}</option>
+          {dobYears.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
+  const renderNameFields = () => (
+    <div className="redeem-protect__row2">
+      <label className="shop-checkout__field" htmlFor={`${idPrefix}-fn`}>
+        <input
+          id={`${idPrefix}-fn`}
+          className={pi}
+          name="firstName"
+          autoComplete="given-name"
+          placeholder={w(510455)}
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+        />
+      </label>
+      <label className="shop-checkout__field" htmlFor={`${idPrefix}-ln`}>
+        <input
+          id={`${idPrefix}-ln`}
+          className={pi}
+          name="lastName"
+          autoComplete="family-name"
+          placeholder={w(510456)}
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+        />
+      </label>
+    </div>
+  );
+
   const renderProfileForm = () => (
     <form
       className="shop-checkout__card-form shop-checkout__protect-form"
@@ -534,146 +633,12 @@ export function RedeemProtectAccountView({
         <div className="shop-checkout__fields shop-checkout__fields--protect">
           {mode === "full" ? (
             <>
-              <div className="redeem-protect__row3-names">
-                <label className="shop-checkout__field" htmlFor={`${idPrefix}-fn`}>
-                  <input
-                    id={`${idPrefix}-fn`}
-                    className={pi}
-                    name="firstName"
-                    autoComplete="given-name"
-                    placeholder={w(510455)}
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                  />
-                </label>
-                <label className="shop-checkout__field" htmlFor={`${idPrefix}-mn`}>
-                  <input
-                    id={`${idPrefix}-mn`}
-                    className={pi}
-                    name="middleName"
-                    autoComplete="additional-name"
-                    placeholder={w(510511)}
-                    value={middleName}
-                    onChange={(e) => setMiddleName(e.target.value)}
-                  />
-                </label>
-                <label className="shop-checkout__field" htmlFor={`${idPrefix}-ln`}>
-                  <input
-                    id={`${idPrefix}-ln`}
-                    className={pi}
-                    name="lastName"
-                    autoComplete="family-name"
-                    placeholder={w(510456)}
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                  />
-                </label>
-              </div>
-              <label className="shop-checkout__field" htmlFor={`${idPrefix}-email`}>
-                <input
-                  id={`${idPrefix}-email`}
-                  className={pi}
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </label>
-              <div className="shop-checkout__field shop-checkout__field--stack">
-                <span
-                  className="shop-checkout__field-heading"
-                  id={`${idPrefix}-phone-legend`}>
-                  {w(510011)}
-                </span>
-                <div
-                  className="shop-checkout__row-phone"
-                  role="group"
-                  aria-labelledby={`${idPrefix}-phone-legend`}>
-                  <select
-                    id={`${idPrefix}-phone-cc`}
-                    className={`${pi} shop-checkout__select shop-checkout__input--code`}
-                    name="phoneCountry"
-                    autoComplete="tel-country-code"
-                    aria-label="Country code"
-                    value={phoneCountry}
-                    onChange={(e) => setPhoneCountry(e.target.value)}>
-                    {PHONE_COUNTRY_CODES.map((c) => (
-                      <option key={c} value={c}>
-                        {c === "1" ? w(10507) : `+${c}`}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    id={`${idPrefix}-phone-num`}
-                    className={`${pi} shop-checkout__input--grow`}
-                    name="phone"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel-national"
-                    placeholder={w(115)}
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="shop-checkout__field shop-checkout__field--stack">
-                <span
-                  className="shop-checkout__field-heading"
-                  id={`${idPrefix}-dob-legend`}>
-                  {w(110)}
-                </span>
-                <div
-                  className="shop-checkout__row3"
-                  role="group"
-                  aria-labelledby={`${idPrefix}-dob-legend`}>
-                  <select
-                    id={`${idPrefix}-dob-m`}
-                    className={`${pi} shop-checkout__select`}
-                    name="dobMonth"
-                    aria-label="Month"
-                    value={dobMonth}
-                    onChange={(e) => setDobMonth(e.target.value)}>
-                    <option value="">{w(111)}</option>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                      <option key={m} value={String(m).padStart(2, "0")}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    id={`${idPrefix}-dob-d`}
-                    className={`${pi} shop-checkout__select`}
-                    name="dobDay"
-                    aria-label="Day"
-                    value={dobDay}
-                    onChange={(e) => setDobDay(e.target.value)}>
-                    <option value="">{w(112)}</option>
-                    {dobDays.map((d) => (
-                      <option key={d} value={String(d).padStart(2, "0")}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    id={`${idPrefix}-dob-y`}
-                    className={`${pi} shop-checkout__select`}
-                    name="dobYear"
-                    aria-label="Year"
-                    value={dobYear}
-                    onChange={(e) => setDobYear(e.target.value)}>
-                    <option value="">{w(113)}</option>
-                    {dobYears.map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              {renderDobFields()}
+              {renderNameFields()}
             </>
           ) : null}
           {renderAddressFields()}
+          {mode === "full" ? renderDocumentFields() : null}
         </div>
         {error ? (
           <p className="shop-checkout__pay-error" role="alert">
@@ -691,28 +656,71 @@ export function RedeemProtectAccountView({
     </form>
   );
 
-  const docvContainerId = SOCURE_DOCV_CONTAINER_SELECTOR.replace(/^#/, "");
-
-  const renderDocvStep = () => (
-    <div className="shop-checkout__card-form shop-checkout__protect-form">
-      <p className="shop-checkout__protect-lead">{w(510454)}</p>
-      <p className="redeem-protect__docv-hint">{w(510466)}</p>
-      {busy ? (
-        <p className="redeem-protect__docv-hint" aria-live="polite">
-          Please wait…
-        </p>
-      ) : null}
-      <div
-        id={docvContainerId}
-        className="redeem-protect__docv-root"
-        aria-busy={busy}
-      />
-      {error ? (
-        <p className="shop-checkout__pay-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </div>
+  const renderIdPhotoStep = () => (
+    <form
+      className="shop-checkout__card-form shop-checkout__protect-form"
+      onSubmit={handleIdPhotosSubmit}
+      noValidate>
+      <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
+        <p className="shop-checkout__protect-lead">{w(510454)}</p>
+        <div className="redeem-protect__upload-list">
+          <label
+            className={`redeem-protect__upload-box${frontImage ? " redeem-protect__upload-box--filled" : ""}`}
+            htmlFor={`${idPrefix}-front-img`}>
+            {frontImage ? (
+              <img
+                className="redeem-protect__upload-preview"
+                src={imagePreviewSrc(frontImage) ?? undefined}
+                alt=""
+              />
+            ) : (
+              <span className="redeem-protect__upload-label">{w(510509)}</span>
+            )}
+            <input
+              id={`${idPrefix}-front-img`}
+              className="redeem-protect__upload-input"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => void handleImagePick("front", e)}
+            />
+          </label>
+          <label
+            className={`redeem-protect__upload-box${backImage ? " redeem-protect__upload-box--filled" : ""}`}
+            htmlFor={`${idPrefix}-back-img`}>
+            {backImage ? (
+              <img
+                className="redeem-protect__upload-preview"
+                src={imagePreviewSrc(backImage) ?? undefined}
+                alt=""
+              />
+            ) : (
+              <span className="redeem-protect__upload-label">{w(510510)}</span>
+            )}
+            <input
+              id={`${idPrefix}-back-img`}
+              className="redeem-protect__upload-input"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => void handleImagePick("back", e)}
+            />
+          </label>
+        </div>
+        {error ? (
+          <p className="shop-checkout__pay-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <p className="shop-checkout__footer-hint">{w(510466)}</p>
+        <button
+          type="submit"
+          className="shop-checkout__submit shop-checkout__submit--blue"
+          disabled={busy}>
+          {busy ? "Please wait…" : w(510507)}
+        </button>
+      </fieldset>
+    </form>
   );
 
   return (
@@ -740,7 +748,7 @@ export function RedeemProtectAccountView({
       </header>
       <hr className="app-modal__rule shop-checkout__head-rule" />
       <div className="redeem-protect__form-wrap">
-        {step === "profile" ? renderProfileForm() : renderDocvStep()}
+        {step === "profile" ? renderProfileForm() : renderIdPhotoStep()}
       </div>
     </>
   );

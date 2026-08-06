@@ -24,6 +24,7 @@ describe("resolveRedeemBindingNextStep", () => {
       resolveRedeemBindingNextStep({
         hasCellPhone: false,
         hasAddress: false,
+        hasFrontImage: false,
         minTxWdrawRaw: undefined,
       }),
     ).toEqual({ kind: "full" });
@@ -34,6 +35,7 @@ describe("resolveRedeemBindingNextStep", () => {
       resolveRedeemBindingNextStep({
         hasCellPhone: true,
         hasAddress: false,
+        hasFrontImage: false,
         minTxWdrawRaw: undefined,
       }),
     ).toEqual({ kind: "addressOnly" });
@@ -44,6 +46,7 @@ describe("resolveRedeemBindingNextStep", () => {
       resolveRedeemBindingNextStep({
         hasCellPhone: true,
         hasAddress: true,
+        hasFrontImage: true,
         minTxWdrawRaw: 50,
       }),
     ).toEqual({ kind: "amountModal" });
