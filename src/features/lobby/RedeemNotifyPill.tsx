@@ -18,10 +18,9 @@ function usePrefersReducedMotion() {
 
 type Props = {
   messages: string[];
-  variant?: "redeem" | "lobby";
 };
 
-export function RedeemNotifyPill({ messages, variant = "redeem" }: Props) {
+export function RedeemNotifyPill({ messages }: Props) {
   const n = messages.length;
   const reduced = usePrefersReducedMotion();
   const labelId = useId();
@@ -47,9 +46,7 @@ export function RedeemNotifyPill({ messages, variant = "redeem" }: Props) {
   if (n === 0) return null;
 
   const baseLabel = "Recent redemptions and prizes";
-  const pillClass =
-    "withdraw-marquee-pill" +
-    (variant === "lobby" ? " withdraw-marquee-pill--lobby" : "");
+  const pillClass = "withdraw-marquee-pill";
 
   const varStyle: CSSProperties = {
     "--redeem-pill-line-h": `${PILL_LINE_EM}em`,

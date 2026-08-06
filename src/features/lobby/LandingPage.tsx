@@ -91,10 +91,9 @@ import {
   lobbyTrackLoadRootMargin,
 } from "../../lib/lobbyIosTuning";
 import { LobbyGamesScroller } from "./LobbyGamesScroller";
-import { RedeemNotifyPill } from "./RedeemNotifyPill";
+import { LobbyWithdrawMarquee } from "./LobbyWithdrawMarquee";
 import { useWithdrawSuccessMarquee } from "./useWithdrawSuccessMarquee";
 import "./LobbyPage.css";
-import "./WithdrawMarqueePill.css";
 
 const LOBBY_SLOTS_ALL_SUBSECTION_LABEL = "Mega X Widescreen Exclusive";
 
@@ -1252,10 +1251,6 @@ export function LandingPage() {
           <LobbyHeroBanner
             videoSrc={sessionHeroVideoSrc}
             posterSrc={sessionHeroPosterSrc}>
-            <RedeemNotifyPill
-              messages={withdrawMarqueeMessages}
-              variant="lobby"
-            />
             {liveJackpotAmounts ? (
               <LobbyJackpotStrip
                 wallet={activeWallet}
@@ -1265,6 +1260,8 @@ export function LandingPage() {
             ) : null}
           </LobbyHeroBanner>
         </section>
+
+        <LobbyWithdrawMarquee messages={withdrawMarqueeMessages} />
 
         <section
           id={LOBBY_GAMES_SECTION_ID}

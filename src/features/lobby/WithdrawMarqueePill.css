@@ -36,16 +36,6 @@
     0 0 22px color-mix(in srgb, #6b7fd4 32%, transparent);
 }
 
-.withdraw-marquee-pill--lobby {
-  position: absolute;
-  top: var(--space-3);
-  left: 50%;
-  z-index: 3;
-  transform: translateX(-50%);
-  margin: 0;
-  pointer-events: none;
-}
-
 .withdraw-marquee-pill-viewport {
   overflow: hidden;
   height: var(--redeem-pill-line-h, 1.3em);
