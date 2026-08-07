@@ -935,12 +935,14 @@ export function buildDailyLoginViewModel(
   const hasClaimableCredit =
     inDisplayWindow && creditRewards.some((r) => r.claimable);
 
-  const firstDayMs = days[0]?.dateMs ?? 0;
-  const lastDayMs = days[days.length - 1]?.dateMs ?? firstDayMs;
+  const displayStartMs =
+    normalizeWireTimestampToMs(activity.displayStartTime) ?? 0;
+  const displayEndMs =
+    normalizeWireTimestampToMs(activity.displayEndTime) ?? 0;
 
   return {
     activityId,
-    dateRangeLabel: formatDateRangeEtLabel(firstDayMs, lastDayMs),
+    dateRangeLabel: formatDateRangeEtLabel(displayStartMs, displayEndMs),
     achievedCreditAmount: parseWireInt64(activity.achievedCreditAmount) ?? 0,
     days,
     creditRewards,
@@ -1000,8 +1002,8 @@ export function buildMockDailyLoginActivity(
     activityID: "9001",
     activityType: "DailySignIn",
     activityName: "Daily Login",
-    displayStartTime: "0",
-    displayEndTime: "0",
+    displayStartTime: "1767243600",
+    displayEndTime: "1798779599",
     achievedCreditAmount: "6",
     dailyMissionCreditRewards: [
       {

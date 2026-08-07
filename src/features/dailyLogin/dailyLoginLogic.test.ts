@@ -408,8 +408,72 @@ describe("dailyLoginLogic", () => {
     expect(vm).not.toBeNull();
     expect(vm!.hasClaimableDaily).toBe(true);
     expect(vm!.claimable).toBe(true);
-    expect(vm!.dateRangeLabel).toContain("(ET)");
+    expect(vm!.dateRangeLabel).toBe("01/01/2026 - 12/31/2026 (ET)");
     expect(vm!.creditRewards).toHaveLength(4);
+  });
+
+  it("dateRangeLabel uses activity display window not 7-day mission window", () => {
+    const now = Date.UTC(2026, 6, 30, 12, 0, 0);
+    const july28 = 1785211200000;
+    const july29 = 1785297600000;
+    const july30 = 1785384000000;
+    const vm = buildDailyLoginViewModel(
+      buildMockDailyLoginActivity({
+        displayStartTime: "1785297600",
+        displayEndTime: "1788321599",
+        achievedCreditAmount: "0",
+        UserDailyMissionsByDates: {
+          [String(july28)]: {
+            date: String(july28),
+            userDailyMissions: [
+              {
+                dailyMissionID: "1",
+                date: String(july28),
+                actionTimes: 1,
+                achievedActionTimes: 1,
+                isCollected: false,
+                itemID: 1,
+                itemAmount: 100000,
+                sort: "1",
+              },
+            ],
+          },
+          [String(july29)]: {
+            date: String(july29),
+            userDailyMissions: [
+              {
+                dailyMissionID: "2",
+                date: String(july29),
+                actionTimes: 1,
+                achievedActionTimes: 0,
+                isCollected: false,
+                itemID: 1,
+                itemAmount: 100000,
+                sort: "2",
+              },
+            ],
+          },
+          [String(july30)]: {
+            date: String(july30),
+            userDailyMissions: [
+              {
+                dailyMissionID: "3",
+                date: String(july30),
+                actionTimes: 1,
+                achievedActionTimes: 0,
+                isCollected: false,
+                itemID: 1,
+                itemAmount: 150000,
+                sort: "3",
+              },
+            ],
+          },
+        },
+      }),
+      now,
+    );
+    expect(vm!.dateRangeLabel).toBe("07/29/2026 - 09/01/2026 (ET)");
+    expect(vm!.dateRangeLabel).not.toContain("07/28/2026");
   });
 
   it("shouldAutoPopupDailyLogin is true only when today daily is claimable", () => {
