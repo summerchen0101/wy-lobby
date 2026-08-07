@@ -18,6 +18,7 @@ import {
   PASSWORD_MAX_LENGTH,
   type OtpFieldErrors,
   type RegisterFieldErrors,
+  translateVerificationCodeSubmitError,
   validateOtpCode,
   validateRegisterFields,
 } from './authFormValidation'
@@ -119,9 +120,7 @@ export function RegisterPage() {
         setError('A new version is required. A download page was opened in a new tab.')
         return
       }
-      const msg =
-        err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Registration failed'
-      setError(msg)
+      setError(translateVerificationCodeSubmitError(err, 'Registration failed'))
     } finally {
       setSubmitting(false)
     }

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { ApiError } from '../../lib/api/client'
+import { getWord } from '../../wordData/getWord'
 import {
   hasFieldErrors,
   isValidEmail,
+  translateVerificationCodeSubmitError,
   validateForgotPasswordEmail,
   validateForgotPasswordReset,
   validateLoginFields,
@@ -91,5 +94,26 @@ describe('validateOtpCode', () => {
   it('accepts 4-6 digit code', () => {
     expect(validateOtpCode('1234')).toEqual({})
     expect(validateOtpCode('123456')).toEqual({})
+  })
+})
+
+describe('translateVerificationCodeSubmitError', () => {
+  it('maps generic 403 to WordData 553', () => {
+    const err = new ApiError(
+      'The request is understood, but it has been refused or access is not allowed.',
+      403,
+    )
+    expect(translateVerificationCodeSubmitError(err)).toBe(getWord(553))
+  })
+
+  it('maps verification API codes to WordData 553', () => {
+    expect(translateVerificationCodeSubmitError(new ApiError('x', 403, '500002'))).toBe(
+      getWord(553),
+    )
+  })
+
+  it('preserves registration limit message', () => {
+    const err = new ApiError('limit', 403, '403012')
+    expect(translateVerificationCodeSubmitError(err)).toBe(getWord(403012))
   })
 })

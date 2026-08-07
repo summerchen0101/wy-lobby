@@ -60,6 +60,9 @@ export async function completeSignUp(
   const s = await signUp(body);
   if (s.auth) return s.auth;
   if (s.needSMSAnswer) {
+    if (body.answer?.trim()) {
+      throw new ApiError("incorrect verification code", 403, "500002");
+    }
     throw new ApiError(
       "Sign-up incomplete: enter the verification code or try again",
       400,

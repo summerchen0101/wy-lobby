@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
-import { ApiError, ClientVersionError } from '../../lib/api/client'
+import { ClientVersionError } from '../../lib/api/client'
 import type { RegisterBody } from '../../lib/api/types'
 import { AuthFieldError } from './AuthFieldError'
 import {
@@ -10,6 +10,7 @@ import {
   hasFieldErrors,
   OTP_MAX_LEN,
   type OtpFieldErrors,
+  translateVerificationCodeSubmitError,
   validateOtpCode,
 } from './authFormValidation'
 import { useWordData } from '../../wordData/useWordData'
@@ -88,9 +89,7 @@ export function PhoneVerificationModal({ open, onClose, displayEmail, pendingBod
         setError('A new version is required. A download page was opened in a new tab.')
         return
       }
-      const msg =
-        err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Registration failed'
-      setError(msg)
+      setError(translateVerificationCodeSubmitError(err, 'Registration failed'))
     } finally {
       setSubmitting(false)
     }

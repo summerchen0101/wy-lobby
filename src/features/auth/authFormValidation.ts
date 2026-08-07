@@ -1,4 +1,33 @@
+import { ApiError } from '../../lib/api/client'
 import { getWord } from '../../wordData/getWord'
+
+const VERIFICATION_CODE_API_CODES = new Set(['500002', '1224', '553', '107'])
+
+function isGenericForbiddenMessage(message: string): boolean {
+  const m = message.trim().toLowerCase()
+  if (!m) return true
+  return (
+    m === 'forbidden' ||
+    m.includes('refused or access is not allowed') ||
+    m.includes('understood, but it has been refused')
+  )
+}
+
+/** Maps register / reset OTP submit failures to WordData 553. */
+export function translateVerificationCodeSubmitError(
+  err: unknown,
+  fallback = 'Request failed',
+): string {
+  if (err instanceof ApiError) {
+    const code = err.code?.trim()
+    if (code === '403012') return getWord(403012)
+    if (code && VERIFICATION_CODE_API_CODES.has(code)) return getWord(553)
+    if (err.status === 403 && isGenericForbiddenMessage(err.message)) return getWord(553)
+    return err.message
+  }
+  if (err instanceof Error) return err.message
+  return fallback
+}
 
 export const PASSWORD_MIN_LENGTH = 6
 export const PASSWORD_MAX_LENGTH = 12

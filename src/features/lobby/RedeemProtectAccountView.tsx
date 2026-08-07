@@ -47,7 +47,7 @@ const LICENSE_ID_PLACEHOLDER = "License ID";
 
 export type RedeemBindingMode = "full" | "addressOnly";
 
-type Step = "profile" | "idPhotos";
+type Step = "profile" | "idPhotos" | "sms";
 
 export type RedeemBindingPrefill = {
   email?: string;
@@ -134,6 +134,7 @@ export function RedeemProtectAccountView({
   const [documentNumber, setDocumentNumber] = useState("");
   const [frontImage, setFrontImage] = useState<ImageBase64Payload | null>(null);
   const [backImage, setBackImage] = useState<ImageBase64Payload | null>(null);
+  const [smsAnswer, setSmsAnswer] = useState("");
 
   const pi = "shop-checkout__input shop-checkout__input--protect";
 
@@ -183,6 +184,7 @@ export function RedeemProtectAccountView({
     setDocumentNumber("");
     setFrontImage(null);
     setBackImage(null);
+    setSmsAnswer("");
   }, [open, mode, bindingPrefill, user, lobbyGet]);
 
   /** Lobby/user 晚到時只補空白欄位，不覆寫玩家已輸入內容。 */
@@ -290,7 +292,8 @@ export function RedeemProtectAccountView({
     validateAddress,
   ]);
 
-  const submitBinding = useCallback(async () => {
+  const submitBinding = useCallback(
+    async (answer = "") => {
     const req = requestRef.current;
     const uid = user?.id;
     if (!req || !gatewayRequestReady) {
@@ -308,6 +311,7 @@ export function RedeemProtectAccountView({
 
     const phoneDigits = normalizePhoneDigits(phoneNumber);
     const countryCode = phoneCountry.trim() || "1";
+    const trimmedAnswer = answer.trim();
 
     const birthday =
       mode === "full" && dobYear && dobMonth && dobDay
@@ -325,7 +329,7 @@ export function RedeemProtectAccountView({
         countryCode,
         phone: phoneDigits,
         email: email.trim(),
-        answer: "",
+        answer: trimmedAnswer,
         firstName: mode === "full" ? firstName.trim() : "",
         middleName: "",
         lastName: mode === "full" ? lastName.trim() : "",
@@ -348,7 +352,9 @@ export function RedeemProtectAccountView({
       const r = await req({
         type: GATEWAY_API_MEGA_ACCOUNT_BINDING,
         data,
-        debugLabel: "MEGA_ACCOUNT_BINDING_REDEEM",
+        debugLabel: trimmedAnswer
+          ? "MEGA_ACCOUNT_BINDING_REDEEM_SMS"
+          : "MEGA_ACCOUNT_BINDING_REDEEM",
       });
       const code = String(r.code ?? "");
       if (!isGatewaySuccessCode(code)) {
@@ -361,12 +367,21 @@ export function RedeemProtectAccountView({
         raw instanceof Uint8Array && raw.byteLength > 0
           ? decodeMegaAccountBindingResponseBytes(raw)
           : decodeMegaAccountBindingResponseBytes(new Uint8Array(0));
+      if (decoded.needSMSAnswer) {
+        setStep("sms");
+        if (trimmedAnswer) {
+          setError(getWord(553));
+        }
+        setBusy(false);
+        return;
+      }
       void finalizeBindingSuccess(fullAddress, decoded.phoneNum.trim());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Binding failed");
       setBusy(false);
     }
-  }, [
+  },
+    [
     requestRef,
     gatewayRequestReady,
     user,
@@ -390,7 +405,8 @@ export function RedeemProtectAccountView({
     frontImage,
     backImage,
     finalizeBindingSuccess,
-  ]);
+  ],
+  );
 
   const handleProfileSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -414,6 +430,17 @@ export function RedeemProtectAccountView({
     void submitBinding();
   };
 
+  const handleSmsSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const code = smsAnswer.trim();
+    if (!code) {
+      setError(getWord(106));
+      return;
+    }
+    setError(null);
+    void submitBinding(code);
+  };
+
   const handleImagePick = async (
     side: "front" | "back",
     e: ChangeEvent<HTMLInputElement>,
@@ -432,6 +459,12 @@ export function RedeemProtectAccountView({
   };
 
   const handleHeaderBack = () => {
+    if (step === "sms") {
+      setStep("idPhotos");
+      setError(null);
+      setBusy(false);
+      return;
+    }
     if (step === "idPhotos") {
       setStep("profile");
       setError(null);
@@ -835,6 +868,46 @@ export function RedeemProtectAccountView({
     </form>
   );
 
+  const renderSmsStep = () => (
+    <form
+      className="shop-checkout__card-form shop-checkout__protect-form"
+      onSubmit={handleSmsSubmit}
+      noValidate>
+      <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
+        <p className="shop-checkout__protect-lead">{w(118)}</p>
+        <div className="shop-checkout__fields shop-checkout__fields--protect">
+          <label className="shop-checkout__field" htmlFor={`${idPrefix}-sms`}>
+            <span className="shop-checkout__label-text shop-checkout__label-text--protect">
+              SMS code
+            </span>
+            <input
+              id={`${idPrefix}-sms`}
+              className={pi}
+              name="smsAnswer"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder={w(106)}
+              value={smsAnswer}
+              onChange={(e) => setSmsAnswer(e.target.value)}
+            />
+          </label>
+        </div>
+        {error ? (
+          <p className="shop-checkout__pay-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <button
+          type="submit"
+          className="shop-checkout__submit shop-checkout__submit--blue shop-checkout__submit--protect-sms"
+          disabled={busy}>
+          {busy ? "Please wait…" : w(120)}
+        </button>
+      </fieldset>
+    </form>
+  );
+
   return (
     <>
       <header className="app-modal__head-row shop-checkout__head--protect">
@@ -842,7 +915,9 @@ export function RedeemProtectAccountView({
           type="button"
           className="app-modal__head-btn"
           onClick={handleHeaderBack}
-          aria-label={step === "profile" ? "Close" : "Back"}>
+          aria-label={
+            step === "profile" ? "Close" : "Back"
+          }>
           <BackIcon />
         </button>
         <h2
@@ -850,17 +925,25 @@ export function RedeemProtectAccountView({
           id="redeem-protect-dialog-title">
           {w(510453)}
         </h2>
-        <button
-          type="button"
-          className="app-modal__close"
-          onClick={onClose}
-          aria-label="Close">
-          ×
-        </button>
+        {step === "sms" ? (
+          <span className="app-modal__head-spacer" aria-hidden />
+        ) : (
+          <button
+            type="button"
+            className="app-modal__close"
+            onClick={onClose}
+            aria-label="Close">
+            ×
+          </button>
+        )}
       </header>
       <hr className="app-modal__rule shop-checkout__head-rule" />
       <div className="redeem-protect__form-wrap">
-        {step === "profile" ? renderProfileForm() : renderIdPhotoStep()}
+        {step === "profile"
+          ? renderProfileForm()
+          : step === "idPhotos"
+            ? renderIdPhotoStep()
+            : renderSmsStep()}
       </div>
     </>
   );

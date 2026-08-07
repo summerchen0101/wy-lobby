@@ -14,6 +14,7 @@ import {
   PASSWORD_MAX_LENGTH,
   type ForgotPasswordEmailFieldErrors,
   type ForgotPasswordResetFieldErrors,
+  translateVerificationCodeSubmitError,
   validateForgotPasswordEmail,
   validateForgotPasswordReset,
 } from './authFormValidation'
@@ -147,13 +148,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
         setError(w(2302))
         return
       }
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : 'Reset failed'
-      setError(msg)
+      setError(translateVerificationCodeSubmitError(err, 'Reset failed'))
     } finally {
       setSubmitting(false)
     }

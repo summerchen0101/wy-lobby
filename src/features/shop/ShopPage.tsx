@@ -30,6 +30,7 @@ import type {
   ShopBindingPrefill,
 } from "./types";
 import { useWordData } from "../../wordData/useWordData";
+import { getWord } from "../../wordData/getWord";
 import { formatVipPoints } from "../lobby/vipHelpers";
 import { shopCoinPileSrc } from "./shopCoinPile";
 import { ShopPurchaseRewardAnimation } from "./ShopPurchaseRewardAnimation";
@@ -407,7 +408,7 @@ export function ShopPage() {
         if (decoded.needSMSAnswer) {
           setProtectNeedSms(true);
           if (payload.answer.trim()) {
-            setBindingError("Invalid or expired verification code.");
+            setBindingError(getWord(553));
           }
           return;
         }

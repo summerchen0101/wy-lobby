@@ -153,6 +153,12 @@ const wireToObjectOpts = {
 /**
  * 僅供 dev 日誌：解 `MegaAccountBindingRequest`（失敗時由呼叫端 try/catch）。
  */
+function summarizeBase64Field(value: unknown): string {
+  const s = String(value ?? "");
+  if (!s) return "";
+  return `${s.length} chars`;
+}
+
 export function decodeMegaAccountBindingRequestForDevLog(
   raw: Uint8Array,
 ): Record<string, unknown> {
@@ -172,6 +178,14 @@ export function decodeMegaAccountBindingRequestForDevLog(
     state?: string;
     zip?: string;
     language?: string;
+    middleName?: string;
+    addressLine1?: string;
+    documentType?: number;
+    documentNumber?: string;
+    frontImageContentType?: string;
+    backImageContentType?: string;
+    frontImageBase64?: string;
+    backImageBase64?: string;
     socureDiSessionToken?: string;
   };
   const token = String(o.socureDiSessionToken ?? "");
@@ -190,9 +204,15 @@ export function decodeMegaAccountBindingRequestForDevLog(
     state: String(o.state ?? ""),
     zip: String(o.zip ?? ""),
     language: String(o.language ?? ""),
-    socureDiSessionToken: token
-      ? `${token.slice(0, 8)}…`
-      : "",
+    middleName: String(o.middleName ?? ""),
+    addressLine1: String(o.addressLine1 ?? ""),
+    documentType: Number(o.documentType ?? 0),
+    documentNumber: String(o.documentNumber ?? ""),
+    frontImageContentType: String(o.frontImageContentType ?? ""),
+    backImageContentType: String(o.backImageContentType ?? ""),
+    frontImageBase64: summarizeBase64Field(o.frontImageBase64),
+    backImageBase64: summarizeBase64Field(o.backImageBase64),
+    socureDiSessionToken: token ? `${token.slice(0, 8)}…` : "",
   };
 }
 
