@@ -12,7 +12,7 @@ function stubBrowserGlobals(socureSdk?: unknown) {
 describe("socureDocv", () => {
   beforeEach(() => {
     vi.resetModules();
-    vi.stubEnv("VITE_SOCURE_DOCV_SDK_KEY", "");
+    vi.stubEnv("VITE_SOCURE_SDK_KEY", "");
     stubBrowserGlobals();
   });
 
@@ -37,7 +37,7 @@ describe("socureDocv", () => {
   });
 
   it("launchSocureDocv calls SocureDocVSDK.launch when SDK is present", async () => {
-    vi.stubEnv("VITE_SOCURE_DOCV_SDK_KEY", "docv-test-key");
+    vi.stubEnv("VITE_SOCURE_SDK_KEY", "docv-test-key");
     const launch = vi.fn().mockResolvedValue({ result: "success" });
     const reset = vi.fn();
     stubBrowserGlobals({ launch, reset });

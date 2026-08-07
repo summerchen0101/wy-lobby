@@ -1,11 +1,9 @@
 import SigmaDeviceManager from "@socure-inc/device-risk-sdk";
+import { getSocureSdkKey } from "./socureSdkKey";
 
 let initialized = false;
 
-export function getSocureSdkKey(): string | undefined {
-  const key = import.meta.env.VITE_SOCURE_SDK_KEY?.trim();
-  return key || undefined;
-}
+export { getSocureSdkKey } from "./socureSdkKey";
 
 export function isSocureDeviceEnabled(): boolean {
   return Boolean(getSocureSdkKey());
