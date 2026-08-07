@@ -1123,7 +1123,7 @@ export default {
               "id": 17
             },
             "documentType": {
-              "type": "int32",
+              "type": "string",
               "id": 18
             },
             "documentNumber": {
@@ -1134,11 +1134,11 @@ export default {
               "type": "string",
               "id": 20
             },
-            "backImageContentType": {
+            "frontImageBase64": {
               "type": "string",
               "id": 21
             },
-            "frontImageBase64": {
+            "backImageContentType": {
               "type": "string",
               "id": 22
             },
@@ -1149,6 +1149,10 @@ export default {
             "socureDiSessionToken": {
               "type": "string",
               "id": 24
+            },
+            "ssn": {
+              "type": "string",
+              "id": 25
             }
           }
         },

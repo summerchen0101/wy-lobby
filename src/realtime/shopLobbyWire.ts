@@ -54,13 +54,14 @@ export type MegaAccountBindingRequestFields = {
   language: string;
   middleName?: string;
   addressLine1?: string;
-  documentType?: number;
+  documentType?: string;
   documentNumber?: string;
   frontImageContentType?: string;
   backImageContentType?: string;
   frontImageBase64?: string;
   backImageBase64?: string;
   socureDiSessionToken: string;
+  ssn?: string;
 };
 
 /** Shop checkout: simplified binding — address/KYC fields omitted. */
@@ -112,13 +113,14 @@ export function encodeMegaAccountBindingRequestBytes(
     language: fields.language,
     middleName: fields.middleName ?? "",
     addressLine1: fields.addressLine1 ?? "",
-    documentType: fields.documentType ?? 0,
+    documentType: fields.documentType ?? "",
     documentNumber: fields.documentNumber ?? "",
     frontImageContentType: fields.frontImageContentType ?? "",
     backImageContentType: fields.backImageContentType ?? "",
     frontImageBase64: fields.frontImageBase64 ?? "",
     backImageBase64: fields.backImageBase64 ?? "",
     socureDiSessionToken: fields.socureDiSessionToken,
+    ssn: fields.ssn ?? "",
   };
   const err = MegaAccountBindingRequestType.verify(msg);
   if (err) throw new Error(`MegaAccountBindingRequest: ${err}`);
@@ -180,13 +182,14 @@ export function decodeMegaAccountBindingRequestForDevLog(
     language?: string;
     middleName?: string;
     addressLine1?: string;
-    documentType?: number;
+    documentType?: string;
     documentNumber?: string;
     frontImageContentType?: string;
     backImageContentType?: string;
     frontImageBase64?: string;
     backImageBase64?: string;
     socureDiSessionToken?: string;
+    ssn?: string;
   };
   const token = String(o.socureDiSessionToken ?? "");
   return {
@@ -206,13 +209,14 @@ export function decodeMegaAccountBindingRequestForDevLog(
     language: String(o.language ?? ""),
     middleName: String(o.middleName ?? ""),
     addressLine1: String(o.addressLine1 ?? ""),
-    documentType: Number(o.documentType ?? 0),
+    documentType: String(o.documentType ?? ""),
     documentNumber: String(o.documentNumber ?? ""),
     frontImageContentType: String(o.frontImageContentType ?? ""),
     backImageContentType: String(o.backImageContentType ?? ""),
     frontImageBase64: summarizeBase64Field(o.frontImageBase64),
     backImageBase64: summarizeBase64Field(o.backImageBase64),
     socureDiSessionToken: token ? `${token.slice(0, 8)}…` : "",
+    ssn: String(o.ssn ?? "") ? "[redacted]" : "",
   };
 }
 

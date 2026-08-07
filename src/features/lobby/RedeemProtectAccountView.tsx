@@ -245,6 +245,14 @@ export function RedeemProtectAccountView({
     return true;
   }, [address1, city, state, zip]);
 
+  const validateDocument = useCallback((): boolean => {
+    if (!documentType || !documentNumber.trim()) {
+      setError("Complete all required profile fields.");
+      return false;
+    }
+    return true;
+  }, [documentType, documentNumber]);
+
   const validateProfile = useCallback((): boolean => {
     if (!email.trim()) {
       setError("Missing account email.");
@@ -261,24 +269,19 @@ export function RedeemProtectAccountView({
       setError(wordId !== null ? getWord(wordId) : getWord(555));
       return false;
     }
-    if (mode === "addressOnly") {
-      return validateAddress();
-    }
     if (
       !firstName.trim() ||
       !lastName.trim() ||
       !dobMonth ||
       !dobDay ||
-      !dobYear ||
-      !documentType ||
-      !documentNumber.trim()
+      !dobYear
     ) {
       setError("Complete all required profile fields.");
       return false;
     }
-    return validateAddress();
+    if (!validateAddress()) return false;
+    return validateDocument();
   }, [
-    mode,
     email,
     phoneCountry,
     phoneNumber,
@@ -287,9 +290,8 @@ export function RedeemProtectAccountView({
     dobMonth,
     dobDay,
     dobYear,
-    documentType,
-    documentNumber,
     validateAddress,
+    validateDocument,
   ]);
 
   const submitBinding = useCallback(
@@ -314,12 +316,11 @@ export function RedeemProtectAccountView({
     const trimmedAnswer = answer.trim();
 
     const birthday =
-      mode === "full" && dobYear && dobMonth && dobDay
+      dobYear && dobMonth && dobDay
         ? `${dobYear}-${dobMonth}-${String(dobDay).padStart(2, "0")}`
         : "";
     const line1 = address1.trim();
     const fullAddress = combineAddress(line1, address2);
-    const parsedDocumentType = Number(documentType);
 
     setBusy(true);
     setError(null);
@@ -330,9 +331,9 @@ export function RedeemProtectAccountView({
         phone: phoneDigits,
         email: email.trim(),
         answer: trimmedAnswer,
-        firstName: mode === "full" ? firstName.trim() : "",
+        firstName: firstName.trim(),
         middleName: "",
-        lastName: mode === "full" ? lastName.trim() : "",
+        lastName: lastName.trim(),
         birthday,
         address: fullAddress,
         addressLine1: line1,
@@ -341,13 +342,14 @@ export function RedeemProtectAccountView({
         state: state.trim(),
         zip: zip.trim(),
         language: "en",
-        documentType: mode === "full" ? parsedDocumentType : 0,
-        documentNumber: mode === "full" ? documentNumber.trim() : "",
+        documentType: documentType.trim(),
+        documentNumber: documentNumber.trim(),
         frontImageContentType: frontImage.contentType,
         backImageContentType: backImage.contentType,
         frontImageBase64: frontImage.base64,
         backImageBase64: backImage.base64,
         socureDiSessionToken: "",
+        ssn: "",
       });
       const r = await req({
         type: GATEWAY_API_MEGA_ACCOUNT_BINDING,
@@ -385,7 +387,6 @@ export function RedeemProtectAccountView({
     requestRef,
     gatewayRequestReady,
     user,
-    mode,
     email,
     phoneCountry,
     phoneNumber,
@@ -581,41 +582,35 @@ export function RedeemProtectAccountView({
   );
 
   const renderDocumentFields = () => (
-    <div className="shop-checkout__field shop-checkout__field--stack">
-      <span
-        className="shop-checkout__field-heading"
-        id={`${idPrefix}-doc-legend`}>
-        {w(510508)}
-      </span>
-      <div
-        className="redeem-protect__row2"
-        role="group"
-        aria-labelledby={`${idPrefix}-doc-legend`}>
-        <select
-          id={`${idPrefix}-doc-type`}
-          className={`${pi} shop-checkout__select`}
-          name="documentType"
-          value={documentType}
-          onChange={(e) => setDocumentType(e.target.value)}
-          disabled={busy}>
-          <option value="">{w(510508)}</option>
-          {REDEEM_DOCUMENT_TYPES.map(({ value, label }) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <input
-          id={`${idPrefix}-doc-num`}
-          className={pi}
-          name="documentNumber"
-          autoComplete="off"
-          placeholder={LICENSE_ID_PLACEHOLDER}
-          value={documentNumber}
-          onChange={(e) => setDocumentNumber(e.target.value)}
-          disabled={busy}
-        />
-      </div>
+    <div
+      className="redeem-protect__row2"
+      role="group"
+      aria-label={w(510508)}>
+      <select
+        id={`${idPrefix}-doc-type`}
+        className={`${pi} shop-checkout__select`}
+        name="documentType"
+        aria-label={w(510508)}
+        value={documentType}
+        onChange={(e) => setDocumentType(e.target.value)}
+        disabled={busy}>
+        <option value="">{w(510508)}</option>
+        {REDEEM_DOCUMENT_TYPES.map(({ value, label }) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <input
+        id={`${idPrefix}-doc-num`}
+        className={pi}
+        name="documentNumber"
+        autoComplete="off"
+        placeholder={LICENSE_ID_PLACEHOLDER}
+        value={documentNumber}
+        onChange={(e) => setDocumentNumber(e.target.value)}
+        disabled={busy}
+      />
     </div>
   );
 
@@ -757,6 +752,7 @@ export function RedeemProtectAccountView({
           placeholder={w(510455)}
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
+          disabled={busy}
         />
       </label>
       <label className="shop-checkout__field" htmlFor={`${idPrefix}-ln`}>
@@ -768,6 +764,7 @@ export function RedeemProtectAccountView({
           placeholder={w(510456)}
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
+          disabled={busy}
         />
       </label>
     </div>
@@ -782,16 +779,10 @@ export function RedeemProtectAccountView({
         <p className="shop-checkout__protect-lead">{w(510454)}</p>
         <div className="shop-checkout__fields shop-checkout__fields--protect">
           {renderContactFields()}
-          {mode === "full" ? (
-            <>
-              {renderDobFields()}
-              {renderNameFields()}
-              {renderAddressFields()}
-              {renderDocumentFields()}
-            </>
-          ) : (
-            renderAddressFields()
-          )}
+          {renderDobFields()}
+          {renderNameFields()}
+          {renderAddressFields()}
+          {renderDocumentFields()}
         </div>
         {error ? (
           <p className="shop-checkout__pay-error" role="alert">

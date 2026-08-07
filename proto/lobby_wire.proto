@@ -490,13 +490,14 @@ message MegaAccountBindingRequest {
   string language = 15;
   string middleName = 16;
   string addressLine1 = 17;
-  int32 documentType = 18;
+  string documentType = 18;
   string documentNumber = 19;
   string frontImageContentType = 20;
-  string backImageContentType = 21;
-  string frontImageBase64 = 22;
+  string frontImageBase64 = 21;
+  string backImageContentType = 22;
   string backImageBase64 = 23;
   string socureDiSessionToken = 24;
+  string ssn = 25;
 }
 
 message MegaAccountBindingResponse {

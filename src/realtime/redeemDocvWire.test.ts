@@ -53,7 +53,7 @@ describe("encodeMegaAccountBindingRequestBytes", () => {
       state: "CA",
       zip: "94102",
       language: "en",
-      documentType: 1,
+      documentType: "DRIVERS_LICENSE",
       documentNumber: "D1234567",
       frontImageContentType: "image/jpg",
       backImageContentType: "image/png",
@@ -66,7 +66,7 @@ describe("encodeMegaAccountBindingRequestBytes", () => {
     expect(logged.backImageContentType).toBe("image/png");
     expect(logged.frontImageBase64).toBe(`${frontBase64.length} chars`);
     expect(logged.backImageBase64).toBe(`${backBase64.length} chars`);
-    expect(logged.documentType).toBe(1);
+    expect(logged.documentType).toBe("DRIVERS_LICENSE");
     expect(logged.documentNumber).toBe("D1234567");
   });
 });

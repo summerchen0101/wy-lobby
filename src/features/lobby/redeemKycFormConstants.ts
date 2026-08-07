@@ -53,8 +53,8 @@ export const US_STATES: ReadonlyArray<{ code: string; name: string }> = [
   { code: "WY", name: "Wyoming" },
 ];
 
-/** Server documentType enum (docs: DRIVERS_LICENSE, PASSPORT). */
+/** Server documentType values (proto: string). */
 export const REDEEM_DOCUMENT_TYPES = [
-  { value: 1, label: "DRIVERS_LICENSE" },
-  { value: 2, label: "PASSPORT" },
+  { value: "DRIVERS_LICENSE", label: "DRIVERS_LICENSE" },
+  { value: "PASSPORT", label: "PASSPORT" },
 ] as const;

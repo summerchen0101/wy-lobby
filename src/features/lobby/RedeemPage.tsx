@@ -56,7 +56,11 @@ import {
   withdrawHistoryShowsCancel,
   withdrawHistoryShowsRemark,
 } from "./redeemHistoryUi";
-import { dispatchRedeemWithdrawReturnSuccess } from "./redeemApprovalWalletGet";
+import {
+  dispatchRedeemWithdrawReturnSuccess,
+  fetchRedeemSCListFromGateway,
+} from "./redeemApprovalWalletGet";
+import { RedeemApprovalModal } from "./RedeemApprovalModal";
 import {
   parseRedeemPaymentState,
   stripRedeemPaymentStateParam,
@@ -175,6 +179,7 @@ export function RedeemPage() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const processedPaymentReturnRef = useRef<string | null>(null);
+  const queuedPaymentReturnRef = useRef<1 | 2 | null>(null);
   const {
     requestRef,
     lobbyGet,
@@ -205,6 +210,8 @@ export function RedeemPage() {
     () => redeemOrdersPrefetch !== null,
   );
   const [cancelBusyUid, setCancelBusyUid] = useState<string | null>(null);
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [approvalAmountsWire, setApprovalAmountsWire] = useState<string[]>([]);
 
   const { amount: scAmount, redeemableAmount, unplayedHundredths } =
     redeemScBalancesFromLobby({
@@ -309,19 +316,49 @@ export function RedeemPage() {
   const handleRedeemPaymentReturn = useCallback(
     async (paymentState: 1 | 2) => {
       clearPaymentCallbackPayload("redeem");
+      const pending = readPendingRedeemOrder();
       clearPendingRedeemOrder();
       setMethodModalOpen(false);
       setMethodModalResume(null);
 
-      if (paymentState === 1) {
-        await refetchOrdersAfterWithdraw();
-        dispatchRedeemWithdrawReturnSuccess();
+      if (paymentState === 2) {
+        show("Redemption failed. Please try again.", { variant: "error" });
         return;
       }
 
-      show("Redemption failed. Please try again.", { variant: "error" });
+      await refetchOrdersAfterWithdraw();
+
+      const req = requestRef.current;
+      if (req && gatewayRequestReady) {
+        try {
+          const list = await fetchRedeemSCListFromGateway(req);
+          if (list.length > 0) {
+            setApprovalAmountsWire(list);
+            setApprovalModalOpen(true);
+            return;
+          }
+        } catch {
+          /* fall through to submit-success UI */
+        }
+      }
+
+      dispatchRedeemWithdrawReturnSuccess();
+
+      if (pending) {
+        setMethodModalResume({
+          kind: "success",
+          orderUid: pending.withdrawOrderUID,
+          amount: pending.pickAmount,
+        });
+        setMethodModalOpen(true);
+      }
     },
-    [refetchOrdersAfterWithdraw, show],
+    [
+      refetchOrdersAfterWithdraw,
+      show,
+      requestRef,
+      gatewayRequestReady,
+    ],
   );
 
   useEffect(() => {
@@ -336,8 +373,16 @@ export function RedeemPage() {
     setSearchParams(stripRedeemPaymentStateParam(searchParams), { replace: true });
 
     if (paymentState == null) return;
+    queuedPaymentReturnRef.current = paymentState;
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const paymentState = queuedPaymentReturnRef.current;
+    if (paymentState == null) return;
+    if (!gatewayRequestReady) return;
+    queuedPaymentReturnRef.current = null;
     void handleRedeemPaymentReturn(paymentState);
-  }, [searchParams, setSearchParams, handleRedeemPaymentReturn]);
+  }, [gatewayRequestReady, handleRedeemPaymentReturn]);
 
   useEffect(() => {
     const pending = readPendingRedeemOrder();
@@ -345,7 +390,9 @@ export function RedeemPage() {
 
     const callback = readPaymentCallbackPayload("redeem");
     if (callback) {
-      void handleRedeemPaymentReturn(callback.state);
+      if (queuedPaymentReturnRef.current == null) {
+        queuedPaymentReturnRef.current = callback.state;
+      }
       return;
     }
 
@@ -358,7 +405,7 @@ export function RedeemPage() {
       });
       setMethodModalOpen(true);
     }
-  }, [handleRedeemPaymentReturn]);
+  }, []);
 
   const handleCancelOrder = useCallback(
     async (redeemOrderUID: string) => {
@@ -640,6 +687,15 @@ export function RedeemPage() {
         lobbyGet={lobbyGet}
         resume={methodModalResume}
         onResumeConsumed={() => setMethodModalResume(null)}
+      />
+
+      <RedeemApprovalModal
+        open={approvalModalOpen}
+        amountsWire={approvalAmountsWire}
+        onClose={() => {
+          setApprovalModalOpen(false);
+          setApprovalAmountsWire([]);
+        }}
       />
     </section>
   );
