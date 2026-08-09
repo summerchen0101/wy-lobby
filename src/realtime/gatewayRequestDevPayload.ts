@@ -4,6 +4,7 @@ import {
   GATEWAY_API_BUY_PRODUCT,
   GATEWAY_API_CLAIM_REFERRAL_REWARD,
   GATEWAY_API_CREATE_WITHDRAW_ORDER,
+  GATEWAY_API_DELETE_ACCOUNT,
   GATEWAY_API_GET_ACTIVITY,
   GATEWAY_API_GET_REFERRAL_INFO,
   GATEWAY_API_LIST_ACTIVITY,
@@ -32,6 +33,7 @@ import {
   decodeActivityCollectRewardReqForDevLog,
   decodeGetActivityRequestForDevLog,
 } from './activityLobbyWire'
+import { decodeDeletePlayerInfoRequestForDevLog } from './deleteAccountWire'
 
 const HEX_MAX = 48
 
@@ -122,6 +124,14 @@ export function decodeGatewayRequestDataForDevLog(
   if (apiType === GATEWAY_API_UPDATE_NOVICE_TEACHING) {
     try {
       return decodeUpdateNoviceTeachingRequestForDevLog(raw)
+    } catch (e) {
+      return fallbackHex(raw, e)
+    }
+  }
+
+  if (apiType === GATEWAY_API_DELETE_ACCOUNT) {
+    try {
+      return decodeDeletePlayerInfoRequestForDevLog(raw)
     } catch (e) {
       return fallbackHex(raw, e)
     }

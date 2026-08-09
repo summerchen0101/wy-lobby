@@ -73,5 +73,6 @@ export function mapListProductToShopPack(p: ListProductsWireProduct): ShopPack {
       : "",
     coinPile: gcAmountToPile(gcAmt),
     paymentTypes: p.paymentTypes ?? [],
+    vipExp: p.vipExp ?? 0,
   };
 }

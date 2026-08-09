@@ -12,13 +12,32 @@ import './index.css'
 import { initSitePatternTileCssVar } from './lib/publicImageUrl'
 initSitePatternTileCssVar()
 import './styles/site-background.css'
+import './styles/ios-safari-fixes.css'
 import { applyThemeFromEnv } from './theme/applyTheme'
 import i18n from './i18n/i18n'
 import App from './App.tsx'
 import { agentDebugLog } from './debug/agentDebugIngest'
+import { registerChunkLoadRecoveryHandlers } from './lib/chunkLoadRecovery'
+import { registerIosOrientationChangeMarker } from './lib/iosOrientationStabilizer'
+import { registerMediaProtection } from './lib/mediaProtection'
 import { registerSpaServiceWorkerOnLoad } from './lib/spaServiceWorker'
 
 applyThemeFromEnv()
+registerChunkLoadRecoveryHandlers()
+registerIosOrientationChangeMarker()
+
+function preventNativeDrag(): void {
+  if (typeof document === 'undefined') return
+  document.addEventListener(
+    'dragstart',
+    (event) => {
+      event.preventDefault()
+    },
+    { capture: true },
+  )
+}
+preventNativeDrag()
+registerMediaProtection()
 
 // #region agent log
 function registerAgentDebugLifecycle(): void {

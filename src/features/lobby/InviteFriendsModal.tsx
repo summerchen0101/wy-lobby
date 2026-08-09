@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Copy } from 'lucide-react'
 import { InfoPopover } from '../../components/InfoPopover'
 import { useAlert } from '../../components/alert/alertContext'
+import { forceSafariRepaint } from '../../lib/forceSafariRepaint'
 import { buildReferralInviteUrl, isWsLobbyGamesEnabled } from '../../lib/env'
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from '../../lib/currencyIcons'
 import {
@@ -21,6 +22,7 @@ import {
   referralScDisplayAmount,
   type GetReferralInfoRespDecoded,
 } from '../../realtime/referralLobbyWire'
+import { InviteFriendsTermsModal } from '../legal/InviteFriendsTermsModal'
 import { getWord } from '../../wordData/getWord'
 import './InviteFriendsModal.css'
 
@@ -68,6 +70,7 @@ export function InviteFriendsModal({ open, onClose }: Props) {
   const [wsConnectSlow, setWsConnectSlow] = useState(false)
   const [retryNonce, setRetryNonce] = useState(0)
   const [claiming, setClaiming] = useState(false)
+  const [termsOpen, setTermsOpen] = useState(false)
 
   const wsOk = isWsLobbyGamesEnabled()
 
@@ -112,10 +115,12 @@ export function InviteFriendsModal({ open, onClose }: Props) {
 
   useEffect(() => {
     if (open) return
+    forceSafariRepaint()
     setReferralInfo(null)
     setLoadPhase('idle')
     setWsConnectSlow(false)
     setRetryNonce(0)
+    setTermsOpen(false)
   }, [open])
 
   useEffect(() => {
@@ -271,15 +276,21 @@ export function InviteFriendsModal({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key !== 'Escape') return
+      if (termsOpen) {
+        setTermsOpen(false)
+        return
+      }
+      onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, onClose, termsOpen])
 
   if (!open) return null
 
   return createPortal(
+    <>
     <div className="app-modal-overlay" role="presentation" onClick={onClose}>
       <div
         className="app-modal app-modal--scroll-y invite-friends-modal"
@@ -290,20 +301,23 @@ export function InviteFriendsModal({ open, onClose }: Props) {
       >
         <div className="app-modal__header app-modal__header--with-start">
           <InfoPopover
+            key={termsOpen ? 'terms-view' : 'info'}
             align="start"
             panelClassName="invite-friends-modal__info-popover-wrap"
             content={
               <p className="invite-friends-modal__qualified invite-friends-modal__qualified--popover">
                 *Friends qualify by signing up with your referral link, purchasing Luklok Casino packages
                 worth $14.99 in total and not with an existing account with STI group.{' '}
-                <a
+                <button
+                  type="button"
                   className="invite-friends-modal__terms-link"
-                  href="/invite-terms"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setTermsOpen(true)
+                  }}
                 >
                   {getWord(212)}
-                </a>
+                </button>
               </p>
             }
           >
@@ -397,7 +411,9 @@ export function InviteFriendsModal({ open, onClose }: Props) {
           <p className="invite-friends-modal__foot">*Qualified: Click on the yellow info button</p>
         </div>
       </div>
-    </div>,
+    </div>
+    <InviteFriendsTermsModal open={termsOpen} onClose={() => setTermsOpen(false)} />
+    </>,
     document.body,
   )
 }

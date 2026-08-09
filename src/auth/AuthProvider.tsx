@@ -35,8 +35,14 @@ import {
   kickstartLobbyWelcomeVoiceFromUserGesture,
   stopLobbyWelcomeVoice,
 } from "../lib/lobbySound";
+import { clearCachedDailyLoginActivity } from "../features/dailyLogin/dailyLoginCache";
 import { clearDailyLoginAutoPopupSession } from "../features/dailyLogin/dailyLoginSession";
+import {
+  clearLobbySessionEviction,
+  dismissLobbySessionOverlays,
+} from "../lib/dismissLobbySessionOverlays";
 import { markFreshLoginWelcomeVoicePending } from "../lib/lobbyWelcomeVoiceGate";
+import { saveLastLoginAccount } from "./lastLoginAccount";
 
 function getInitialToken(): string | null {
   return getStoredAccessToken();
@@ -76,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const prevTokenRef = useRef<string | null | undefined>(undefined);
 
   const applyAuthResponse = useCallback((res: AuthResponse) => {
+    clearLobbySessionEviction();
     persistAuthResponse(res);
     setToken(res.accessToken);
     const u = resolveUserAfterAuth(res);
@@ -84,7 +91,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    dismissLobbySessionOverlays();
     clearDailyLoginAutoPopupSession();
+    clearCachedDailyLoginActivity();
     clearStoredSession();
     setToken(null);
     setUser(null);
@@ -106,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleClientVersionRequired = useCallback(
     () => {
+      dismissLobbySessionOverlays();
       clearStoredSession();
       setToken(null);
       setUser(null);
@@ -148,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       expiresIn?: number;
       user?: User | null | undefined;
     }) => {
+      clearLobbySessionEviction();
       persistAuthResponse(res);
       setToken(res.accessToken);
       if (res.user) {
@@ -261,6 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       kickstartLobbyWelcomeVoiceFromUserGesture();
       try {
         const res = await apiLogin({ account, password });
+        saveLastLoginAccount(account);
         const user = res.user ?? syntheticUserFromAccount(account);
         setSessionFromAuth({ ...res, user });
       } catch (err) {

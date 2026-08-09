@@ -29,11 +29,26 @@
   backdrop-filter: blur(var(--modal-overlay-blur));
 }
 
+.daily-login-overlay__tap-zone {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--modal-z-index) + 1);
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.daily-login-overlay__tap-zone:disabled {
+  cursor: not-allowed;
+}
+
 .daily-login-overlay__close {
   position: fixed;
   top: max(0.85rem, var(--safe-top));
   right: max(0.85rem, var(--page-pad-inline));
-  z-index: calc(var(--modal-z-index) + 2);
+  z-index: calc(var(--modal-z-index) + 20);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -59,6 +74,8 @@
 }
 
 .daily-login-modal {
+  position: relative;
+  z-index: calc(var(--modal-z-index) + 2);
   width: 100%;
   max-width: 26rem;
   margin: auto;
@@ -67,6 +84,7 @@
   background: transparent;
   box-shadow: none;
   color: #fff;
+  pointer-events: none;
 }
 
 .daily-login-modal__header {
@@ -340,12 +358,14 @@
   list-style: none;
   margin: 0 0 0.5rem;
   padding: 0;
+  pointer-events: none;
 }
 
 .daily-login-modal__featured {
   list-style: none;
   margin: 0 0 var(--space-3);
   padding: 0;
+  pointer-events: none;
 }
 
 .daily-login-modal__day {
@@ -357,6 +377,7 @@
   border: 1px solid var(--dl-card-border);
   background: var(--dl-card-bg);
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .daily-login-modal__day--locked {
@@ -569,6 +590,11 @@
   margin-top: var(--space-2);
   padding-bottom: 0.35rem;
   text-align: center;
+  pointer-events: none;
+}
+
+.daily-login-modal__footer * {
+  pointer-events: none;
 }
 
 .daily-login-modal__cta {

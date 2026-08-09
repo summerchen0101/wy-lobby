@@ -1,4 +1,6 @@
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
+import type { PaymentCallbackPageProps } from "./features/payment/PaymentCallbackPage";
+import { lazyRoute, lazyRouteWithProps } from "./lib/lazyRoute";
 import { Navigate, Route, BrowserRouter, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthProvider";
 import { OAuthReturnHandler } from "./auth/OAuthReturnHandler";
@@ -14,6 +16,7 @@ import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
 import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
 import { BeggarRedEnvelopeGate } from "./features/lobby/BeggarRedEnvelopeGate";
+import { RedeemApprovalGate } from "./features/lobby/RedeemApprovalGate";
 import { DailyLoginGate } from "./features/dailyLogin/DailyLoginGate";
 import { DailyLoginModalHost } from "./features/dailyLogin/DailyLoginModalHost";
 import { DailyLoginProvider } from "./features/dailyLogin/DailyLoginProvider";
@@ -34,63 +37,63 @@ import { LocaleHtmlSync } from "./i18n/LocaleHtmlSync";
 import { GatewayLobbyProvider } from "./realtime/GatewayLobbyProvider";
 import { WalletProvider } from "./wallet/WalletProvider";
 
-const EventsRedirect = lazy(() =>
+const EventsRedirect = lazyRoute(() =>
   import("./features/lobby/EventsRedirect").then((m) => ({
     default: m.EventsRedirect,
   })),
 );
-const GamePopoutPage = lazy(() =>
+const GamePopoutPage = lazyRoute(() =>
   import("./features/lobby/GamePopoutPage").then((m) => ({
     default: m.GamePopoutPage,
   })),
 );
-const GamePlayPage = lazy(() =>
+const GamePlayPage = lazyRoute(() =>
   import("./features/lobby/GamePlayPage").then((m) => ({
     default: m.GamePlayPage,
   })),
 );
-const PromoPage = lazy(() =>
+const PromoPage = lazyRoute(() =>
   import("./features/lobby/PromoPage").then((m) => ({ default: m.PromoPage })),
 );
-const ProfilePage = lazy(() =>
+const ProfilePage = lazyRoute(() =>
   import("./features/lobby/ProfilePage").then((m) => ({
     default: m.ProfilePage,
   })),
 );
-const RedeemPage = lazy(() =>
+const RedeemPage = lazyRoute(() =>
   import("./features/lobby/RedeemPage").then((m) => ({
     default: m.RedeemPage,
   })),
 );
-const ShopPage = lazy(() =>
+const ShopPage = lazyRoute(() =>
   import("./features/shop/ShopPage").then((m) => ({ default: m.ShopPage })),
 );
-const PaymentCallbackPage = lazy(() =>
+const PaymentCallbackPage = lazyRouteWithProps<PaymentCallbackPageProps>(() =>
   import("./features/payment/PaymentCallbackPage").then((m) => ({
     default: m.PaymentCallbackPage,
   })),
 );
-const SessionLayout = lazy(() =>
+const SessionLayout = lazyRoute(() =>
   import("./components/session/SessionLayout").then((m) => ({
     default: m.SessionLayout,
   })),
 );
-const PrivacyPolicyPage = lazy(() =>
+const PrivacyPolicyPage = lazyRoute(() =>
   import("./features/legal/PrivacyPolicyPage").then((m) => ({
     default: m.PrivacyPolicyPage,
   })),
 );
-const TermsOfServicePage = lazy(() =>
+const TermsOfServicePage = lazyRoute(() =>
   import("./features/legal/TermsOfServicePage").then((m) => ({
     default: m.TermsOfServicePage,
   })),
 );
-const SweepsPolicyPage = lazy(() =>
+const SweepsPolicyPage = lazyRoute(() =>
   import("./features/legal/SweepsPolicyPage").then((m) => ({
     default: m.SweepsPolicyPage,
   })),
 );
-const InviteFriendsTermsPage = lazy(() =>
+const InviteFriendsTermsPage = lazyRoute(() =>
   import("./features/legal/InviteFriendsTermsPage").then((m) => ({
     default: m.InviteFriendsTermsPage,
   })),
@@ -120,6 +123,7 @@ export default function App() {
                       <IosInstallGuide />
                       <NewbieTutorialGate />
                       <BeggarRedEnvelopeGate />
+                      <RedeemApprovalGate />
                       <DailyLoginGate />
                       <DailyLoginModalHost />
                       <GeoGate />

@@ -1,0 +1,64 @@
+.shop-reward-anim {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--modal-z-index) + 8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgb(0 0 0 / 0.35);
+}
+
+.shop-reward-anim__piles {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(1.5rem, 8vw, 3.5rem);
+  padding: 1rem;
+}
+
+.shop-reward-anim__pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  opacity: 0;
+  transform: translateY(1.75rem) scale(0.72);
+  transition:
+    opacity 0.45s ease-out,
+    transform 0.55s cubic-bezier(0.22, 1.15, 0.32, 1);
+}
+
+.shop-reward-anim__pile--in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.shop-reward-anim__pile--out {
+  opacity: 0;
+  transform: translateY(0.65rem) scale(0.3);
+  transition:
+    opacity 0.42s ease-in,
+    transform 0.45s cubic-bezier(0.4, 0, 0.85, 0.35);
+}
+
+.shop-reward-anim__pile--done {
+  visibility: hidden;
+}
+
+.shop-reward-anim__coin-img {
+  display: block;
+  width: min(42vw, 11rem);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgb(0 0 0 / 0.45));
+}
+
+.shop-reward-anim__amount {
+  margin: 0;
+  font-size: clamp(1.35rem, 4.5vw, 1.85rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 2px 8px rgb(0 0 0 / 0.55);
+}

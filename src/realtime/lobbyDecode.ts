@@ -47,7 +47,43 @@ function numFromWire(v: unknown): number | undefined {
     const n = Number(v);
     if (Number.isFinite(n)) return n;
   }
+  if (
+    v &&
+    typeof v === "object" &&
+    "toString" in v &&
+    typeof (v as { toString: () => string }).toString === "function"
+  ) {
+    const n = Number((v as { toString: () => string }).toString());
+    if (Number.isFinite(n)) return n;
+  }
   return undefined;
+}
+
+/** LOBBY_GET `playerInfo.noviceTeaching.general`；無欄位時為 `undefined`。 */
+export function noviceTeachingGeneralFromLobbyGet(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): number | undefined {
+  const p = lobbyGet?.playerInfo;
+  if (!p || typeof p !== "object") return undefined;
+  const nt = (p as { noviceTeaching?: { general?: unknown } | null })
+    .noviceTeaching;
+  if (!nt || typeof nt !== "object") return undefined;
+  return numFromWire((nt as { general?: unknown }).general);
+}
+
+/** LOBBY_GET `playerInfo.noviceTeaching.general`：0 = 尚未完成一般新手教學。 */
+export function isNoviceTeachingGeneralDone(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): boolean {
+  const general = noviceTeachingGeneralFromLobbyGet(lobbyGet);
+  return general !== undefined && general !== 0;
+}
+
+/** 僅在 LOBBY_GET 已帶入且 `general === 0` 時顯示一般新手教學。 */
+export function shouldShowNoviceTeachingGeneralTutorial(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): boolean {
+  return noviceTeachingGeneralFromLobbyGet(lobbyGet) === 0;
 }
 
 /** megaman.GameLabel 數值（若 toObject 未轉成字串則用此對應） */
@@ -441,12 +477,13 @@ export function lobbyDecodedPlayerToUserPatch(
 export type RedeemPlayerBindingState = {
   hasCellPhone: boolean;
   hasAddress: boolean;
+  /** KYC 證件已上傳（playerInfo.frontImage 有值）。 */
   hasFrontImage: boolean;
   /** 後端 minTxWdraw 原始單位；未提供時 undefined */
   minTxWdrawRaw: number | undefined;
 };
 
-/** 提現前綁定閘道：依 LOBBY_GET playerInfo.cellPhone / address / frontImage。 */
+/** 提現前綁定閘道：依 LOBBY_GET playerInfo.cellPhone / address。 */
 export function redeemPlayerBindingFromLobby(
   lobbyGet: LobbyGetDecoded | null | undefined,
 ): RedeemPlayerBindingState {

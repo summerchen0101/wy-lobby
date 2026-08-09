@@ -6,6 +6,7 @@ describe("gatewayWsRoute", () => {
     expect(isGatewayWsSuppressedRoute("/invite-terms")).toBe(true);
     expect(isGatewayWsSuppressedRoute("/privacy")).toBe(true);
     expect(isGatewayWsSuppressedRoute("/terms")).toBe(true);
+    expect(isGatewayWsSuppressedRoute("/term")).toBe(true);
   });
 
   it("allows WS on lobby routes", () => {

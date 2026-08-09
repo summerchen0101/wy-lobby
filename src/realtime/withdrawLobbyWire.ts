@@ -19,6 +19,8 @@ const CreateWithdrawOrderReqType = mustLookup("megaman.CreateWithdrawOrderReq");
 const CreateWithdrawOrderRespType = mustLookup(
   "megaman.CreateWithdrawOrderResp",
 );
+const CancelRedeemOrderReqType = mustLookup("megaman.CancelRedeemOrderReq");
+const CancelRedeemOrderRespType = mustLookup("megaman.CancelRedeemOrderResp");
 const WithdrawSuccessPushType = mustLookup("megaman.WithdrawSuccessPush");
 
 /** @deprecated 新第三方提現改由 paymentURL 頁選方式；保留供舊 wire 測試參考。 */
@@ -29,9 +31,22 @@ export const WITHDRAW_PAYMENT_TYPE_REC = {
   ACH: 16,
 } as const;
 
-/** megaman ListWithdrawOrdersReq.withdrawOrderPaymentStatusIn（對齊 payment.proto 0–7） */
+/** megaman WithdrawOrderPaymentStatus（對齊 payment.proto 0–8） */
+export const WITHDRAW_ORDER_PAYMENT_STATUS = {
+  Unknown: 0,
+  Reviewing: 1,
+  Passed: 2,
+  Rejected: 3,
+  Proccessing: 4,
+  Success: 5,
+  Failed: 6,
+  ExpirationRejected: 7,
+  Canceled: 8,
+} as const;
+
+/** megaman ListWithdrawOrdersReq.withdrawOrderPaymentStatusIn（對齊 payment.proto 0–8） */
 export const ALL_WITHDRAW_ORDER_PAYMENT_STATUSES: readonly number[] = [
-  0, 1, 2, 3, 4, 5, 6, 7,
+  0, 1, 2, 3, 4, 5, 6, 7, 8,
 ];
 
 const wireToObjectOpts = {
@@ -64,15 +79,40 @@ export function encodeListWithdrawOrdersRequestBytes(
 export type WithdrawOrderWireRow = {
   withdrawOrderUID: string;
   amount: string;
-  withdrawOrderPaymentStatus: string;
+  fee: string;
+  withdrawOrderPaymentStatus: number;
   statusLabel: string;
   remark: string;
+  createdAtTimestampMillisecond: string;
+  uuu: string;
 };
 
 export type ListWithdrawOrdersWireResult = {
   orders: WithdrawOrderWireRow[];
   total: string;
 };
+
+function parseWithdrawOrderStatusCode(raw: unknown): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) return Math.trunc(raw);
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    if (/^\d+$/.test(t)) return Number(t);
+    const byName: Record<string, number> = {
+      UnknownWithdrawOrderPaymentStatus: 0,
+      Reviewing: 1,
+      Passed: 2,
+      Rejected: 3,
+      Proccessing: 4,
+      Processing: 4,
+      Success: 5,
+      Failed: 6,
+      ExpirationRejected: 7,
+      Canceled: 8,
+    };
+    if (byName[t] !== undefined) return byName[t];
+  }
+  return 0;
+}
 
 export function decodeListWithdrawOrdersResponseBytes(
   data: Uint8Array,
@@ -83,21 +123,28 @@ export function decodeListWithdrawOrdersResponseBytes(
     withdrawOrders?: Array<{
       withdrawOrderUID?: string;
       amount?: string | number;
+      fee?: string | number;
       withdrawOrderPaymentStatus?: string | number;
       remark?: string;
+      createdAtTimestampMillisecond?: string | number;
+      uuu?: string;
     }>;
   };
   const rows = o.withdrawOrders ?? [];
   const orders: WithdrawOrderWireRow[] = rows.map((row) => {
     const st = row.withdrawOrderPaymentStatus;
-    const statusStr =
-      typeof st === "string" ? st : typeof st === "number" ? String(st) : "";
+    const statusCode = parseWithdrawOrderStatusCode(st);
     return {
       withdrawOrderUID: String(row.withdrawOrderUID ?? ""),
       amount: String(row.amount ?? ""),
-      withdrawOrderPaymentStatus: statusStr,
+      fee: String(row.fee ?? ""),
+      withdrawOrderPaymentStatus: statusCode,
       statusLabel: withdrawOrderPaymentStatusToLabel(st),
       remark: String(row.remark ?? "").trim(),
+      createdAtTimestampMillisecond: String(
+        row.createdAtTimestampMillisecond ?? "",
+      ),
+      uuu: String(row.uuu ?? "").trim(),
     };
   });
   const totalRaw = o.total;
@@ -161,6 +208,27 @@ export function decodeCreateWithdrawOrderResponseBytes(
   };
 }
 
+export function encodeCancelRedeemOrderRequestBytes(
+  redeemOrderUID: string,
+): Uint8Array {
+  const uid = redeemOrderUID.trim();
+  const err = CancelRedeemOrderReqType.verify({ redeemOrderUID: uid });
+  if (err) throw new Error(`CancelRedeemOrderReq: ${err}`);
+  const created = CancelRedeemOrderReqType.create({ redeemOrderUID: uid });
+  return Uint8Array.from(CancelRedeemOrderReqType.encode(created).finish());
+}
+
+export function decodeCancelRedeemOrderResponseBytes(
+  data: Uint8Array,
+): Record<string, unknown> {
+  if (!(data instanceof Uint8Array) || data.byteLength === 0) return {};
+  const msg = CancelRedeemOrderRespType.decode(data);
+  return CancelRedeemOrderRespType.toObject(msg, wireToObjectOpts) as Record<
+    string,
+    unknown
+  >;
+}
+
 export type WithdrawSuccessPushWire = {
   userID?: string;
   nickname: string;
@@ -222,6 +290,16 @@ export function decodeCreateWithdrawOrderRequestForDevLog(
 ): Record<string, unknown> {
   const msg = CreateWithdrawOrderReqType.decode(raw);
   return CreateWithdrawOrderReqType.toObject(msg, wireToObjectOpts) as Record<
+    string,
+    unknown
+  >;
+}
+
+export function decodeCancelRedeemOrderRequestForDevLog(
+  raw: Uint8Array,
+): Record<string, unknown> {
+  const msg = CancelRedeemOrderReqType.decode(raw);
+  return CancelRedeemOrderReqType.toObject(msg, wireToObjectOpts) as Record<
     string,
     unknown
   >;

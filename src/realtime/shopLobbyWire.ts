@@ -54,13 +54,14 @@ export type MegaAccountBindingRequestFields = {
   language: string;
   middleName?: string;
   addressLine1?: string;
-  documentType?: number;
+  documentType?: string;
   documentNumber?: string;
   frontImageContentType?: string;
   backImageContentType?: string;
   frontImageBase64?: string;
   backImageBase64?: string;
   socureDiSessionToken: string;
+  ssn?: string;
 };
 
 /** Shop checkout: simplified binding — address/KYC fields omitted. */
@@ -112,13 +113,14 @@ export function encodeMegaAccountBindingRequestBytes(
     language: fields.language,
     middleName: fields.middleName ?? "",
     addressLine1: fields.addressLine1 ?? "",
-    documentType: fields.documentType ?? 0,
+    documentType: fields.documentType ?? "",
     documentNumber: fields.documentNumber ?? "",
     frontImageContentType: fields.frontImageContentType ?? "",
     backImageContentType: fields.backImageContentType ?? "",
     frontImageBase64: fields.frontImageBase64 ?? "",
     backImageBase64: fields.backImageBase64 ?? "",
     socureDiSessionToken: fields.socureDiSessionToken,
+    ssn: fields.ssn ?? "",
   };
   const err = MegaAccountBindingRequestType.verify(msg);
   if (err) throw new Error(`MegaAccountBindingRequest: ${err}`);
@@ -153,6 +155,12 @@ const wireToObjectOpts = {
 /**
  * 僅供 dev 日誌：解 `MegaAccountBindingRequest`（失敗時由呼叫端 try/catch）。
  */
+function summarizeBase64Field(value: unknown): string {
+  const s = String(value ?? "");
+  if (!s) return "";
+  return `${s.length} chars`;
+}
+
 export function decodeMegaAccountBindingRequestForDevLog(
   raw: Uint8Array,
 ): Record<string, unknown> {
@@ -172,7 +180,16 @@ export function decodeMegaAccountBindingRequestForDevLog(
     state?: string;
     zip?: string;
     language?: string;
+    middleName?: string;
+    addressLine1?: string;
+    documentType?: string;
+    documentNumber?: string;
+    frontImageContentType?: string;
+    backImageContentType?: string;
+    frontImageBase64?: string;
+    backImageBase64?: string;
     socureDiSessionToken?: string;
+    ssn?: string;
   };
   const token = String(o.socureDiSessionToken ?? "");
   return {
@@ -190,9 +207,16 @@ export function decodeMegaAccountBindingRequestForDevLog(
     state: String(o.state ?? ""),
     zip: String(o.zip ?? ""),
     language: String(o.language ?? ""),
-    socureDiSessionToken: token
-      ? `${token.slice(0, 8)}…`
-      : "",
+    middleName: String(o.middleName ?? ""),
+    addressLine1: String(o.addressLine1 ?? ""),
+    documentType: String(o.documentType ?? ""),
+    documentNumber: String(o.documentNumber ?? ""),
+    frontImageContentType: String(o.frontImageContentType ?? ""),
+    backImageContentType: String(o.backImageContentType ?? ""),
+    frontImageBase64: summarizeBase64Field(o.frontImageBase64),
+    backImageBase64: summarizeBase64Field(o.backImageBase64),
+    socureDiSessionToken: token ? `${token.slice(0, 8)}…` : "",
+    ssn: String(o.ssn ?? "") ? "[redacted]" : "",
   };
 }
 
@@ -232,6 +256,7 @@ export type ListProductsWireProduct = {
   price: string;
   paymentTypes: string[];
   productContents: Record<string, unknown>[];
+  vipExp: number;
 };
 
 export type ListProductsWireResult = {
@@ -253,15 +278,26 @@ export function decodeListProductsResponseBytes(
       price?: string;
       paymentTypes?: Array<string | number>;
       productContents?: Record<string, unknown>[];
+      vipExp?: string | number;
     }>;
   };
-  const products: ListProductsWireProduct[] = (o.products ?? []).map((p) => ({
-    productID: String(p.productID ?? "0"),
-    originalPrice: String(p.originalPrice ?? ""),
-    price: String(p.price ?? ""),
-    paymentTypes: (p.paymentTypes ?? []).map((x) => String(x)),
-    productContents: p.productContents ?? [],
-  }));
+  const products: ListProductsWireProduct[] = (o.products ?? []).map((p) => {
+    const rawVip = p.vipExp;
+    const vipExp =
+      typeof rawVip === "number"
+        ? rawVip
+        : typeof rawVip === "string"
+          ? Number(rawVip)
+          : 0;
+    return {
+      productID: String(p.productID ?? "0"),
+      originalPrice: String(p.originalPrice ?? ""),
+      price: String(p.price ?? ""),
+      paymentTypes: (p.paymentTypes ?? []).map((x) => String(x)),
+      productContents: p.productContents ?? [],
+      vipExp: Number.isFinite(vipExp) ? vipExp : 0,
+    };
+  });
   return { products };
 }
 

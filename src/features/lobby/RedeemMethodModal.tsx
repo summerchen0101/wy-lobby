@@ -11,6 +11,7 @@ import {
   buildRedeemCallbackUrl,
   isThirdPartyPaymentEnabled,
 } from "../../lib/env";
+import { navigateToThirdPartyPayment } from "../../lib/thirdPartyPaymentNavigation";
 import { GATEWAY_API_CREATE_WITHDRAW_ORDER } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
@@ -19,7 +20,6 @@ import {
 } from "../../realtime/withdrawLobbyWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import {
-  formatScFromRaw,
   SC_POINT_SCALE,
 } from "../../wallet/formatWalletAmount";
 import { usePaymentCallbackListener } from "../payment/usePaymentCallbackListener";
@@ -27,6 +27,12 @@ import {
   resolveMinRedeemDisplay,
   resolveMinRedeemRaw,
 } from "./redeemMinAmount";
+import {
+  clearPendingRedeemOrder,
+  createPendingRedeemOrder,
+  persistPendingRedeemOrder,
+} from "./redeemPaymentSession";
+import { dispatchRedeemWithdrawReturnSuccess } from "./redeemApprovalWalletGet";
 import type { LobbyGetDecoded } from "../../realtime/lobbyDecode";
 import { useWordData } from "../../wordData/useWordData";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
@@ -35,12 +41,27 @@ import "./RedeemMethodModal.css";
 
 type Step = "amount" | "payment" | "success";
 
+export type RedeemMethodModalResume =
+  | {
+      kind: "success";
+      orderUid: string;
+      amount: string;
+    }
+  | {
+      kind: "payment";
+      withdrawOrderUID: string;
+      pickAmount: string;
+      paymentUrl: string;
+    };
+
 type Props = {
   open: boolean;
   onClose: () => void;
   onOrderCreated?: () => void | Promise<void>;
   redeemableAmountRaw?: number;
   lobbyGet?: LobbyGetDecoded | null;
+  resume?: RedeemMethodModalResume | null;
+  onResumeConsumed?: () => void;
 };
 
 function parseWithdrawDisplayToWire(amountStr: string): bigint | null {
@@ -56,10 +77,14 @@ function parseWithdrawDisplayToWire(amountStr: string): bigint | null {
 function RedeemWithdrawSuccessView({
   orderUid,
   amountDisplay,
+  statusLabel,
+  backLabel,
   onBackToLobby,
 }: {
   orderUid: string;
   amountDisplay: string;
+  statusLabel: string;
+  backLabel: string;
   onBackToLobby: () => void;
 }) {
   return (
@@ -89,12 +114,14 @@ function RedeemWithdrawSuccessView({
           {orderUid}
         </div>
         <p className="redeem-method-modal__success-field-label">Status</p>
-        <div className="redeem-method-modal__success-status-box">Reviewing</div>
+        <div className="redeem-method-modal__success-status-box">
+          {statusLabel}
+        </div>
         <button
           type="button"
           className="redeem-method-modal__success-cta"
           onClick={onBackToLobby}>
-          BACK TO LOBBY
+          {backLabel}
         </button>
       </div>
     </div>
@@ -107,6 +134,8 @@ export function RedeemMethodModal({
   onOrderCreated,
   redeemableAmountRaw,
   lobbyGet,
+  resume,
+  onResumeConsumed,
 }: Props) {
   const w = useWordData();
   const { show } = useAlert();
@@ -127,16 +156,34 @@ export function RedeemMethodModal({
 
   useEffect(() => {
     if (!open) return;
+    if (resume) return;
     setStep("amount");
     setPickAmount("");
     setSubmitBusy(false);
     setPaymentUrl(null);
     setSuccessOrderUid("");
     setSuccessAmountDisplay("");
-  }, [open]);
+  }, [open, resume]);
+
+  useEffect(() => {
+    if (!open || !resume) return;
+    if (resume.kind === "success") {
+      setSuccessOrderUid(resume.orderUid);
+      setSuccessAmountDisplay(resume.amount);
+      setPaymentUrl(null);
+      setStep("success");
+    } else {
+      setSuccessOrderUid(resume.withdrawOrderUID);
+      setPickAmount(resume.pickAmount);
+      setPaymentUrl(resume.paymentUrl);
+      setStep("payment");
+    }
+    onResumeConsumed?.();
+  }, [open, resume, onResumeConsumed]);
 
   const finalizeSuccessFlow = useCallback(
     async (orderUid: string, amountStr: string) => {
+      clearPendingRedeemOrder();
       setSuccessOrderUid(orderUid);
       setSuccessAmountDisplay(amountStr.trim());
       setPaymentUrl(null);
@@ -150,21 +197,21 @@ export function RedeemMethodModal({
     (payload: { state: 1 | 2 }) => {
       if (step !== "payment" || !paymentUrl) return;
       if (payload.state === 2) {
-        show("Redemption was not completed.", { variant: "error" });
+        clearPendingRedeemOrder();
+        show("Redemption failed. Please try again.", { variant: "error" });
         setPaymentUrl(null);
         setStep("amount");
         return;
       }
-      void finalizeSuccessFlow(successOrderUid || "—", pickAmount);
+      clearPendingRedeemOrder();
+      setPaymentUrl(null);
+      void (async () => {
+        await onOrderCreated?.();
+        dispatchRedeemWithdrawReturnSuccess();
+        onClose();
+      })();
     },
-    [
-      step,
-      paymentUrl,
-      show,
-      finalizeSuccessFlow,
-      successOrderUid,
-      pickAmount,
-    ],
+    [step, paymentUrl, show, onOrderCreated, onClose],
   );
 
   usePaymentCallbackListener(
@@ -174,14 +221,11 @@ export function RedeemMethodModal({
   );
 
   const openPaymentPage = useCallback((url: string) => {
-    const trimmed = url.trim();
-    if (!trimmed) return false;
     if (!isThirdPartyPaymentEnabled()) {
       show("Redemption payment is unavailable.", { variant: "error" });
       return false;
     }
-    window.open(trimmed, "_blank");
-    return true;
+    return navigateToThirdPartyPayment(url);
   }, [show]);
 
   const submitWithdrawOrder = useCallback(async () => {
@@ -217,9 +261,7 @@ export function RedeemMethodModal({
     }
 
     setSubmitBusy(true);
-    let paymentTab: Window | null = null;
     try {
-      paymentTab = window.open("about:blank", "_blank");
       const data = encodeCreateWithdrawOrderRequestBytes({
         userID: uid,
         amount: wireAmt,
@@ -233,7 +275,6 @@ export function RedeemMethodModal({
       });
       const code = String(r.code ?? "");
       if (!isGatewaySuccessCode(code)) {
-        paymentTab?.close();
         show(translateGatewayError(code, r.errMessage, `Withdrawal failed (${code})`), {
           variant: "error",
         });
@@ -241,7 +282,6 @@ export function RedeemMethodModal({
       }
       const raw = r.data;
       if (!(raw instanceof Uint8Array) || raw.byteLength === 0) {
-        paymentTab?.close();
         show("Empty withdrawal response", { variant: "error" });
         return;
       }
@@ -252,22 +292,15 @@ export function RedeemMethodModal({
 
       const url = paymentURL.trim();
       if (!url) {
-        paymentTab?.close();
         await finalizeSuccessFlow(oid || "—", pickAmount);
         return;
       }
 
-      if (paymentTab && !paymentTab.closed) {
-        try {
-          paymentTab.location.href = url;
-        } catch {
-          paymentTab.close();
-        }
-      }
-      setPaymentUrl(url);
-      setStep("payment");
+      persistPendingRedeemOrder(
+        createPendingRedeemOrder(oid || "—", pickAmount, url),
+      );
+      navigateToThirdPartyPayment(url);
     } catch (e) {
-      paymentTab?.close();
       show(e instanceof Error ? e.message : "Withdrawal failed", {
         variant: "error",
       });
@@ -353,19 +386,21 @@ export function RedeemMethodModal({
             <RedeemWithdrawSuccessView
               orderUid={successOrderUid}
               amountDisplay={successAmountDisplay}
+              statusLabel={w(510477)}
+              backLabel={w(510473)}
               onBackToLobby={onClose}
             />
           ) : step === "payment" && paymentUrl ? (
             <div className="redeem-method-modal__payment-wait">
               <p className="redeem-form-page__hint">
-                Complete your redemption in the new browser tab. This dialog
+                You will be redirected to complete your redemption. This dialog
                 will update when finished.
               </p>
               <button
                 type="button"
                 className="redeem-form-page__confirm"
                 onClick={() => openPaymentPage(paymentUrl)}>
-                Open redemption page
+                Continue to redemption page
               </button>
             </div>
           ) : (
@@ -385,13 +420,8 @@ export function RedeemMethodModal({
                 onChange={(e) => setPickAmount(e.target.value)}
                 disabled={submitBusy}
               />
-              <p className="redeem-form-page__hint">
-                Minimum {minDisplay} SC · Redeemable{" "}
-                {redeemableAmountRaw !== undefined
-                  ? formatScFromRaw(redeemableAmountRaw)
-                  : "—"}{" "}
-                SC
-              </p>
+              <p className="redeem-form-page__hint">{w(510488, minDisplay)}</p>
+              <pre className="redeem-method-modal__fee-tiers">{w(510489)}</pre>
               <button
                 type="button"
                 className="redeem-form-page__confirm"

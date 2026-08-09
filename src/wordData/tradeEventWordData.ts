@@ -6,8 +6,11 @@ const TRADE_EVENT_ENUM_WORD_DATA: Readonly<Record<string, number>> = {
   REFERRAL_BONUS: 510768,
   PURCHASE: 510769,
   LEVEL_UP_BONUS: 510783,
+  VIPLEVELBONUS: 510783,
+  VIP_LEVEL_BONUS: 510783,
   DAILY_BONUS: 510786,
   AMOE: 510784,
+  AMOE_AWARD: 510784,
   REPLENISHMENT: 510785,
   DAILY_LOGIN_AWARD: 510786,
   DAILYMISSONAWARD: 510786,
@@ -28,6 +31,8 @@ const TRADE_EVENT_NUM_WORD_DATA: Readonly<Record<number, number>> = {
   46: 510768, // BINDING_REFERRER_CODE_AWARD
   51: 510786, // DailyMissonAward
   66: 510785, // PLAYER_DAILY_SCORE_AWARD
+  111: 510783, // VIPLevelBonus
+  112: 510784, // AMOE_AWARD
 };
 
 export function tradeEventWordDataId(raw: unknown): number | undefined {

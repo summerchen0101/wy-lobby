@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { formatScFromRaw, formatScFromRawWireInteger } from "./formatWalletAmount";
 
+describe("formatScFromRaw", () => {
+  it("raw=23000 顯示 2.30 而非浮點誤差的 2.29", () => {
+    expect(formatScFromRaw(23000)).toBe("2.30");
+    expect(formatScFromRaw(23099)).toBe("2.30");
+  });
+});
+
 describe("formatScFromRawWireInteger", () => {
   it("與 formatScFromRaw（number）對齊於可安全表示的原始整數", () => {
     expect(formatScFromRawWireInteger("12345")).toBe(formatScFromRaw(12345));

@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
+import * as protobuf from "protobufjs/light.js";
+import schema from "../gen/lobby_wire.schema.js";
 import {
+  isNoviceTeachingGeneralDone,
+  noviceTeachingGeneralFromLobbyGet,
+  shouldShowNoviceTeachingGeneralTutorial,
   lobbyDecodedGamesToApiGames,
   lobbyThirdPartyListToApiGames,
+  decodeLobbyGetResponseBytes,
   type LobbyGetDecoded,
 } from "./lobbyDecode";
+
+const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
+const LobbyGetResponseType = root.lookupType("megaman.LobbyGetResponse");
+
+function encodeLobbyGet(playerInfo: Record<string, unknown>): Uint8Array {
+  const msg = LobbyGetResponseType.create({ playerInfo });
+  return Uint8Array.from(LobbyGetResponseType.encode(msg).finish());
+}
 
 /** LOBBY_GET `games.games` 單列最小形狀（其餘 wire 欄位省略） */
 function gameRow(
@@ -114,5 +128,52 @@ describe("lobbyThirdPartyListToApiGames", () => {
     expect(items[0]?.subtitle).toBe("M2PLAY");
     expect(items[0]?.provider).toBe("M2PLAY");
     expect(items[0]?.thirdPartyLaunch?.platform).toBe("MICROGAMING");
+  });
+});
+
+describe("isNoviceTeachingGeneralDone", () => {
+  it("returns false when general is 0", () => {
+    const lobbyGet = {
+      playerInfo: { noviceTeaching: { general: 0 } },
+    } as unknown as LobbyGetDecoded;
+    expect(isNoviceTeachingGeneralDone(lobbyGet)).toBe(false);
+    expect(shouldShowNoviceTeachingGeneralTutorial(lobbyGet)).toBe(true);
+  });
+
+  it("returns true when general is 1", () => {
+    const lobbyGet = {
+      playerInfo: { noviceTeaching: { general: 1 } },
+    } as unknown as LobbyGetDecoded;
+    expect(isNoviceTeachingGeneralDone(lobbyGet)).toBe(true);
+    expect(shouldShowNoviceTeachingGeneralTutorial(lobbyGet)).toBe(false);
+  });
+
+  it("returns false when noviceTeaching is missing", () => {
+    const lobbyGet = {
+      playerInfo: { userID: "123" },
+    } as unknown as LobbyGetDecoded;
+    expect(isNoviceTeachingGeneralDone(lobbyGet)).toBe(false);
+    expect(shouldShowNoviceTeachingGeneralTutorial(lobbyGet)).toBe(false);
+  });
+
+  it("decodes general=1 from protobuf wire bytes", () => {
+    const data = encodeLobbyGet({
+      userID: "2084595942960222208",
+      noviceTeaching: { general: 1 },
+    });
+    const decoded = decodeLobbyGetResponseBytes(data);
+    expect(noviceTeachingGeneralFromLobbyGet(decoded)).toBe(1);
+    expect(isNoviceTeachingGeneralDone(decoded)).toBe(true);
+    expect(shouldShowNoviceTeachingGeneralTutorial(decoded)).toBe(false);
+  });
+
+  it("decodes general=0 from protobuf wire bytes", () => {
+    const data = encodeLobbyGet({
+      userID: "2084595942960222208",
+      noviceTeaching: { general: 0 },
+    });
+    const decoded = decodeLobbyGetResponseBytes(data);
+    expect(noviceTeachingGeneralFromLobbyGet(decoded)).toBe(0);
+    expect(shouldShowNoviceTeachingGeneralTutorial(decoded)).toBe(true);
   });
 });

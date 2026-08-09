@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { isSecondaryAppTab } from "./primaryAppTab";
+import {
+  claimPrimaryTabLeaseIfVisible,
+  isSecondaryAppTab,
+} from "./primaryAppTab";
 
 function installStorageMocks(): void {
   const session = new Map<string, string>();
@@ -66,5 +69,37 @@ describe("primaryAppTab", () => {
       JSON.stringify({ tabId: "tab-b", at: Date.now() }),
     );
     expect(isSecondaryAppTab()).toBe(false);
+  });
+
+  it("visible tab can claim lease from another tab", () => {
+    localStorage.setItem(
+      "ffgt:primary-tab-lease",
+      JSON.stringify({ tabId: "tab-a", at: Date.now() }),
+    );
+    expect(isSecondaryAppTab()).toBe(true);
+
+    vi.stubGlobal("document", {
+      visibilityState: "visible",
+    });
+    claimPrimaryTabLeaseIfVisible();
+
+    expect(isSecondaryAppTab()).toBe(false);
+    expect(JSON.parse(localStorage.getItem("ffgt:primary-tab-lease")!)).toEqual(
+      expect.objectContaining({ tabId: "tab-b" }),
+    );
+  });
+
+  it("does not claim lease while tab is hidden", () => {
+    localStorage.setItem(
+      "ffgt:primary-tab-lease",
+      JSON.stringify({ tabId: "tab-a", at: Date.now() }),
+    );
+
+    vi.stubGlobal("document", {
+      visibilityState: "hidden",
+    });
+    claimPrimaryTabLeaseIfVisible();
+
+    expect(isSecondaryAppTab()).toBe(true);
   });
 });

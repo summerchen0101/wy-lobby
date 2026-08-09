@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
-export const LOBBY_BANNER_DESKTOP_MQ = "(min-width: 48rem)";
+/**
+ * Desktop lobby banner assets — exclude phones rotated to landscape:
+ * iPhone横屏常 >48rem，若僅用 min-width 會誤切 pc 版 hero 影片並整段重載解碼，易導致 Safari crash。
+ */
+export const LOBBY_BANNER_DESKTOP_MQ =
+  "(min-width: 48rem) and (hover: hover) and (pointer: fine)";
 
 export type LobbyBannerViewport = "mb" | "pc";
 

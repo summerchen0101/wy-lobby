@@ -4,12 +4,24 @@ import { IoChevronBack } from "react-icons/io5";
 import { useWordData } from "../../wordData/useWordData";
 import "./ShopCheckout.css";
 import { ProtectAccountView } from "./ProtectAccountView";
+import { SHOP_SUCCESS_PILE_SRC } from "./shopCoinPile";
+import {
+  SHOP_WORD_BINDING_SUCCESS,
+  SHOP_WORD_PLAY_NOW,
+  SHOP_WORD_SUCCESS_BODY,
+  SHOP_WORD_SUCCESS_TITLE,
+} from "./shopWordIds";
 import type {
   ShopBindingFormPayload,
   ShopBindingPrefill,
 } from "./types";
 
-export type CheckoutStep = "loading" | "protect" | "payment" | "success";
+export type CheckoutStep =
+  | "loading"
+  | "protect"
+  | "bindingSuccess"
+  | "payment"
+  | "success";
 
 type Props = {
   open: boolean;
@@ -22,10 +34,12 @@ type Props = {
   protectNeedSms: boolean;
   bindingPrefill?: ShopBindingPrefill;
   onClose: () => void;
+  onBackFromProtect: () => void;
   onBackToProtectForm: () => void;
   onBindingSubmit: (payload: ShopBindingFormPayload) => Promise<void>;
-  /** 開啟第三方金流結帳 URL；回傳 false 表示已阻擋（Toast 由父層處理） */
+  onBindingSuccessConfirm: () => void;
   onOpenPaymentPage: (url: string) => boolean;
+  onPlayNow: () => void;
 };
 
 function BackIcon() {
@@ -119,33 +133,58 @@ function PaymentFrameView({
       <hr className="app-modal__rule shop-checkout__head-rule" />
       <div className="shop-checkout__payment-frame-wrap shop-checkout__payment-wait-body">
         <p className="shop-checkout__payment-wait-text">
-          Complete your payment in the new browser tab or window. This dialog
-          will update when your purchase is confirmed.
+          You will be redirected to the payment page. This dialog will update
+          when your purchase is confirmed.
         </p>
         <p className="shop-checkout__payment-wait-text">
           <button
             type="button"
             className="shop-checkout__payment-wait-link"
             onClick={() => onOpenPaymentPage(paymentUrl)}>
-            Open payment page
+            Continue to payment page
           </button>{" "}
-          if it did not open automatically.
+          if you are not redirected automatically.
         </p>
       </div>
     </>
   );
 }
 
-function SuccessView({ onClose }: { onClose: () => void }) {
+function BindingSuccessView({ onConfirm }: { onConfirm: () => void }) {
+  const w = useWordData();
+  return (
+    <div
+      className="shop-checkout__summary-body shop-checkout__binding-success-body"
+      role="status">
+      <p className="shop-checkout__binding-success-text">
+        {w(SHOP_WORD_BINDING_SUCCESS)}
+      </p>
+      <button
+        type="button"
+        className="shop-checkout__submit shop-checkout__submit--blue"
+        onClick={onConfirm}>
+        {w(57)}
+      </button>
+    </div>
+  );
+}
+
+function SuccessView({
+  onClose,
+  onPlayNow,
+}: {
+  onClose: () => void;
+  onPlayNow: () => void;
+}) {
   const w = useWordData();
   return (
     <>
       <header className="app-modal__head-row">
         <span className="app-modal__head-spacer" aria-hidden />
         <h2
-          className="app-modal__title--abs-center shop-checkout__title"
+          className="app-modal__title--abs-center shop-checkout__title shop-checkout__title--success"
           id="shop-checkout-dialog-title">
-          {w(103)}
+          {w(SHOP_WORD_SUCCESS_TITLE)}
         </h2>
         <button
           type="button"
@@ -158,13 +197,20 @@ function SuccessView({ onClose }: { onClose: () => void }) {
       <hr className="app-modal__rule shop-checkout__head-rule" />
       <div className="shop-checkout__summary-body shop-checkout__success-body">
         <p className="shop-checkout__success-text">
-          Your purchase is complete. Coins have been added to your wallet.
+          {w(SHOP_WORD_SUCCESS_BODY)}
         </p>
+        <div className="shop-checkout__success-pile-wrap">
+          <img
+            src={SHOP_SUCCESS_PILE_SRC}
+            alt=""
+            className="shop-checkout__success-pile"
+          />
+        </div>
         <button
           type="button"
-          className="shop-checkout__submit shop-checkout__submit--blue"
-          onClick={onClose}>
-          OK
+          className="shop-checkout__submit shop-checkout__submit--blue shop-checkout__submit--play-now"
+          onClick={onPlayNow}>
+          {w(SHOP_WORD_PLAY_NOW)}
         </button>
       </div>
     </>
@@ -182,12 +228,15 @@ export function ShopCheckoutOverlay({
   protectNeedSms,
   bindingPrefill,
   onClose,
+  onBackFromProtect,
   onBackToProtectForm,
   onBindingSubmit,
+  onBindingSuccessConfirm,
   onOpenPaymentPage,
+  onPlayNow,
 }: Props) {
   const handleBackdrop = useCallback(() => {
-    if (step === "success") return;
+    if (step === "success" || step === "bindingSuccess") return;
     onClose();
   }, [step, onClose]);
 
@@ -195,7 +244,7 @@ export function ShopCheckoutOverlay({
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (step === "success") return;
+      if (step === "success" || step === "bindingSuccess") return;
       onClose();
     };
     document.addEventListener("keydown", onKey);
@@ -212,7 +261,8 @@ export function ShopCheckoutOverlay({
       <div
         className={
           "app-modal app-modal--col shop-checkout" +
-          (step === "payment" ? " shop-checkout--payment" : "")
+          (step === "payment" ? " shop-checkout--payment" : "") +
+          (step === "success" ? " shop-checkout--success" : "")
         }
         role="dialog"
         aria-modal="true"
@@ -224,20 +274,32 @@ export function ShopCheckoutOverlay({
             bindingError={bindingError}
             protectNeedSms={protectNeedSms}
             bindingPrefill={bindingPrefill}
-            onClose={onClose}
+            onClose={onBackFromProtect}
             onBackToProtectForm={onBackToProtectForm}
             onSubmit={onBindingSubmit}
           />
+        ) : step === "bindingSuccess" ? (
+          <BindingSuccessView onConfirm={onBindingSuccessConfirm} />
         ) : step === "loading" ? (
-          <LoadingView buyBusy={buyBusy} buyError={buyError} onClose={onClose} />
+          <LoadingView
+            buyBusy={buyBusy}
+            buyError={buyError}
+            onClose={onClose}
+          />
         ) : step === "payment" && paymentUrl ? (
           <PaymentFrameView
             paymentUrl={paymentUrl}
             onClose={onClose}
             onOpenPaymentPage={onOpenPaymentPage}
           />
+        ) : step === "success" ? (
+          <SuccessView onClose={onPlayNow} onPlayNow={onPlayNow} />
         ) : (
-          <SuccessView onClose={onClose} />
+          <LoadingView
+            buyBusy={buyBusy}
+            buyError={buyError}
+            onClose={onClose}
+          />
         )}
       </div>
     </div>,

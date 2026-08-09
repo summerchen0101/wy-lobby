@@ -111,13 +111,16 @@ export function LobbyHeroBanner({ videoSrc, posterSrc, children }: Props) {
   }, [tryUnmuteAfterUserActivation, bannerMuteVersion]);
 
   return (
-    <div className="lobby-hero-banner__art-wrap">
+    <div
+      className="lobby-hero-banner__art-wrap"
+      onContextMenu={(e) => e.preventDefault()}>
       {posterSrc ? (
         <img
           className="lobby-hero-banner__img--base"
           src={posterSrc}
           alt=""
           decoding="async"
+          draggable={false}
           aria-hidden
         />
       ) : null}
@@ -130,6 +133,9 @@ export function LobbyHeroBanner({ videoSrc, posterSrc, children }: Props) {
         muted
         playsInline
         preload="auto"
+        draggable={false}
+        disablePictureInPicture
+        controlsList="nodownload nofullscreen noremoteplayback"
         aria-hidden
       />
       {children}

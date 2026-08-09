@@ -1,3 +1,5 @@
+import { getSocureSdkKey } from "./socureSdkKey";
+
 const SOCURE_DOCV_SCRIPT_URL = "https://websdk.socure.com/bundle.js";
 const DEFAULT_CONTAINER_SELECTOR = "#socure-docv-root";
 
@@ -33,13 +35,8 @@ declare global {
 
 let scriptLoadPromise: Promise<void> | null = null;
 
-export function getSocureDocvSdkKey(): string | undefined {
-  const key = import.meta.env.VITE_SOCURE_DOCV_SDK_KEY?.trim();
-  return key || undefined;
-}
-
 export function isSocureDocvEnabled(): boolean {
-  return Boolean(getSocureDocvSdkKey());
+  return Boolean(getSocureSdkKey());
 }
 
 function loadSocureDocvScript(): Promise<void> {
@@ -85,7 +82,7 @@ export async function launchSocureDocv(
   callbacks: SocureDocvLaunchConfig = {},
   containerSelector: string = DEFAULT_CONTAINER_SELECTOR,
 ): Promise<SocureDocvLaunchResult> {
-  const sdkKey = getSocureDocvSdkKey();
+  const sdkKey = getSocureSdkKey();
   if (!sdkKey) {
     return {
       result: "error",

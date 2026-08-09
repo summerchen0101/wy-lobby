@@ -1,7 +1,16 @@
 import type { ActivityDataDecoded } from "../../realtime/activityLobbyWire";
+import {
+  calendarDayKeyInTimeZone,
+  DAILY_LOGIN_CALENDAR_TIME_ZONE,
+} from "./dailyLoginLogic";
 
 const ACTIVITY_ID_KEY = "ffgt:daily-login:activity-id";
 const ACTIVITY_SNAPSHOT_KEY = "ffgt:daily-login:activity-snapshot";
+
+type CachedDailyLoginSnapshot = {
+  etDateKey: number;
+  activity: ActivityDataDecoded;
+};
 
 export function readCachedDailyLoginActivityId(): string | null {
   try {
@@ -22,13 +31,29 @@ export function writeCachedDailyLoginActivityId(activityId: string): void {
   }
 }
 
-export function readCachedDailyLoginActivity(): ActivityDataDecoded | null {
+export function readCachedDailyLoginActivity(
+  nowMs: number = Date.now(),
+): ActivityDataDecoded | null {
   try {
     const raw = sessionStorage.getItem(ACTIVITY_SNAPSHOT_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as ActivityDataDecoded;
-    const activityId = String(parsed.activityID ?? "").trim();
-    return activityId ? parsed : null;
+    const parsed = JSON.parse(raw) as
+      | CachedDailyLoginSnapshot
+      | ActivityDataDecoded;
+    const todayKey = calendarDayKeyInTimeZone(
+      nowMs,
+      DAILY_LOGIN_CALENDAR_TIME_ZONE,
+    );
+
+    if ("etDateKey" in parsed && "activity" in parsed) {
+      if (parsed.etDateKey !== todayKey) return null;
+      const activityId = String(parsed.activity.activityID ?? "").trim();
+      return activityId ? parsed.activity : null;
+    }
+
+    const legacy = parsed as ActivityDataDecoded;
+    const activityId = String(legacy.activityID ?? "").trim();
+    return activityId ? legacy : null;
   } catch {
     return null;
   }
@@ -36,11 +61,19 @@ export function readCachedDailyLoginActivity(): ActivityDataDecoded | null {
 
 export function writeCachedDailyLoginActivity(
   activity: ActivityDataDecoded,
+  nowMs: number = Date.now(),
 ): void {
   const activityId = String(activity.activityID ?? "").trim();
   if (!activityId) return;
   try {
-    sessionStorage.setItem(ACTIVITY_SNAPSHOT_KEY, JSON.stringify(activity));
+    const snapshot: CachedDailyLoginSnapshot = {
+      etDateKey: calendarDayKeyInTimeZone(
+        nowMs,
+        DAILY_LOGIN_CALENDAR_TIME_ZONE,
+      ),
+      activity,
+    };
+    sessionStorage.setItem(ACTIVITY_SNAPSHOT_KEY, JSON.stringify(snapshot));
     writeCachedDailyLoginActivityId(activityId);
   } catch {
     /* ignore */

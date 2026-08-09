@@ -77,6 +77,7 @@ message WalletGetRequest {
 message WalletGetResponse {
   Bag bag = 1;
   int64 subsidyAmount = 2;
+  repeated string redeemSCList = 3;
 }
 
 // Gateway push（如 SLOT_JACKPOT_INFO_PUSH 14）：累積獎池；jackpot_amounts 前三個元素對應大廳 JP1～JP3。
@@ -173,6 +174,7 @@ message PlayerInfo {
   uint64 vipCurrentLevelBetExp = 41;
   uint64 vipCurrentLevelBetExpRequired = 42;
   WalletType walletType = 85;
+  NoviceTeaching noviceTeaching = 53;
   int64 minTxWdraw = 97;
   string frontImage = 98;
 }
@@ -210,6 +212,21 @@ message NoviceTeaching {
 message UpdateNoviceTeaching {
   uint64 userID = 1;
   NoviceTeaching noviceTeaching = 2;
+}
+
+// 對齊 proto/megaman/playerinfo.proto DeletePlayerInfoReq（Gateway DELETE_ACCOUNT=34）
+enum OAuthProvider {
+  UNKNOWN_OAUTH_PROVIDER = 0;
+  PROVIDER_MEGA = 1;
+  PROVIDER_GOOGLE = 2;
+  PROVIDER_FB = 3;
+  PROVIDER_LINE = 4;
+  PROVIDER_APPLE = 5;
+}
+
+message DeletePlayerInfoReq {
+  OAuthProvider privoder = 1;
+  string accessToken = 2;
 }
 
 // --- wallet.Bag（對齊 proto/wallet/wallet.proto）與 LOBBY_GET 衛星型別 ---
@@ -473,13 +490,14 @@ message MegaAccountBindingRequest {
   string language = 15;
   string middleName = 16;
   string addressLine1 = 17;
-  int32 documentType = 18;
+  string documentType = 18;
   string documentNumber = 19;
   string frontImageContentType = 20;
-  string backImageContentType = 21;
-  string frontImageBase64 = 22;
+  string frontImageBase64 = 21;
+  string backImageContentType = 22;
   string backImageBase64 = 23;
   string socureDiSessionToken = 24;
+  string ssn = 25;
 }
 
 message MegaAccountBindingResponse {
@@ -500,6 +518,7 @@ enum WithdrawOrderPaymentStatus {
   Success = 5;
   Failed = 6;
   ExpirationRejected = 7;
+  Canceled = 8;
 }
 
 message WithdrawSuccessPush {
@@ -524,6 +543,7 @@ message ListWithdrawOrdersRespWithdrawOrder {
   int32 withdrawOrderPaymentStatus = 4;
   int64 createdAtTimestampMillisecond = 5;
   string remark = 6;
+  string uuu = 7;
 }
 
 message ListWithdrawOrdersResp {
@@ -550,6 +570,12 @@ message CreateWithdrawOrderResp {
   string withdrawOrderUID = 1;
   string paymentURL = 2;
 }
+
+message CancelRedeemOrderReq {
+  string redeemOrderUID = 1;
+}
+
+message CancelRedeemOrderResp {}
 
 // --- Referral — 對齊 proto/megaman/activity.proto；Gateway GetReferralInfo=540, ClaimReferralReward=541 ---
 // google.protobuf.StringValue 二進位相容（field 1 = value）

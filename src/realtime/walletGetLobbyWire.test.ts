@@ -5,6 +5,7 @@ import {
   decodeWalletGetResponseBytes,
   encodeWalletGetRequestBytes,
   encodeWalletGetResponseBytes,
+  parseRedeemSCList,
   parseSubsidyAmount,
 } from "./walletGetLobbyWire";
 
@@ -49,6 +50,18 @@ describe("decodeWalletGetResponseBytes", () => {
     const decoded = decodeWalletGetResponseBytes(raw);
     expect(parseSubsidyAmount(decoded.subsidyAmount)).toBe(0);
   });
+
+  it("decodes redeemSCList field 3", () => {
+    const msg = WalletGetResponsePb.create({
+      redeemSCList: ["1000000", "2500000"],
+    });
+    const raw = Uint8Array.from(WalletGetResponsePb.encode(msg).finish());
+    const decoded = decodeWalletGetResponseBytes(raw);
+    expect(parseRedeemSCList(decoded.redeemSCList)).toEqual([
+      "1000000",
+      "2500000",
+    ]);
+  });
 });
 
 describe("encodeWalletGetResponseBytes", () => {
@@ -56,6 +69,13 @@ describe("encodeWalletGetResponseBytes", () => {
     const raw = encodeWalletGetResponseBytes(100000);
     const decoded = decodeWalletGetResponseBytes(raw);
     expect(parseSubsidyAmount(decoded.subsidyAmount)).toBe(100000);
+  });
+});
+
+describe("parseRedeemSCList", () => {
+  it("filters invalid entries", () => {
+    expect(parseRedeemSCList(["100", "bad", "200"])).toEqual(["100", "200"]);
+    expect(parseRedeemSCList(null)).toEqual([]);
   });
 });
 

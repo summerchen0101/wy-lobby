@@ -51,7 +51,7 @@ export function scTruncatedDisplayFromRaw(raw: number): number {
 /** 後端原始值 → 顯示字串（向零捨去至小數二位，與 header SC 一致）。 */
 export function formatScFromRaw(raw: number | undefined): string {
   if (raw === undefined) return "—";
-  return formatWalletScAmountForDisplay(scRawToDisplay(raw));
+  return formatScFromTruncatedHundredths(scTruncatedHundredthsFromRaw(raw));
 }
 
 /** 已截斷至小數二位的 SC 顯示值（×100 整數）→ 顯示字串；避免大額 raw 相減後 `formatScFromRaw` 浮點誤差。 */

@@ -7,6 +7,17 @@ import {
 } from '../../lib/api/auth'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
 import { useWordData } from '../../wordData/useWordData'
+import { AuthFieldError } from './AuthFieldError'
+import {
+  clearFieldError,
+  hasFieldErrors,
+  PASSWORD_MAX_LENGTH,
+  type ForgotPasswordEmailFieldErrors,
+  type ForgotPasswordResetFieldErrors,
+  translateVerificationCodeSubmitError,
+  validateForgotPasswordEmail,
+  validateForgotPasswordReset,
+} from './authFormValidation'
 import './AuthModals.css'
 
 type Props = {
@@ -33,9 +44,6 @@ function IconEyeClosed() {
   )
 }
 
-const OTP_MIN_LEN = 4
-const OTP_MAX_LEN = 6
-
 export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
   const w = useWordData()
   const formId = useId()
@@ -50,7 +58,10 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailFieldErrors, setEmailFieldErrors] = useState<ForgotPasswordEmailFieldErrors>({})
+  const [resetFieldErrors, setResetFieldErrors] = useState<ForgotPasswordResetFieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -70,17 +81,22 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
     setPassword('')
     setPasswordConfirm('')
     setShowPassword(false)
+    setShowPasswordConfirm(false)
     setError(null)
+    setEmailFieldErrors({})
+    setResetFieldErrors({})
   }, [open])
 
   async function onSendEmail(e: FormEvent) {
     e.preventDefault()
     setError(null)
     const trimmed = email.trim()
-    if (!trimmed) {
-      setError(w(550))
+    const nextFieldErrors = validateForgotPasswordEmail(trimmed)
+    if (hasFieldErrors(nextFieldErrors)) {
+      setEmailFieldErrors(nextFieldErrors)
       return
     }
+    setEmailFieldErrors({})
     setSubmitting(true)
     try {
       await requestPasswordReset({ email: trimmed })
@@ -107,15 +123,17 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
   async function onSubmitNewPassword(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    const nextFieldErrors = validateForgotPasswordReset({
+      code,
+      password,
+      passwordConfirm,
+    })
+    if (hasFieldErrors(nextFieldErrors)) {
+      setResetFieldErrors(nextFieldErrors)
+      return
+    }
+    setResetFieldErrors({})
     const c = code.replace(/\s/g, '')
-    if (c.length < OTP_MIN_LEN || c.length > OTP_MAX_LEN) {
-      setError(w(106))
-      return
-    }
-    if (password !== passwordConfirm) {
-      setError(w(552))
-      return
-    }
     setSubmitting(true)
     try {
       await completePasswordReset({
@@ -130,13 +148,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
         setError(w(2302))
         return
       }
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : 'Reset failed'
-      setError(msg)
+      setError(translateVerificationCodeSubmitError(err, 'Reset failed'))
     } finally {
       setSubmitting(false)
     }
@@ -169,6 +181,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                     setPassword('')
                     setPasswordConfirm('')
                     setError(null)
+                    setResetFieldErrors({})
                   }
                 : phase === 'success'
                   ? onClose
@@ -210,9 +223,14 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 autoComplete="email"
                 placeholder={w(7)}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setEmailFieldErrors((prev) => clearFieldError(prev, 'email'))
+                }}
                 required
+                aria-invalid={Boolean(emailFieldErrors.email)}
               />
+              <AuthFieldError message={emailFieldErrors.email} variant="modal" />
               {error ? <p className="auth-modal__error">{error}</p> : null}
               <button type="submit" className="auth-modal__submit" disabled={submitting}>
                 {submitting ? '…' : w(30)}
@@ -242,9 +260,14 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 autoComplete="one-time-code"
                 placeholder={w(36)}
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e) => {
+                  setCode(e.target.value)
+                  setResetFieldErrors((prev) => clearFieldError(prev, 'code'))
+                }}
                 required
+                aria-invalid={Boolean(resetFieldErrors.code)}
               />
+              <AuthFieldError message={resetFieldErrors.code} variant="modal" />
               <label
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={pwdId}
@@ -260,8 +283,14 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                   autoComplete="new-password"
                   placeholder={w(38)}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setResetFieldErrors((prev) => clearFieldError(prev, 'password'))
+                  }}
                   required
+                  minLength={6}
+                  maxLength={PASSWORD_MAX_LENGTH}
+                  aria-invalid={Boolean(resetFieldErrors.password)}
                 />
                 <button
                   type="button"
@@ -273,6 +302,7 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                   {showPassword ? <IconEyeClosed /> : <IconEyeOpen />}
                 </button>
               </div>
+              <AuthFieldError message={resetFieldErrors.password} variant="modal" />
               <label
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={pwd2Id}
@@ -283,23 +313,30 @@ export function ForgotPasswordModal({ open, onClose, onSwitchToLogin }: Props) {
                 <input
                   id={pwd2Id}
                   className="auth-modal__input auth-modal__input--register auth-modal__input--password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPasswordConfirm ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder={w(22)}
                   value={passwordConfirm}
-                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  onChange={(e) => {
+                    setPasswordConfirm(e.target.value)
+                    setResetFieldErrors((prev) => clearFieldError(prev, 'passwordConfirm'))
+                  }}
                   required
+                  minLength={6}
+                  maxLength={PASSWORD_MAX_LENGTH}
+                  aria-invalid={Boolean(resetFieldErrors.passwordConfirm)}
                 />
                 <button
                   type="button"
                   className="auth-modal__password-toggle"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  aria-pressed={showPassword}
+                  onClick={() => setShowPasswordConfirm((v) => !v)}
+                  aria-label={showPasswordConfirm ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPasswordConfirm}
                 >
-                  {showPassword ? <IconEyeClosed /> : <IconEyeOpen />}
+                  {showPasswordConfirm ? <IconEyeClosed /> : <IconEyeOpen />}
                 </button>
               </div>
+              <AuthFieldError message={resetFieldErrors.passwordConfirm} variant="modal" />
               {error ? <p className="auth-modal__error">{error}</p> : null}
               <button type="submit" className="auth-modal__submit" disabled={submitting}>
                 {submitting ? '…' : w(41)}

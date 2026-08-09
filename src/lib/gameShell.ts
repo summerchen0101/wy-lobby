@@ -1,16 +1,20 @@
 import { openGamesInNewWindowDefault } from "./env";
 import { createShellQuitMessage } from "./gameShellMessages";
+import { isDesktopLikeBrowser } from "./iosGameFullscreen";
 import { isLobbySoundEnabled } from "./lobbySound";
 
 const GAME_POPOUT_STORAGE_PREFIX = "ffgt:gamePopout:v1:";
 
 /** 僅允許 http(s)，供遊戲 iframe／新分頁外殼辨識可載入之外部網址。 */
-/** Unity WebEntry：`volume=1` 開啟、`volume=0` 關閉（對應大廳 Profile 音量開關）。 */
+/** Unity WebEntry：`volume=1` 開啟、`volume=0` 關閉（對應大廳 Profile 音量開關）；桌機網頁帶 `isPC=1`。 */
 export function appendGameLaunchQueryParams(gameUrl: string): string {
   const safe = parseSafeHttpGameUrl(gameUrl);
   if (!safe) return gameUrl;
   const u = new URL(safe);
   u.searchParams.set("volume", isLobbySoundEnabled() ? "1" : "0");
+  if (isDesktopLikeBrowser()) {
+    u.searchParams.set("isPC", "1");
+  }
   return u.toString();
 }
 

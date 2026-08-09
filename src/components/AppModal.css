@@ -6,19 +6,21 @@
   position: fixed;
   inset: 0;
   z-index: var(--modal-z-index);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-top: max(var(--page-pad), var(--safe-top));
-  padding-bottom: max(var(--page-pad), var(--safe-bottom));
+  display: grid;
+  place-items: center;
   padding-left: var(--page-pad-inline);
   padding-right: var(--page-pad-inline);
+  box-sizing: border-box;
   background: var(--modal-overlay-scrim);
   backdrop-filter: blur(var(--modal-overlay-blur));
 }
 
 .app-modal {
   width: 100%;
+  max-height: calc(
+    100dvh - max(var(--page-pad), var(--safe-top)) -
+      max(var(--page-pad), var(--safe-bottom))
+  );
   box-sizing: border-box;
   color: var(--color-text);
   background: var(--modal-panel-bg);
@@ -36,6 +38,21 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.app-modal.shop-checkout.app-modal--redeem-binding {
+  max-height: min(94dvh, 780px);
+}
+
+.app-modal--redeem-binding {
+  /* Native <select> menus mis-anchor when ancestors clip with overflow:hidden. */
+  overflow: visible;
+}
+
+.app-modal--redeem-binding .redeem-protect__form-wrap {
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: min(78dvh, 40rem);
 }
 
 .app-modal__header {

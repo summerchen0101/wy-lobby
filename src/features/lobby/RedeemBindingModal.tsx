@@ -45,7 +45,7 @@ export function RedeemBindingModal({
       role="presentation"
       onClick={handleBackdrop}>
       <div
-        className="app-modal app-modal--col shop-checkout"
+        className="app-modal app-modal--col app-modal--redeem-binding shop-checkout"
         role="dialog"
         aria-modal="true"
         aria-labelledby="redeem-protect-dialog-title"

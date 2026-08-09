@@ -49,6 +49,10 @@ interface ImportMetaEnv {
    * 搭配 `window.__ffgtDevBeggarEnvelope` 在 console 測試。
    */
   readonly VITE_DEV_WALLET_GET_SUBSIDY?: string;
+  /**
+   * 僅 dev：提領核准彈窗 WALLET_GET mock。逗號分隔 wire SC，如 `1000000` 或 `500000,1200000`。
+   */
+  readonly VITE_DEV_WALLET_GET_REDEEM_SC_LIST?: string;
   /** 寫入 Gateway RequestBasic.clientVer */
   readonly VITE_CLIENT_VER?: string;
   /**
@@ -110,10 +114,8 @@ interface ImportMetaEnv {
   readonly VITE_PUBLIC_IMAGE_CDN_BASE?: string;
   /** Radar Web SDK publishable key；未設則跳過地理圍欄檢查 */
   readonly VITE_RADAR_PUBLISHABLE_KEY?: string;
-  /** Socure Digital Intelligence Web SDK key；未設則帳號綁定無法取得 di session token */
+  /** Socure Web SDK key（DI 裝置驗證 + DocV 證件驗證）；未設則綁定／DocV 無法啟動 */
   readonly VITE_SOCURE_SDK_KEY?: string;
-  /** Socure DocV Web SDK key；未設則提現 DocV 驗證無法啟動 */
-  readonly VITE_SOCURE_DOCV_SDK_KEY?: string;
 }
 
 interface ImportMeta {

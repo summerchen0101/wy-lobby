@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { useAlert } from "../../components/alert/alertContext";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
 import { isThirdPartyPaymentEnabled } from "../../lib/env";
-import { usePaymentCallbackListener } from "../payment/usePaymentCallbackListener";
+import { navigateToThirdPartyPayment } from "../../lib/thirdPartyPaymentNavigation";
 import {
   GATEWAY_API_BUY_PRODUCT,
   GATEWAY_API_MEGA_ACCOUNT_BINDING,
@@ -20,9 +21,8 @@ import {
   setSocureBindingNavigationContext,
 } from "../../lib/socure/socureDevice";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
-import { publicImageUrl } from "../../lib/publicImageUrl";
 import { isPhoneBound } from "./isPhoneBound";
-import { translateGatewayError } from "../../i18n/apiErrorMessage";
+import { translateShopGatewayError } from "./shopGatewayError";
 import { ShopCheckoutOverlay, type CheckoutStep } from "./ShopCheckoutOverlay";
 import type {
   ShopBindingFormPayload,
@@ -30,23 +30,44 @@ import type {
   ShopBindingPrefill,
 } from "./types";
 import { useWordData } from "../../wordData/useWordData";
+import { getWord } from "../../wordData/getWord";
+import { formatVipPoints } from "../lobby/vipHelpers";
+import { shopCoinPileSrc } from "./shopCoinPile";
+import { ShopPurchaseRewardAnimation } from "./ShopPurchaseRewardAnimation";
+import {
+  dispatchShopRewardDevPreview,
+  installShopRewardDevMock,
+  parseShopRewardDevQuery,
+  SHOP_REWARD_DEV_MOCK_PACK,
+  SHOP_REWARD_DEV_PREVIEW_EVENT,
+  type ShopRewardDevPreviewDetail,
+} from "./shopRewardDevMock";
+import {
+  clearPendingShopOrder,
+  createPendingShopOrder,
+  isPaymentPushFailure,
+  persistPendingShopOrder,
+  readPendingShopOrder,
+  shouldAcceptPaymentComplete,
+  type PendingShopOrder,
+} from "./shopPaymentSession";
+import {
+  parseShopPaymentState,
+  stripShopPaymentStateParam,
+} from "./shopPaymentReturn";
 import "./ShopPage.css";
 import "../lobby/SessionPageDecor.css";
-
-const PANEL = publicImageUrl("/images/shop");
 
 const PAYMENT_UNAVAILABLE_MSG =
   "Payment is unavailable. Please try again later.";
 
-/** BuyProduct 新第三方：PaymentType 固定 0，方式於 paymentURL 頁選擇。 */
+/** WebGL：PaymentType 固定 0，付款方式於 paymentURL 頁選擇。 */
 const BUY_PRODUCT_PAYMENT_TYPE = 0;
-
-function coinPileSrc(n: 1 | 2 | 3 | 4 | 5) {
-  return `${PANEL}/icon_coinPile${n}.png`;
-}
 
 export function ShopPage() {
   const w = useWordData();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { show } = useAlert();
   const { token, user, mergeUser } = useAuth();
   const {
@@ -65,6 +86,15 @@ export function ShopPage() {
   const [protectNeedSms, setProtectNeedSms] = useState(false);
   const [bindingBusy, setBindingBusy] = useState(false);
   const [bindingError, setBindingError] = useState<string | null>(null);
+  const [rewardAnimPack, setRewardAnimPack] = useState<ShopPack | null>(null);
+  const [pendingOrder, setPendingOrder] = useState<PendingShopOrder | null>(() =>
+    readPendingShopOrder(),
+  );
+  const successCloseTimerRef = useRef<number | null>(null);
+  const completionHandledRef = useRef(false);
+  const processedPaymentReturnRef = useRef<string | null>(null);
+  const processedDevRewardQueryRef = useRef<string | null>(null);
+  const rewardAnimNavigateRef = useRef(true);
 
   useEffect(() => {
     if (!token || !gatewayRequestReady) return;
@@ -73,55 +103,149 @@ export function ShopPage() {
 
   const packs = shopPacks ?? [];
   const listLoading = Boolean(token) && shopPacks === null;
+  const paymentMonitoringActive = Boolean(pendingOrder);
 
-  const closeCheckout = useCallback(() => {
+  const clearSuccessCloseTimer = useCallback(() => {
+    if (successCloseTimerRef.current != null) {
+      window.clearTimeout(successCloseTimerRef.current);
+      successCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const resetCheckoutUi = useCallback(() => {
+    clearSuccessCloseTimer();
     setCheckoutPack(null);
     setCheckoutStep("loading");
     setPaymentUrl(null);
     setBuyError(null);
     setProtectNeedSms(false);
     setBindingError(null);
-  }, []);
+  }, [clearSuccessCloseTimer]);
 
-  const handlePaymentCallback = useCallback(
-    (payload: { state: 1 | 2 }) => {
-      if (checkoutStep !== "payment" || !paymentUrl) return;
-      if (payload.state === 2) {
-        closeCheckout();
-        show("Payment was not completed.", { variant: "info" });
+  const closeCheckout = useCallback(() => {
+    resetCheckoutUi();
+    clearPendingShopOrder();
+    setPendingOrder(null);
+    completionHandledRef.current = false;
+  }, [resetCheckoutUi]);
+
+  const dismissCheckoutOverlay = useCallback(() => {
+    resetCheckoutUi();
+  }, [resetCheckoutUi]);
+
+  const dismissPendingPaymentSilently = useCallback(() => {
+    completionHandledRef.current = false;
+    clearPendingShopOrder();
+    setPendingOrder(null);
+    resetCheckoutUi();
+  }, [resetCheckoutUi]);
+
+  const handlePaymentSuccess = useCallback(() => {
+    if (!shouldAcceptPaymentComplete(completionHandledRef.current)) return;
+    completionHandledRef.current = true;
+    const pending = pendingOrder ?? readPendingShopOrder();
+    if (!pending) return;
+    clearPendingShopOrder();
+    setPendingOrder(null);
+    setPaymentUrl(null);
+    rewardAnimNavigateRef.current = true;
+    setCheckoutPack(pending.pack);
+    setCheckoutStep("success");
+  }, [pendingOrder]);
+
+  useEffect(() => {
+    const raw = searchParams.get("paymentState");
+    if (raw == null) return;
+
+    const fingerprint = searchParams.toString();
+    if (processedPaymentReturnRef.current === fingerprint) return;
+    processedPaymentReturnRef.current = fingerprint;
+
+    const paymentState = parseShopPaymentState(raw);
+    const nextParams = stripShopPaymentStateParam(searchParams);
+    setSearchParams(nextParams, { replace: true });
+
+    if (paymentState !== 1) {
+      dismissPendingPaymentSilently();
+      return;
+    }
+
+    handlePaymentSuccess();
+  }, [
+    searchParams,
+    setSearchParams,
+    dismissPendingPaymentSilently,
+    handlePaymentSuccess,
+  ]);
+
+  useEffect(() => {
+    if (!paymentMonitoringActive) return;
+    return subscribePaymentFinish((push) => {
+      if (isPaymentPushFailure(push)) {
+        dismissPendingPaymentSilently();
         return;
       }
-      setPaymentUrl(null);
-      setCheckoutStep("success");
-    },
-    [checkoutStep, paymentUrl, closeCheckout, show],
-  );
+      handlePaymentSuccess();
+    });
+  }, [
+    paymentMonitoringActive,
+    subscribePaymentFinish,
+    dismissPendingPaymentSilently,
+    handlePaymentSuccess,
+  ]);
 
-  usePaymentCallbackListener(
-    "shop",
-    checkoutStep === "payment" && !!paymentUrl,
-    handlePaymentCallback,
+  const applyShopRewardDevPreview = useCallback(
+    (detail: ShopRewardDevPreviewDetail) => {
+      const pack = detail.pack ?? SHOP_REWARD_DEV_MOCK_PACK;
+      const navigateAfter = detail.navigateAfter ?? false;
+      rewardAnimNavigateRef.current = navigateAfter;
+      if (detail.mode === "success") {
+        setCheckoutPack(pack);
+        setCheckoutStep("success");
+        return;
+      }
+      setRewardAnimPack(pack);
+    },
+    [],
   );
 
   useEffect(() => {
-    if (checkoutStep !== "payment" || !paymentUrl) return;
-    return subscribePaymentFinish((push) => {
-      const err = String(push.errorMsg ?? "").trim();
-      const reason = String(push.reason ?? "").trim();
-      if (err || reason) {
-        closeCheckout();
-        show(err || reason, { variant: "info" });
-        return;
-      }
-      setPaymentUrl(null);
-      setCheckoutStep("success");
-    });
-  }, [checkoutStep, paymentUrl, subscribePaymentFinish, closeCheckout, show]);
+    if (!import.meta.env.DEV) return;
+    installShopRewardDevMock();
+    const onPreview = (e: Event) => {
+      applyShopRewardDevPreview(
+        (e as CustomEvent<ShopRewardDevPreviewDetail>).detail,
+      );
+    };
+    window.addEventListener(SHOP_REWARD_DEV_PREVIEW_EVENT, onPreview);
+    return () =>
+      window.removeEventListener(SHOP_REWARD_DEV_PREVIEW_EVENT, onPreview);
+  }, [applyShopRewardDevPreview]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const raw = searchParams.get("devShopReward");
+    const mode = parseShopRewardDevQuery(raw);
+    if (!mode) return;
+
+    const fingerprint = searchParams.toString();
+    if (processedDevRewardQueryRef.current === fingerprint) return;
+    processedDevRewardQueryRef.current = fingerprint;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("devShopReward");
+    setSearchParams(nextParams, { replace: true });
+    dispatchShopRewardDevPreview({ mode, navigateAfter: false });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (checkoutStep !== "protect") return;
     void setSocureBindingNavigationContext();
   }, [checkoutStep]);
+
+  useEffect(() => {
+    return () => clearSuccessCloseTimer();
+  }, [clearSuccessCloseTimer]);
 
   const notifyPaymentBlocked = useCallback(() => {
     show(PAYMENT_UNAVAILABLE_MSG, { variant: "info" });
@@ -129,15 +253,11 @@ export function ShopPage() {
 
   const openThirdPartyPaymentPage = useCallback(
     (url: string) => {
-      const trimmed = url.trim();
-      if (!trimmed) return false;
       if (!isThirdPartyPaymentEnabled()) {
         notifyPaymentBlocked();
         return false;
       }
-      const w = window.open(trimmed, "_blank");
-      if (!w) console.warn("[shop] payment window.open blocked");
-      return true;
+      return navigateToThirdPartyPayment(url);
     },
     [notifyPaymentBlocked],
   );
@@ -147,6 +267,7 @@ export function ShopPage() {
       const req = requestRef.current;
       if (!req) {
         setBuyError("Not connected");
+        setCheckoutStep("loading");
         return;
       }
       if (!isThirdPartyPaymentEnabled()) {
@@ -154,11 +275,11 @@ export function ShopPage() {
         closeCheckout();
         return;
       }
+      completionHandledRef.current = false;
+      setCheckoutStep("loading");
       setBuyBusy(true);
       setBuyError(null);
-      let paymentTab: Window | null = null;
       try {
-        paymentTab = window.open("about:blank", "_blank");
         const r = await req({
           type: GATEWAY_API_BUY_PRODUCT,
           data: encodeBuyProductRequestBytes(
@@ -169,34 +290,31 @@ export function ShopPage() {
         });
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
-          paymentTab?.close();
-          setBuyError(translateGatewayError(code, r.errMessage, `Purchase failed (${code})`));
+          setBuyError(
+            translateShopGatewayError(
+              code,
+              r.errMessage,
+              `Purchase failed (${code})`,
+            ),
+          );
           return;
         }
         const raw = r.data;
         if (!(raw instanceof Uint8Array) || raw.byteLength === 0) {
-          paymentTab?.close();
           setBuyError("Empty purchase response");
           return;
         }
-        const { paymentURL: url } = decodeBuyProductResponseBytes(raw);
+        const { orderID, paymentURL: url } = decodeBuyProductResponseBytes(raw);
         if (!url?.trim()) {
-          paymentTab?.close();
           setBuyError("No payment URL returned");
           return;
         }
         const trimmed = url.trim();
-        if (paymentTab && !paymentTab.closed) {
-          try {
-            paymentTab.location.href = trimmed;
-          } catch {
-            paymentTab.close();
-          }
-        }
-        setPaymentUrl(trimmed);
-        setCheckoutStep("payment");
+        const pending = createPendingShopOrder(orderID, pack);
+        persistPendingShopOrder(pending);
+        setPendingOrder(pending);
+        navigateToThirdPartyPayment(trimmed);
       } catch (e) {
-        paymentTab?.close();
         setBuyError(e instanceof Error ? e.message : "Purchase failed");
       } finally {
         setBuyBusy(false);
@@ -205,22 +323,31 @@ export function ShopPage() {
     [requestRef, notifyPaymentBlocked, closeCheckout],
   );
 
-  const onPackPriceClick = useCallback(
+  const onPackClick = useCallback(
     (p: ShopPack) => {
       if (checkoutPack) return;
       setBuyError(null);
       setPaymentUrl(null);
       setProtectNeedSms(false);
       setBindingError(null);
+      completionHandledRef.current = false;
       setCheckoutPack(p);
       if (!isPhoneBound(user)) {
         setCheckoutStep("protect");
         return;
       }
-      setCheckoutStep("loading");
       void executeBuyProduct(p);
     },
     [checkoutPack, user, executeBuyProduct],
+  );
+
+  const onPackKeyDown = useCallback(
+    (e: KeyboardEvent, p: ShopPack) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      onPackClick(p);
+    },
+    [onPackClick],
   );
 
   const handleBindingSubmit = useCallback(
@@ -264,7 +391,13 @@ export function ShopPage() {
         });
         const code = String(r.code ?? "");
         if (!isGatewaySuccessCode(code)) {
-          setBindingError(translateGatewayError(code, r.errMessage, `Binding failed (${code})`));
+          setBindingError(
+            translateShopGatewayError(
+              code,
+              r.errMessage,
+              `Binding failed (${code})`,
+            ),
+          );
           return;
         }
         const raw = r.data;
@@ -275,7 +408,7 @@ export function ShopPage() {
         if (decoded.needSMSAnswer) {
           setProtectNeedSms(true);
           if (payload.answer.trim()) {
-            setBindingError("Invalid or expired verification code.");
+            setBindingError(getWord(553));
           }
           return;
         }
@@ -284,31 +417,78 @@ export function ShopPage() {
         await refreshLobbyGet();
         setProtectNeedSms(false);
         setBindingError(null);
-        closeCheckout();
-        show("Account verified. Please tap purchase again to continue.", {
-          variant: "success",
-        });
+        setCheckoutStep("bindingSuccess");
       } catch (e) {
         setBindingError(e instanceof Error ? e.message : "Binding failed");
       } finally {
         setBindingBusy(false);
       }
     },
-    [
-      checkoutPack,
-      user?.id,
-      requestRef,
-      mergeUser,
-      refreshLobbyGet,
-      closeCheckout,
-      show,
-    ],
+    [checkoutPack, user?.id, requestRef, mergeUser, refreshLobbyGet],
   );
+
+  const handleBindingSuccessConfirm = useCallback(() => {
+    if (!checkoutPack) return;
+    void executeBuyProduct(checkoutPack);
+  }, [checkoutPack, executeBuyProduct]);
 
   const handleBackToProtectForm = useCallback(() => {
     setProtectNeedSms(false);
     setBindingError(null);
   }, []);
+
+  const handleLoadingClose = useCallback(() => {
+    closeCheckout();
+  }, [closeCheckout]);
+
+  const handlePaymentOverlayClose = useCallback(() => {
+    dismissCheckoutOverlay();
+  }, [dismissCheckoutOverlay]);
+
+  const handlePlayNowFromSuccess = useCallback(() => {
+    const pack = checkoutPack;
+    if (!pack) return;
+    clearSuccessCloseTimer();
+    const navigateAfter = rewardAnimNavigateRef.current;
+    resetCheckoutUi();
+    rewardAnimNavigateRef.current = navigateAfter;
+    setRewardAnimPack(pack);
+  }, [checkoutPack, clearSuccessCloseTimer, resetCheckoutUi]);
+
+  const handleRewardAnimationComplete = useCallback(async () => {
+    setRewardAnimPack(null);
+    const shouldNavigate = rewardAnimNavigateRef.current;
+    rewardAnimNavigateRef.current = true;
+    if (!shouldNavigate) return;
+    try {
+      await refreshLobbyGet();
+    } catch {
+      /* balance refresh best-effort */
+    }
+    navigate("/");
+  }, [refreshLobbyGet, navigate]);
+
+  const handleCheckoutClose = useCallback(() => {
+    if (checkoutStep === "loading") {
+      handleLoadingClose();
+      return;
+    }
+    if (checkoutStep === "payment") {
+      handlePaymentOverlayClose();
+      return;
+    }
+    if (checkoutStep === "success") {
+      handlePlayNowFromSuccess();
+      return;
+    }
+    closeCheckout();
+  }, [
+    checkoutStep,
+    handleLoadingClose,
+    handlePaymentOverlayClose,
+    handlePlayNowFromSuccess,
+    closeCheckout,
+  ]);
 
   return (
     <div className="shop-page page-container session-page session-page--pattern">
@@ -326,7 +506,19 @@ export function ShopPage() {
         ) : (
           <ul className="shop-page__grid">
             {packs.map((p) => (
-              <li key={p.id} className="shop-page__card">
+              <li
+                key={p.id}
+                className={
+                  "shop-page__card shop-page__card--clickable" +
+                  (checkoutPack || rewardAnimPack
+                    ? " shop-page__card--disabled"
+                    : "")
+                }
+                role="button"
+                tabIndex={checkoutPack || rewardAnimPack ? -1 : 0}
+                aria-disabled={checkoutPack || rewardAnimPack ? true : undefined}
+                onClick={() => onPackClick(p)}
+                onKeyDown={(e) => onPackKeyDown(e, p)}>
                 <div className="shop-page__card-mid">
                   <div className="shop-page__card-top">
                     <span className="shop-page__gc-row">
@@ -345,35 +537,54 @@ export function ShopPage() {
                   </div>
                   <div className="shop-page__card-art" data-pile={p.coinPile}>
                     <img
-                      src={coinPileSrc(p.coinPile)}
+                      src={shopCoinPileSrc(p.coinPile)}
                       alt=""
                       className="shop-page__card-art-img"
                       loading="lazy"
                       decoding="async"
                     />
                   </div>
-                  <p
-                    className="shop-page__bonus"
-                    aria-label={`Plus free SC ${p.bonusSc}`}>
-                    <span className="shop-page__bonus-free">+{w(105)}</span>
-                    <span className="shop-page__chip shop-page__chip--sc">
-                      <img
-                        src={CURRENCY_ICON_SC}
-                        alt=""
-                        width={24}
-                        height={24}
-                      />
-                    </span>
-                    <span className="shop-page__bonus-amt">{p.bonusSc}</span>
-                  </p>
+                  <div className="shop-page__card-spacer" aria-hidden="true" />
+                  <div className="shop-page__card-meta">
+                    <p
+                      className="shop-page__bonus"
+                      aria-label={`Plus free SC ${p.bonusSc}`}>
+                      <span className="shop-page__bonus-free">+{w(105)}</span>
+                      <span className="shop-page__chip shop-page__chip--sc">
+                        <img
+                          src={CURRENCY_ICON_SC}
+                          alt=""
+                          width={24}
+                          height={24}
+                        />
+                      </span>
+                      <span className="shop-page__bonus-amt">{p.bonusSc}</span>
+                    </p>
+                    <p
+                      className={
+                        p.vipExp > 0
+                          ? "shop-page__vip"
+                          : "shop-page__vip shop-page__vip--placeholder"
+                      }
+                      aria-hidden={p.vipExp <= 0 ? true : undefined}
+                      aria-label={
+                        p.vipExp > 0 ? `VIP points ${p.vipExp}` : undefined
+                      }>
+                      {p.vipExp > 0 ? (
+                        <>
+                          <span className="shop-page__vip-plus">+</span>
+                          <span className="shop-page__vip-amt">
+                            {formatVipPoints(p.vipExp)}
+                          </span>
+                          <span className="shop-page__vip-label">
+                            {w(510760)}
+                          </span>
+                        </>
+                      ) : null}
+                    </p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className="shop-page__price-btn"
-                  disabled={!!checkoutPack}
-                  onClick={() => onPackPriceClick(p)}>
-                  {p.price}
-                </button>
+                <span className="shop-page__price-pill">{p.price}</span>
               </li>
             ))}
           </ul>
@@ -395,10 +606,19 @@ export function ShopPage() {
               phone: user?.phone,
             } satisfies ShopBindingPrefill
           }
-          onClose={closeCheckout}
+          onClose={handleCheckoutClose}
+          onBackFromProtect={closeCheckout}
           onBackToProtectForm={handleBackToProtectForm}
           onBindingSubmit={handleBindingSubmit}
+          onBindingSuccessConfirm={handleBindingSuccessConfirm}
           onOpenPaymentPage={openThirdPartyPaymentPage}
+          onPlayNow={handlePlayNowFromSuccess}
+        />
+      ) : null}
+      {rewardAnimPack ? (
+        <ShopPurchaseRewardAnimation
+          pack={rewardAnimPack}
+          onComplete={handleRewardAnimationComplete}
         />
       ) : null}
     </div>

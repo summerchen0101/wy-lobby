@@ -81,6 +81,16 @@ describe("fundsHistoryLobbyWire", () => {
     expect(tradeEventToLabel("PAYMENT_BUY_GOLD")).toBe(getWord(510769));
   });
 
+  it("decodes VIPLevelBonus (TradeEvent 111) as Level Up Bonus", () => {
+    expect(tradeEventToLabel(111)).toBe(getWord(510783));
+    expect(tradeEventToLabel("VIPLevelBonus")).toBe(getWord(510783));
+  });
+
+  it("decodes AMOE_AWARD (TradeEvent 112) as AMOE", () => {
+    expect(tradeEventToLabel(112)).toBe(getWord(510784));
+    expect(tradeEventToLabel("AMOE_AWARD")).toBe(getWord(510784));
+  });
+
   it("formats timestamp as MM/DD/YYYY in America/New_York", () => {
     expect(formatFundsHistoryDate("1781491946824")).toBe("06/14/2026");
   });

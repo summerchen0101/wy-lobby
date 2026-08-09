@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { publicImageUrl } from '../lib/publicImageUrl'
 import {
   ZENDESK_CONTACT_REQUEST_URL,
@@ -32,16 +33,23 @@ export type LobbyComplianceFooterProps = {
 function FooterLink({ href, label }: { href: string; label: string }) {
   const external = /^https?:\/\//i.test(href)
 
+  if (external) {
+    return (
+      <a
+        className="lobby-comp__link"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {label}
+      </a>
+    )
+  }
+
   return (
-    <a
-      className="lobby-comp__link"
-      href={href}
-      {...(external
-        ? { target: '_blank', rel: 'noopener noreferrer' }
-        : {})}
-    >
+    <Link className="lobby-comp__link" to={href}>
       {label}
-    </a>
+    </Link>
   )
 }
 
@@ -76,9 +84,9 @@ export function LobbyComplianceFooter({ variant }: LobbyComplianceFooterProps) {
 
         <p className="lobby-comp__rsp-text">{getWord(205)}</p>
 
-        <a href="/term" className="lobby-comp__rsp-btn">
+        <Link to="/term" className="lobby-comp__rsp-btn">
           {getWord(204)}
-        </a>
+        </Link>
 
         <div className="lobby-comp__divider" aria-hidden />
 

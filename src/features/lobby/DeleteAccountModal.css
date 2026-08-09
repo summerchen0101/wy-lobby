@@ -1,57 +1,104 @@
+.app-modal.delete-account-modal {
+  max-width: 22rem;
+}
+
+.delete-account-modal .app-modal__body {
+  padding: var(--space-5) var(--space-5) var(--space-6);
+}
+
 .delete-account-modal__text {
-  margin: 0 0 1rem;
-  line-height: 1.45;
+  margin: 0 0 var(--space-4);
+  line-height: 1.5;
   white-space: pre-wrap;
+  text-align: center;
 }
 
 .delete-account-modal__label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-3);
   font-size: 0.875rem;
+  text-align: center;
 }
 
 .delete-account-modal__input {
+  display: block;
   width: 100%;
-  margin-bottom: 1rem;
-  padding: 0.65rem 0.75rem;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, #fff 18%, transparent);
-  background: color-mix(in srgb, #000 35%, transparent);
-  color: inherit;
+  margin-bottom: var(--space-5);
+  min-height: 2.35rem;
+  padding: 0.45rem 0.85rem;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 999px;
+  background: #0a0a0a;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
-.delete-account-modal__warn {
-  margin: 0 0 1rem;
-  white-space: pre-wrap;
-  opacity: 0.9;
+.delete-account-modal__input:focus {
+  outline: 2px solid color-mix(in srgb, var(--crown-locale-green) 55%, transparent);
+  outline-offset: 2px;
 }
 
 .delete-account-modal__actions {
   display: flex;
   gap: 0.75rem;
+  margin-top: var(--space-2);
 }
 
 .delete-account-modal__cancel,
 .delete-account-modal__submit {
   flex: 1;
+  min-height: 2.6rem;
   padding: 0.75rem 1rem;
   border-radius: 999px;
   border: none;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   cursor: pointer;
-}
-
-.delete-account-modal__cancel {
-  background: color-mix(in srgb, #fff 12%, transparent);
-  color: inherit;
-}
-
-.delete-account-modal__submit {
-  background: var(--crown-locale-green, #5878ff);
-  color: #fff;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .delete-account-modal__submit:disabled {
-  opacity: 0.45;
+  opacity: 0.55;
   cursor: not-allowed;
+}
+
+.delete-account-modal__error-overlay {
+  z-index: calc(var(--modal-z-index) + 100);
+}
+
+.delete-account-modal__error {
+  max-width: min(26rem, 100%);
+}
+
+.delete-account-modal__error-body {
+  padding: var(--space-5, 1.35rem);
+}
+
+.delete-account-modal__error-message {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: rgb(255 255 255 / 92%);
+}
+
+.delete-account-modal__error-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-5, 1.35rem);
+}
+
+.delete-account-modal__error-actions .delete-account-modal__submit {
+  min-width: 11rem;
+}
+
+@media (min-width: 48rem) {
+  .app-modal.delete-account-modal {
+    max-width: min(24rem, calc(100vw - 2 * var(--page-pad-inline)));
+  }
 }

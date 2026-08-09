@@ -21,20 +21,32 @@ describe("translateApiErrorCode", () => {
 });
 
 describe("translateGatewayError", () => {
-  it("prefers WordData for numeric codes", async () => {
+  it("prefers server errMessage over numeric code collisions", async () => {
     await i18n.changeLanguage("en");
-    expect(translateGatewayError("552")).toBe("Passwords do not match");
+    expect(
+      translateGatewayError("400001", "This reward is not ready to collect yet."),
+    ).toBe("This reward is not ready to collect yet.");
   });
 
-  it("falls back to server errMessage when WordData missing", async () => {
+  it("does not map numeric codes to WordData", async () => {
+    await i18n.changeLanguage("en");
+    expect(translateGatewayError("552", null, "Validation failed")).toBe(
+      "Validation failed",
+    );
+    expect(translateGatewayError("400001", null, "Claim failed (400001)")).toBe(
+      "Claim failed (400001)",
+    );
+  });
+
+  it("falls back to server errMessage when i18n missing", async () => {
     expect(translateGatewayError("NOT_IN_WORDDATA", "Server said no")).toBe(
       "Server said no",
     );
   });
 
-  it("uses i18n for known string keys before server message", async () => {
+  it("uses i18n for known string keys when errMessage missing", async () => {
     await i18n.changeLanguage("en");
-    expect(translateGatewayError("RATE_LIMITED", "ignored")).toMatch(
+    expect(translateGatewayError("RATE_LIMITED", null, "fallback")).toMatch(
       /Too many requests/i,
     );
   });

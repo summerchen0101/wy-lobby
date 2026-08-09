@@ -1,0 +1,96 @@
+/* iOS Safari: fixed body backgrounds + backdrop-filter modals often fail to repaint after close. */
+
+@supports (-webkit-touch-callout: none) {
+  /*
+   * 轉向時勿 display:none 全站 body::before（/shop 等頁會只剩純色底閃一下）。
+   * 改為暫時 absolute，減輕 fixed compositor 壓力又保留 pattern。
+   */
+  html.ios-orientation-stabilizing body::before {
+    position: absolute;
+    width: 100%;
+    min-height: 100%;
+    height: auto;
+    inset: 0 auto auto 0;
+  }
+
+  /* 大廳額外霧面層；轉向期間暫隱，避免與 hero 影片疊加觸發 WebKit crash */
+  html.ios-orientation-stabilizing .lobby-landing::before {
+    display: none;
+  }
+
+  body {
+    background-image: none;
+    background-attachment: scroll;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--color-bg);
+    background-image:
+      radial-gradient(
+        ellipse 80% 50% at 50% -15%,
+        var(--theme-radial-green-body),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 45% 35% at 100% 35%,
+        var(--theme-radial-gold-body),
+        transparent 50%
+      ),
+      var(--site-pattern-tile-url, url("/images/lobby/bg/Pattern_bg.png"));
+    background-repeat: no-repeat, no-repeat, repeat;
+    background-size:
+      auto,
+      auto,
+      250px 250px;
+  }
+
+  #root {
+    isolation: isolate;
+  }
+
+  .landing-header,
+  .landing-header--over-hero,
+  .session-header,
+  .session-layout--hero-overlay .session-header {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .app-modal-overlay,
+  .daily-login-overlay,
+  .invite-friends-terms-modal-overlay,
+  .beggar-envelope-overlay,
+  .newbie-tutorial-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgb(0 0 0 / 82%);
+  }
+
+  .newbie-video-tutorial--mobile.newbie-video-tutorial--playing {
+    background: #000;
+  }
+
+  /* 大廳專用 fixed 霧面（LobbyPage.css）；iOS 改 absolute，避免轉屏 compositor crash */
+  .lobby-landing::before {
+    position: absolute;
+    width: 100%;
+    min-height: 100%;
+    height: auto;
+    inset: 0 auto auto 0;
+  }
+
+  html.session-lobby-page {
+    scrollbar-gutter: auto;
+  }
+
+  .lobby-games-panel-swap .lobby-games-grid__item,
+  .lobby-games-panel-swap .lobby-games-track > li,
+  .lobby-games-panel-swap .lobby-games-group-head {
+    animation: none !important;
+  }
+}

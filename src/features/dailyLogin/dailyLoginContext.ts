@@ -8,8 +8,11 @@ export type DailyLoginContextValue = {
   claiming: boolean;
   flying: boolean;
   modalOpen: boolean;
+  postClaimDismissible: boolean;
+  canDismissModal: boolean;
   openModal: (options?: { refresh?: boolean; background?: boolean }) => void;
   closeModal: () => void;
+  dismissModal: () => void;
   reload: (options?: { background?: boolean }) => Promise<void>;
   claimDay: (day: DayViewModel, flyFromRect: DOMRect | null) => Promise<void>;
   claimCreditReward: (
@@ -17,6 +20,7 @@ export type DailyLoginContextValue = {
     flyFromRect: DOMRect | null,
   ) => Promise<void>;
   onFlyComplete: () => void;
+  handlePrimaryAction: (flyFromRect?: DOMRect | null) => void;
 };
 
 export const DailyLoginContext = createContext<DailyLoginContextValue | null>(

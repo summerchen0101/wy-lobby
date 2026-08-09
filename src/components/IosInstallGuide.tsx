@@ -3,6 +3,10 @@ import { MdIosShare } from "react-icons/md";
 import { useLocation } from "react-router-dom";
 import { publicImageUrl } from "../lib/publicImageUrl";
 import { isStandalonePWA } from "../lib/pwaMode";
+import {
+  isTutorialOverlayOpen,
+  TUTORIAL_OVERLAY_STATE_EVENT,
+} from "../features/tutorial/tutorialOverlayState";
 import "./IosInstallGuide.css";
 
 function isIOS(): boolean {
@@ -16,22 +20,36 @@ const SHOW_DELAY_MS = 10_000;
 export function IosInstallGuide() {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(isTutorialOverlayOpen);
 
   useEffect(() => {
-    if (pathname !== "/" || !isIOS() || isStandalonePWA()) {
+    const sync = () => setTutorialOpen(isTutorialOverlayOpen());
+    window.addEventListener(TUTORIAL_OVERLAY_STATE_EVENT, sync);
+    return () => window.removeEventListener(TUTORIAL_OVERLAY_STATE_EVENT, sync);
+  }, []);
+
+  useEffect(() => {
+    if (
+      pathname !== "/" ||
+      !isIOS() ||
+      isStandalonePWA() ||
+      tutorialOpen
+    ) {
       setOpen(false);
       return;
     }
-    const t = window.setTimeout(() => setOpen(true), SHOW_DELAY_MS);
+    const t = window.setTimeout(() => {
+      if (!isTutorialOverlayOpen()) setOpen(true);
+    }, SHOW_DELAY_MS);
     return () => {
       window.clearTimeout(t);
       setOpen(false);
     };
-  }, [pathname]);
+  }, [pathname, tutorialOpen]);
 
   const close = useCallback(() => setOpen(false), []);
 
-  if (!open) return null;
+  if (!open || tutorialOpen) return null;
 
   return (
     <div

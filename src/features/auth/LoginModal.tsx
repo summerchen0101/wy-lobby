@@ -8,13 +8,21 @@ import {
 import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
+import { readLastLoginAccount } from "../../auth/lastLoginAccount";
 import { resolvePostLoginRedirect } from "../../auth/loginEntry";
 import { ApiError } from "../../lib/api/client";
 import { ClientVersionError } from "../../lib/api/clientVersionError";
 import { presentClientVersionError } from "../../lib/clientVersionUi";
 import { useWordData } from "../../wordData/useWordData";
 import { AuthClearableInputWrap } from "./AuthClearableInputWrap";
+import { AuthFieldError } from "./AuthFieldError";
 import { AuthSocialButtons } from "./AuthSocialButtons";
+import {
+  clearFieldError,
+  hasFieldErrors,
+  type LoginFieldErrors,
+  validateLoginFields,
+} from "./authFormValidation";
 import "./AuthModals.css";
 
 type Props = {
@@ -69,10 +77,11 @@ export function LoginModal({
   const emailId = `${formId}-email`;
   const passwordId = `${formId}-password`;
 
-  const [account, setAccount] = useState("");
+  const [account, setAccount] = useState(() => readLastLoginAccount());
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -89,6 +98,7 @@ export function LoginModal({
     if (!open) return;
     setFormError(null);
     setOauthError(null);
+    setFieldErrors({});
   }, [open]);
 
   const finishLogin = useCallback(() => {
@@ -101,6 +111,15 @@ export function LoginModal({
   async function onSignIn(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
+    const nextFieldErrors = validateLoginFields({
+      account,
+      password,
+    });
+    if (hasFieldErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors);
+      return;
+    }
+    setFieldErrors({});
     setSubmitting(true);
     try {
       await login(account.trim(), password);
@@ -127,7 +146,7 @@ export function LoginModal({
   return createPortal(
     <div className="app-modal-overlay" role="presentation">
       <div
-        className="app-modal app-modal--scroll-y auth-modal auth-modal--login"
+        className="app-modal app-modal--col auth-modal auth-modal--login"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -147,7 +166,7 @@ export function LoginModal({
           </h2>
         </div>
         <hr className="app-modal__rule" />
-        <div className="app-modal__body">
+        <div className="app-modal__body auth-modal__scroll-body">
           <AuthSocialButtons
             mode="signin"
             searchParams={searchParams}
@@ -175,7 +194,10 @@ export function LoginModal({
               <AuthClearableInputWrap
                 variant="modal"
                 value={account}
-                onClear={() => setAccount("")}
+                onClear={() => {
+                  setAccount("");
+                  setFieldErrors((prev) => clearFieldError(prev, "account"));
+                }}
                 clearAriaLabel="Clear email"
               >
                 <input
@@ -186,10 +208,15 @@ export function LoginModal({
                   autoComplete="username"
                   placeholder={w(7)}
                   value={account}
-                  onChange={(e) => setAccount(e.target.value)}
+                  onChange={(e) => {
+                    setAccount(e.target.value);
+                    setFieldErrors((prev) => clearFieldError(prev, "account"));
+                  }}
                   required
+                  aria-invalid={Boolean(fieldErrors.account)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.account} variant="modal" />
               <label
                 className="auth-modal__field-label auth-modal__field-label--register"
                 htmlFor={passwordId}
@@ -200,7 +227,10 @@ export function LoginModal({
                 variant="modal"
                 modalWrap="password"
                 value={password}
-                onClear={() => setPassword("")}
+                onClear={() => {
+                  setPassword("");
+                  setFieldErrors((prev) => clearFieldError(prev, "password"));
+                }}
                 clearAriaLabel="Clear password"
                 suffix={
                   <button
@@ -224,10 +254,15 @@ export function LoginModal({
                   autoComplete="current-password"
                   placeholder={w(9)}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFieldErrors((prev) => clearFieldError(prev, "password"));
+                  }}
                   required
+                  aria-invalid={Boolean(fieldErrors.password)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.password} variant="modal" />
               <p className="auth-modal__forgot-password">
                 {w(11)}{" "}
                 <button
@@ -250,17 +285,17 @@ export function LoginModal({
               </button>
             </fieldset>
           </form>
-          <p className="auth-modal__footer">
-            {w(31)}{" "}
-            <button
-              type="button"
-              className="auth-modal__footer-link"
-              onClick={onSwitchRegister}
-            >
-              {w(18)}
-            </button>
-          </p>
         </div>
+        <p className="auth-modal__footer auth-modal__footer--pinned">
+          {w(31)}{" "}
+          <button
+            type="button"
+            className="auth-modal__footer-link"
+            onClick={onSwitchRegister}
+          >
+            {w(18)}
+          </button>
+        </p>
       </div>
     </div>,
     document.body,

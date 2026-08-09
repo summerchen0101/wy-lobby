@@ -83,7 +83,16 @@ import {
   unityDemoGameUrl,
 } from "./landingContent";
 import { useHorizontalScrollContainer } from "../../hooks/useHorizontalScrollContainer";
+import { useIosOrientationMediaGate } from "../../hooks/useIosOrientationMediaGate";
+import {
+  lobbyGamesPageSize,
+  lobbyGridLoadRootMargin,
+  lobbyThumbIntersectionMargin,
+  lobbyTrackLoadRootMargin,
+} from "../../lib/lobbyIosTuning";
 import { LobbyGamesScroller } from "./LobbyGamesScroller";
+import { LobbyWithdrawMarquee } from "./LobbyWithdrawMarquee";
+import { useWithdrawSuccessMarquee } from "./useWithdrawSuccessMarquee";
 import "./LobbyPage.css";
 
 const LOBBY_SLOTS_ALL_SUBSECTION_LABEL = "Mega X Widescreen Exclusive";
@@ -134,11 +143,6 @@ function lobbyAllSubsections(
   ];
 }
 
-/** 已登入大廳：每批渲染的遊戲卡數量 */
-const LOBBY_GAMES_PAGE_SIZE = 50;
-const LOBBY_GRID_LOAD_ROOT_MARGIN = "200px 0px 280px 0px";
-/** 橫向列：向右預載（root = scroller） */
-const LOBBY_TRACK_LOAD_ROOT_MARGIN = "0px 240px 0px 0px";
 /** 訪客 HOT 列 LOBBY_GET 完成前之骨架卡數（僅佔位，不顯示假遊戲圖） */
 const GUEST_HOT_SKELETON_COUNT = 4;
 const LOBBY_GAMES_SECTION_ID = "lobby-games-section";
@@ -170,10 +174,12 @@ function PaginatedGameGrid({
   thumbOffset: number;
   gameCard: LobbyGameCardRenderer;
 }) {
+  const pageSize = lobbyGamesPageSize();
+  const gridMargin = lobbyGridLoadRootMargin();
   const sentinelRef = useRef<HTMLLIElement | null>(null);
   const total = games.length;
   const [visible, setVisible] = useState(() =>
-    Math.min(LOBBY_GAMES_PAGE_SIZE, total),
+    Math.min(pageSize, total),
   );
 
   useEffect(() => {
@@ -187,14 +193,14 @@ function PaginatedGameGrid({
     const obs = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
-          setVisible((c) => Math.min(c + LOBBY_GAMES_PAGE_SIZE, total));
+          setVisible((c) => Math.min(c + pageSize, total));
         }
       },
-      { root: null, rootMargin: LOBBY_GRID_LOAD_ROOT_MARGIN, threshold: 0 },
+      { root: null, rootMargin: gridMargin, threshold: 0 },
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [visible, total]);
+  }, [visible, total, pageSize, gridMargin]);
 
   const slice = games.slice(0, visible);
   const hasMore = visible < total;
@@ -230,11 +236,13 @@ function PaginatedGameTrack({
   onCardAction?: (g: Game) => void;
   gameCard: LobbyGameCardRenderer;
 }) {
+  const pageSize = lobbyGamesPageSize();
+  const trackMargin = lobbyTrackLoadRootMargin();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLLIElement | null>(null);
   const total = games.length;
   const [visible, setVisible] = useState(() =>
-    Math.min(LOBBY_GAMES_PAGE_SIZE, total),
+    Math.min(pageSize, total),
   );
 
   useEffect(() => {
@@ -249,14 +257,14 @@ function PaginatedGameTrack({
     const obs = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
-          setVisible((c) => Math.min(c + LOBBY_GAMES_PAGE_SIZE, total));
+          setVisible((c) => Math.min(c + pageSize, total));
         }
       },
-      { root, rootMargin: LOBBY_TRACK_LOAD_ROOT_MARGIN, threshold: 0 },
+      { root, rootMargin: trackMargin, threshold: 0 },
     );
     obs.observe(target);
     return () => obs.disconnect();
-  }, [visible, total]);
+  }, [visible, total, pageSize, trackMargin]);
 
   const slice = games.slice(0, visible);
   const hasMore = visible < total;
@@ -336,7 +344,9 @@ function gamesForFilter(displayGames: Game[], f: LobbyFilterTab): Game[] {
 }
 
 /** 進入視窗（含上下預載）後才載入縮圖，避免大廳一次打滿 HTTP */
-const LOBBY_THUMB_ROOT_MARGIN = "200px 0px 220px 0px";
+function lobbyThumbRootMargin(): string {
+  return lobbyThumbIntersectionMargin();
+}
 
 function LobbyGameCardThumbSpinner() {
   return <span className="lobby-game-card__thumb-spinner" aria-hidden />;
@@ -352,6 +362,8 @@ function LobbyGameCardThumb({
   /** 訪客首屏橫列等少量本地卡圖：略過 IO，避免首幀空白 */
   eagerLoad?: boolean;
 }) {
+  const thumbRootMargin = lobbyThumbRootMargin();
+  const orientationMediaGate = useIosOrientationMediaGate();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [inView, setInView] = useState(() => eagerLoad || !thumb);
@@ -378,13 +390,13 @@ function LobbyGameCardThumb({
           setInView(true);
         }
       },
-      { root: null, rootMargin: LOBBY_THUMB_ROOT_MARGIN, threshold: 0 },
+      { root: null, rootMargin: thumbRootMargin, threshold: 0 },
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [thumb, inView]);
+  }, [thumb, inView, thumbRootMargin]);
 
-  const loadThumb = Boolean(thumb && inView);
+  const loadThumb = Boolean(thumb && inView && orientationMediaGate);
 
   useEffect(() => {
     if (!loadThumb) return;
@@ -438,6 +450,7 @@ export function LandingPage() {
     requestRef,
     refreshLobbyGet,
   } = useGatewayLobby();
+  const withdrawMarqueeMessages = useWithdrawSuccessMarquee();
 
   const wsLobbyEnabled = isWsLobbyGamesEnabled();
   const thirdPartyGamesEnabled = isThirdPartyGamesEnabled();
@@ -1238,13 +1251,16 @@ export function LandingPage() {
           <LobbyHeroBanner
             videoSrc={sessionHeroVideoSrc}
             posterSrc={sessionHeroPosterSrc}>
-            {liveJackpotAmounts ? (
-              <LobbyJackpotStrip
-                wallet={activeWallet}
-                amounts={liveJackpotAmounts}
-                variant="live"
-              />
-            ) : null}
+            <div className="lobby-hero-banner__bottom-stack">
+              {liveJackpotAmounts ? (
+                <LobbyJackpotStrip
+                  wallet={activeWallet}
+                  amounts={liveJackpotAmounts}
+                  variant="live"
+                />
+              ) : null}
+              <LobbyWithdrawMarquee messages={withdrawMarqueeMessages} />
+            </div>
           </LobbyHeroBanner>
         </section>
 
@@ -1257,7 +1273,8 @@ export function LandingPage() {
               <div
                 className={
                   "lobby-games-filter-strip" +
-                  (providerMenuOpen ? " is-provider-menu-open" : "")
+                  (providerMenuOpen ? " is-provider-menu-open" : "") +
+                  (lobbySearchExpanded ? " is-search-expanded" : "")
                 }>
                 <div
                   className={
@@ -1293,7 +1310,6 @@ export function LandingPage() {
                       }}
                       autoComplete="off"
                       enterKeyHint="search"
-                      placeholder="BGAMING"
                       aria-label="BGAMING"
                     />
                     {lobbySearchExpanded ? (
@@ -1322,42 +1338,41 @@ export function LandingPage() {
                   onPointerUp={onLobbyGameFilterPointerUp}
                   onPointerCancel={onLobbyGameFilterPointerCancel}
                   onLostPointerCapture={onLobbyGameFilterLostPointerCapture}>
+                  {thirdPartyGamesEnabled ? (
+                    <div className="lobby-provider-tab">
+                      <button
+                        ref={providerTabBtnRef}
+                        id={lobbyTabDomId("providers")}
+                        type="button"
+                        className={
+                          "lobby-game-filter__tab lobby-game-filter__tab--providers" +
+                          (lobbyFilter === "providers" || providerMenuOpen
+                            ? " is-active"
+                            : "") +
+                          (providerMenuOpen ? " is-menu-open" : "")
+                        }
+                        role="tab"
+                        aria-selected={
+                          lobbyFilter === "providers" || providerMenuOpen
+                        }
+                        aria-controls="lobby-games-panel"
+                        aria-haspopup="listbox"
+                        aria-expanded={providerMenuOpen}
+                        tabIndex={
+                          lobbyFilter === "providers" || providerMenuOpen ? 0 : -1
+                        }
+                        onClick={onProvidersTabClick}>
+                        <span>PROVIDERS</span>
+                        <ChevronDown
+                          className="lobby-provider-tab__chevron"
+                          strokeWidth={2.5}
+                          aria-hidden
+                        />
+                      </button>
+                    </div>
+                  ) : null}
                   {lobbyFilterTabsList.map(({ id, label }) =>
-                    id === "providers" && thirdPartyGamesEnabled ? (
-                      <div key={id} className="lobby-provider-tab">
-                        <button
-                          ref={providerTabBtnRef}
-                          id={lobbyTabDomId(id)}
-                          type="button"
-                          className={
-                            "lobby-game-filter__tab lobby-game-filter__tab--providers" +
-                            (lobbyFilter === "providers" || providerMenuOpen
-                              ? " is-active"
-                              : "") +
-                            (providerMenuOpen ? " is-menu-open" : "")
-                          }
-                          role="tab"
-                          aria-selected={
-                            lobbyFilter === "providers" || providerMenuOpen
-                          }
-                          aria-controls="lobby-games-panel"
-                          aria-haspopup="listbox"
-                          aria-expanded={providerMenuOpen}
-                          tabIndex={
-                            lobbyFilter === "providers" || providerMenuOpen
-                              ? 0
-                              : -1
-                          }
-                          onClick={onProvidersTabClick}>
-                          <span>{label}</span>
-                          <ChevronDown
-                            className="lobby-provider-tab__chevron"
-                            strokeWidth={2.5}
-                            aria-hidden
-                          />
-                        </button>
-                      </div>
-                    ) : isProviderTabId(id) ? (
+                    id === "providers" ? null : isProviderTabId(id) ? (
                       <button
                         key={id}
                         id={lobbyTabDomId(id)}

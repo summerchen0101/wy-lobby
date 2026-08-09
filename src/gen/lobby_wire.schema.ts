@@ -84,6 +84,11 @@ export default {
             "subsidyAmount": {
               "type": "int64",
               "id": 2
+            },
+            "redeemSCList": {
+              "rule": "repeated",
+              "type": "string",
+              "id": 3
             }
           }
         },
@@ -363,6 +368,10 @@ export default {
               "type": "WalletType",
               "id": 85
             },
+            "noviceTeaching": {
+              "type": "NoviceTeaching",
+              "id": 53
+            },
             "minTxWdraw": {
               "type": "int64",
               "id": 97
@@ -438,6 +447,28 @@ export default {
             },
             "noviceTeaching": {
               "type": "NoviceTeaching",
+              "id": 2
+            }
+          }
+        },
+        "OAuthProvider": {
+          "values": {
+            "UNKNOWN_OAUTH_PROVIDER": 0,
+            "PROVIDER_MEGA": 1,
+            "PROVIDER_GOOGLE": 2,
+            "PROVIDER_FB": 3,
+            "PROVIDER_LINE": 4,
+            "PROVIDER_APPLE": 5
+          }
+        },
+        "DeletePlayerInfoReq": {
+          "fields": {
+            "privoder": {
+              "type": "OAuthProvider",
+              "id": 1
+            },
+            "accessToken": {
+              "type": "string",
               "id": 2
             }
           }
@@ -1092,7 +1123,7 @@ export default {
               "id": 17
             },
             "documentType": {
-              "type": "int32",
+              "type": "string",
               "id": 18
             },
             "documentNumber": {
@@ -1103,11 +1134,11 @@ export default {
               "type": "string",
               "id": 20
             },
-            "backImageContentType": {
+            "frontImageBase64": {
               "type": "string",
               "id": 21
             },
-            "frontImageBase64": {
+            "backImageContentType": {
               "type": "string",
               "id": 22
             },
@@ -1118,6 +1149,10 @@ export default {
             "socureDiSessionToken": {
               "type": "string",
               "id": 24
+            },
+            "ssn": {
+              "type": "string",
+              "id": 25
             }
           }
         },
@@ -1146,7 +1181,8 @@ export default {
             "Proccessing": 4,
             "Success": 5,
             "Failed": 6,
-            "ExpirationRejected": 7
+            "ExpirationRejected": 7,
+            "Canceled": 8
           }
         },
         "WithdrawSuccessPush": {
@@ -1220,6 +1256,10 @@ export default {
             "remark": {
               "type": "string",
               "id": 6
+            },
+            "uuu": {
+              "type": "string",
+              "id": 7
             }
           }
         },
@@ -1295,6 +1335,17 @@ export default {
               "id": 2
             }
           }
+        },
+        "CancelRedeemOrderReq": {
+          "fields": {
+            "redeemOrderUID": {
+              "type": "string",
+              "id": 1
+            }
+          }
+        },
+        "CancelRedeemOrderResp": {
+          "fields": {}
         },
         "StringValue": {
           "fields": {

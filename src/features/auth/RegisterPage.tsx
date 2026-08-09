@@ -3,22 +3,31 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { MarketingTopBar } from '../../components/MarketingTopBar'
 import { ApiError, ClientVersionError } from '../../lib/api/client'
-import { buildAppMetaForAuthRequest, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
+import { buildAppMetaForAuthRequest, getOrCreateWebDeviceId } from '../../lib/appMeta'
 import type { SignUpRequest } from '../../lib/api/types'
 import {
   kickstartLobbyWelcomeVoiceFromUserGesture,
   stopLobbyWelcomeVoice,
 } from '../../lib/lobbySound'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
+import { AuthFieldError } from './AuthFieldError'
+import {
+  clearFieldError,
+  hasFieldErrors,
+  OTP_MAX_LEN,
+  PASSWORD_MAX_LENGTH,
+  type OtpFieldErrors,
+  type RegisterFieldErrors,
+  translateVerificationCodeSubmitError,
+  validateOtpCode,
+  validateRegisterFields,
+} from './authFormValidation'
 import { useWordData } from '../../wordData/useWordData'
 import './AuthPages.css'
-
-const PASSWORD_MAX_LENGTH = 12
 
 function buildRequest(params: { email: string; password: string; rePassword: string }): SignUpRequest {
   const em = params.email.trim()
   return {
-    nickname: nicknameFromEmail(em),
     password: params.password,
     rePassword: params.rePassword,
     answer: '',
@@ -38,6 +47,8 @@ export function RegisterPage() {
   const [answer, setAnswer] = useState('')
   const [pending, setPending] = useState<SignUpRequest | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<RegisterFieldErrors>({})
+  const [otpFieldErrors, setOtpFieldErrors] = useState<OtpFieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -49,14 +60,16 @@ export function RegisterPage() {
   async function onSubmitFirst(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    if (password.length > PASSWORD_MAX_LENGTH) {
-      setError(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`)
+    const nextFieldErrors = validateRegisterFields({
+      email,
+      password,
+      passwordConfirm: password2,
+    })
+    if (hasFieldErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors)
       return
     }
-    if (password !== password2) {
-      setError(w(552))
-      return
-    }
+    setFieldErrors({})
     kickstartLobbyWelcomeVoiceFromUserGesture()
     setSubmitting(true)
     const body = buildRequest({ email, password, rePassword: password2 })
@@ -91,6 +104,12 @@ export function RegisterPage() {
     e.preventDefault()
     if (!pending) return
     setError(null)
+    const nextOtpErrors = validateOtpCode(answer)
+    if (hasFieldErrors(nextOtpErrors)) {
+      setOtpFieldErrors(nextOtpErrors)
+      return
+    }
+    setOtpFieldErrors({})
     setSubmitting(true)
     try {
       await register({ ...pending, answer: answer.replace(/\s/g, '') })
@@ -101,9 +120,7 @@ export function RegisterPage() {
         setError('A new version is required. A download page was opened in a new tab.')
         return
       }
-      const msg =
-        err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Registration failed'
-      setError(msg)
+      setError(translateVerificationCodeSubmitError(err, 'Registration failed'))
     } finally {
       setSubmitting(false)
     }
@@ -125,7 +142,10 @@ export function RegisterPage() {
                 <AuthClearableInputWrap
                   variant="page"
                   value={answer}
-                  onClear={() => setAnswer('')}
+                  onClear={() => {
+                    setAnswer('')
+                    setOtpFieldErrors((prev) => clearFieldError(prev, 'code'))
+                  }}
                   clearAriaLabel="Clear verification code"
                 >
                   <input
@@ -135,10 +155,15 @@ export function RegisterPage() {
                     autoComplete="one-time-code"
                     inputMode="numeric"
                     value={answer}
-                    onChange={(e) => setAnswer(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    onChange={(e) => {
+                      setAnswer(e.target.value.replace(/\D/g, '').slice(0, OTP_MAX_LEN))
+                      setOtpFieldErrors((prev) => clearFieldError(prev, 'code'))
+                    }}
                     required
+                    aria-invalid={Boolean(otpFieldErrors.code)}
                   />
                 </AuthClearableInputWrap>
+                <AuthFieldError message={otpFieldErrors.code} variant="page" />
               </div>
               {error ? <p className="auth-form__error">{error}</p> : null}
               <div className="auth-form__actions">
@@ -168,7 +193,10 @@ export function RegisterPage() {
               <AuthClearableInputWrap
                 variant="page"
                 value={email}
-                onClear={() => setEmail('')}
+                onClear={() => {
+                  setEmail('')
+                  setFieldErrors((prev) => clearFieldError(prev, 'email'))
+                }}
                 clearAriaLabel="Clear email"
               >
                 <input
@@ -178,10 +206,15 @@ export function RegisterPage() {
                   type="email"
                   autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setFieldErrors((prev) => clearFieldError(prev, 'email'))
+                  }}
                   required
+                  aria-invalid={Boolean(fieldErrors.email)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.email} variant="page" />
             </div>
             <div className="auth-form__field">
               <label className="auth-form__label" htmlFor="reg-password">
@@ -190,7 +223,10 @@ export function RegisterPage() {
               <AuthClearableInputWrap
                 variant="page"
                 value={password}
-                onClear={() => setPassword('')}
+                onClear={() => {
+                  setPassword('')
+                  setFieldErrors((prev) => clearFieldError(prev, 'password'))
+                }}
                 clearAriaLabel="Clear password"
               >
                 <input
@@ -200,12 +236,17 @@ export function RegisterPage() {
                   type="password"
                   autoComplete="new-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setFieldErrors((prev) => clearFieldError(prev, 'password'))
+                  }}
                   required
                   minLength={6}
                   maxLength={PASSWORD_MAX_LENGTH}
+                  aria-invalid={Boolean(fieldErrors.password)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.password} variant="page" />
             </div>
             <div className="auth-form__field">
               <label className="auth-form__label" htmlFor="reg-password2">
@@ -214,7 +255,10 @@ export function RegisterPage() {
               <AuthClearableInputWrap
                 variant="page"
                 value={password2}
-                onClear={() => setPassword2('')}
+                onClear={() => {
+                  setPassword2('')
+                  setFieldErrors((prev) => clearFieldError(prev, 'passwordConfirm'))
+                }}
                 clearAriaLabel="Clear confirm password"
               >
                 <input
@@ -224,12 +268,17 @@ export function RegisterPage() {
                   type="password"
                   autoComplete="new-password"
                   value={password2}
-                  onChange={(e) => setPassword2(e.target.value)}
+                  onChange={(e) => {
+                    setPassword2(e.target.value)
+                    setFieldErrors((prev) => clearFieldError(prev, 'passwordConfirm'))
+                  }}
                   required
                   minLength={6}
                   maxLength={PASSWORD_MAX_LENGTH}
+                  aria-invalid={Boolean(fieldErrors.passwordConfirm)}
                 />
               </AuthClearableInputWrap>
+              <AuthFieldError message={fieldErrors.passwordConfirm} variant="page" />
             </div>
             {error ? <p className="auth-form__error">{error}</p> : null}
             <div className="auth-form__actions">

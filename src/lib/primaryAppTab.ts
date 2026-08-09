@@ -51,6 +51,13 @@ function releaseLease(tabId: string): void {
   }
 }
 
+/** 目前可見的分頁搶佔主分頁 lease（最後聚焦的分頁負責 Gateway WS）。 */
+export function claimPrimaryTabLeaseIfVisible(): void {
+  if (typeof document === "undefined") return;
+  if (document.visibilityState !== "visible") return;
+  writeLease(getOrCreateTabId());
+}
+
 /** 是否為另開的分頁（已有其他分頁持有主分頁 lease）。 */
 export function isSecondaryAppTab(): boolean {
   if (typeof sessionStorage === "undefined" || typeof localStorage === "undefined") {
@@ -89,7 +96,7 @@ function startPrimaryLeaseHeartbeat(tabId: string): () => void {
 
 /**
  * 主分頁：負責 Gateway WS 與每日登入自動彈窗。
- * 另開的分頁回傳 false，並在 lease 釋放後可升級為主分頁。
+ * 背景分頁回傳 false；聚焦時搶佔 lease，原主分頁會讓出 WS。
  */
 export function usePrimaryAppTab(): boolean {
   const [isPrimary, setIsPrimary] = useState(() => !isSecondaryAppTab());
@@ -97,10 +104,19 @@ export function usePrimaryAppTab(): boolean {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sync = () => setIsPrimary(!isSecondaryAppTab());
+    const onFocusOrVisible = () => {
+      claimPrimaryTabLeaseIfVisible();
+      sync();
+    };
     window.addEventListener("storage", sync);
+    window.addEventListener("focus", onFocusOrVisible);
+    document.addEventListener("visibilitychange", onFocusOrVisible);
     const pollId = window.setInterval(sync, HEARTBEAT_MS);
+    onFocusOrVisible();
     return () => {
       window.removeEventListener("storage", sync);
+      window.removeEventListener("focus", onFocusOrVisible);
+      document.removeEventListener("visibilitychange", onFocusOrVisible);
       window.clearInterval(pollId);
     };
   }, []);

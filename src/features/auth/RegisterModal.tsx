@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { buildAppMetaForAuthRequest, getOrCreateWebDeviceId, nicknameFromEmail } from '../../lib/appMeta'
+import { buildAppMetaForAuthRequest, getOrCreateWebDeviceId } from '../../lib/appMeta'
 import { useAuth } from '../../auth/useAuth'
 import { resolvePostLoginRedirect } from '../../auth/loginEntry'
 import {
@@ -12,11 +12,17 @@ import { ApiError, ClientVersionError } from '../../lib/api/client'
 import { useAuthModals } from './authModalsContext'
 import type { SignUpRequest } from '../../lib/api/types'
 import { AuthClearableInputWrap } from './AuthClearableInputWrap'
+import { AuthFieldError } from './AuthFieldError'
 import { AuthSocialButtons } from './AuthSocialButtons'
+import {
+  clearFieldError,
+  hasFieldErrors,
+  PASSWORD_MAX_LENGTH,
+  type RegisterFieldErrors,
+  validateRegisterFields,
+} from './authFormValidation'
 import { useWordData } from '../../wordData/useWordData'
 import './AuthModals.css'
-
-const PASSWORD_MAX_LENGTH = 12
 
 type Props = {
   open: boolean
@@ -61,7 +67,6 @@ function buildSignUpRequest(params: {
 }): SignUpRequest {
   const em = params.email.trim()
   return {
-    nickname: nicknameFromEmail(em),
     password: params.password,
     rePassword: params.rePassword,
     answer: '',
@@ -89,8 +94,10 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [referral, setReferral] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [oauthError, setOauthError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<RegisterFieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -106,6 +113,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
     if (!open) return
     setError(null)
     setOauthError(null)
+    setFieldErrors({})
   }, [open])
 
   useEffect(() => {
@@ -120,14 +128,16 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    if (password.length > PASSWORD_MAX_LENGTH) {
-      setError(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`)
+    const nextFieldErrors = validateRegisterFields({
+      email,
+      password,
+      passwordConfirm,
+    })
+    if (hasFieldErrors(nextFieldErrors)) {
+      setFieldErrors(nextFieldErrors)
       return
     }
-    if (password !== passwordConfirm) {
-      setError(w(552))
-      return
-    }
+    setFieldErrors({})
     const body = buildSignUpRequest({
       email,
       password,
@@ -173,7 +183,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
   return createPortal(
     <div className="app-modal-overlay" role="presentation" onClick={onClose}>
       <div
-        className="app-modal app-modal--scroll-y auth-modal auth-modal--register"
+        className="app-modal app-modal--col auth-modal auth-modal--register"
         role="dialog"
         aria-modal="true"
         aria-labelledby="register-modal-title"
@@ -188,7 +198,7 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
           </h2>
         </div>
         <hr className="app-modal__rule" />
-        <div className="app-modal__body">
+        <div className="app-modal__body auth-modal__scroll-body">
           <AuthSocialButtons
             mode="signup"
             searchParams={searchParams}
@@ -208,7 +218,10 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             <AuthClearableInputWrap
               variant="modal"
               value={email}
-              onClear={() => setEmail('')}
+              onClear={() => {
+                setEmail('')
+                setFieldErrors((prev) => clearFieldError(prev, 'email'))
+              }}
               clearAriaLabel="Clear email"
             >
               <input
@@ -218,10 +231,15 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 autoComplete="email"
                 placeholder={w(7)}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setFieldErrors((prev) => clearFieldError(prev, 'email'))
+                }}
                 required
+                aria-invalid={Boolean(fieldErrors.email)}
               />
             </AuthClearableInputWrap>
+            <AuthFieldError message={fieldErrors.email} variant="modal" />
 
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={passwordId}>
               {w(8)}:
@@ -230,7 +248,10 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
               variant="modal"
               modalWrap="password"
               value={password}
-              onClear={() => setPassword('')}
+              onClear={() => {
+                setPassword('')
+                setFieldErrors((prev) => clearFieldError(prev, 'password'))
+              }}
               clearAriaLabel="Clear password"
               suffix={
                 <button
@@ -251,12 +272,17 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
                 autoComplete="new-password"
                 placeholder={w(9)}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  setFieldErrors((prev) => clearFieldError(prev, 'password'))
+                }}
                 required
                 minLength={6}
                 maxLength={PASSWORD_MAX_LENGTH}
+                aria-invalid={Boolean(fieldErrors.password)}
               />
             </AuthClearableInputWrap>
+            <AuthFieldError message={fieldErrors.password} variant="modal" />
 
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={password2Id}>
               {w(21)}:
@@ -265,22 +291,41 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
               variant="modal"
               modalWrap="password"
               value={passwordConfirm}
-              onClear={() => setPasswordConfirm('')}
+              onClear={() => {
+                setPasswordConfirm('')
+                setFieldErrors((prev) => clearFieldError(prev, 'passwordConfirm'))
+              }}
               clearAriaLabel="Clear confirm password"
+              suffix={
+                <button
+                  type="button"
+                  className="auth-modal__password-toggle"
+                  onClick={() => setShowPasswordConfirm((v) => !v)}
+                  aria-label={showPasswordConfirm ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPasswordConfirm}
+                >
+                  {showPasswordConfirm ? <IconEyeClosed /> : <IconEyeOpen />}
+                </button>
+              }
             >
               <input
                 id={password2Id}
                 className="auth-modal__input auth-modal__input--register auth-modal__input--password"
-                type={showPassword ? 'text' : 'password'}
+                type={showPasswordConfirm ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder={w(22)}
                 value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
+                onChange={(e) => {
+                  setPasswordConfirm(e.target.value)
+                  setFieldErrors((prev) => clearFieldError(prev, 'passwordConfirm'))
+                }}
                 required
                 minLength={6}
                 maxLength={PASSWORD_MAX_LENGTH}
+                aria-invalid={Boolean(fieldErrors.passwordConfirm)}
               />
             </AuthClearableInputWrap>
+            <AuthFieldError message={fieldErrors.passwordConfirm} variant="modal" />
 
             <label className="auth-modal__field-label auth-modal__field-label--register" htmlFor={referralId}>
               {w(26)}
@@ -307,13 +352,13 @@ export function RegisterModal({ open, onClose, onSwitchLogin }: Props) {
             </button>
             </fieldset>
           </form>
-          <p className="auth-modal__footer">
-            {w(24)}{' '}
-            <button type="button" className="auth-modal__footer-link" onClick={onSwitchLogin}>
-              {w(25)}
-            </button>
-          </p>
         </div>
+        <p className="auth-modal__footer auth-modal__footer--pinned">
+          {w(24)}{' '}
+          <button type="button" className="auth-modal__footer-link" onClick={onSwitchLogin}>
+            {w(25)}
+          </button>
+        </p>
       </div>
     </div>,
     document.body,

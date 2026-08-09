@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import * as protobuf from "protobufjs/light.js";
 import schema from "../gen/lobby_wire.schema.js";
 import {
+  decodeCancelRedeemOrderRequestForDevLog,
   decodeCreateWithdrawOrderRequestForDevLog,
   decodeCreateWithdrawOrderResponseBytes,
   decodeListWithdrawOrdersRequestForDevLog,
+  decodeListWithdrawOrdersResponseBytes,
   decodeWithdrawSuccessPushBytes,
+  encodeCancelRedeemOrderRequestBytes,
   encodeCreateWithdrawOrderRequestBytes,
   encodeListWithdrawOrdersRequestBytes,
 } from "./withdrawLobbyWire";
@@ -51,6 +54,53 @@ describe("encodeCreateWithdrawOrderRequestBytes", () => {
 const CreateWithdrawOrderRespPb = root.lookupType(
   "megaman.CreateWithdrawOrderResp",
 ) as protobuf.Type;
+const ListWithdrawOrdersRespPb = root.lookupType(
+  "megaman.ListWithdrawOrdersResp",
+) as protobuf.Type;
+
+describe("decodeListWithdrawOrdersResponseBytes", () => {
+  it("解碼 createdAt、remark、uuu 與狀態碼", () => {
+    const raw = Uint8Array.from(
+      ListWithdrawOrdersRespPb.encode(
+        ListWithdrawOrdersRespPb.create({
+          total: "1",
+          withdrawOrders: [
+            {
+              withdrawOrderUID: "wd-99",
+              amount: "999",
+              fee: "0.15",
+              withdrawOrderPaymentStatus: 3,
+              createdAtTimestampMillisecond: "1700000000000",
+              remark: "> 60 Minutes",
+              uuu: "https://pay.example/order/wd-99",
+            },
+          ],
+        }),
+      ).finish(),
+    );
+    const { orders, total } = decodeListWithdrawOrdersResponseBytes(raw);
+    expect(total).toBe("1");
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({
+      withdrawOrderUID: "wd-99",
+      amount: "999",
+      fee: "0.15",
+      withdrawOrderPaymentStatus: 3,
+      remark: "> 60 Minutes",
+      createdAtTimestampMillisecond: "1700000000000",
+      uuu: "https://pay.example/order/wd-99",
+    });
+    expect(orders[0]?.statusLabel).toBeTruthy();
+  });
+});
+
+describe("encodeCancelRedeemOrderRequestBytes", () => {
+  it("帶入 redeemOrderUID", () => {
+    const raw = encodeCancelRedeemOrderRequestBytes("wd-cancel-1");
+    const o = decodeCancelRedeemOrderRequestForDevLog(raw);
+    expect(o.redeemOrderUID).toBe("wd-cancel-1");
+  });
+});
 
 describe("decodeCreateWithdrawOrderResponseBytes", () => {
   it("解碼 withdrawOrderUID 與 paymentURL", () => {

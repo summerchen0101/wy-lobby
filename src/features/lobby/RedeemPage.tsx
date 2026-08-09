@@ -1,19 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { InfoPopover } from "../../components/InfoPopover";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import { CURRENCY_ICON_SC } from "../../lib/currencyIcons";
+import { navigateToThirdPartyPayment } from "../../lib/thirdPartyPaymentNavigation";
+import { openZendeskOrFallback } from "../../lib/zendeskSupport";
 import {
   formatScFromRaw,
-  formatScFromRawWireInteger,
   formatScFromTruncatedHundredths,
-  formatWithdrawHistoryFiatAmount,
   MIN_REDEEM_SC_DISPLAY,
 } from "../../wallet/formatWalletAmount";
-import { GATEWAY_API_LIST_WITHDRAW_ORDERS } from "../../realtime/gatewayApi";
+import {
+  GATEWAY_API_CANCEL_REDEEM_ORDER,
+  GATEWAY_API_LIST_WITHDRAW_ORDERS,
+} from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
+  encodeCancelRedeemOrderRequestBytes,
   encodeListWithdrawOrdersRequestBytes,
   decodeListWithdrawOrdersResponseBytes,
   type WithdrawOrderWireRow,
@@ -21,47 +25,54 @@ import {
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
 import { redeemScBalancesFromLobby } from "./redeemBalances";
 import { RedeemNotifyPill } from "./RedeemNotifyPill";
-import { useRedeemPillMessages } from "./useRedeemPillMessages";
-import { RedeemMethodModal } from "./RedeemMethodModal";
+import { useWithdrawSuccessMarquee } from "./useWithdrawSuccessMarquee";
+import { RedeemMethodModal, type RedeemMethodModalResume } from "./RedeemMethodModal";
+import {
+  clearPendingRedeemOrder,
+  readPendingRedeemOrder,
+} from "./redeemPaymentSession";
+import {
+  clearPaymentCallbackPayload,
+  readPaymentCallbackPayload,
+} from "../payment/paymentCallbackStorage";
 import {
   RedeemBindingModal,
   type RedeemBindingMode,
 } from "./RedeemBindingModal";
 import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
+import {
+  redeemBindingPrefillFromLobby,
+  resolveRedeemBindingNextStep,
+} from "./redeemBindingGate";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
 import {
   resolveMinRedeemDisplay,
   resolveMinRedeemRaw,
 } from "./redeemMinAmount";
+import {
+  formatRedeemHistoryRowLabel,
+  formatWithdrawCreatedAt,
+  redeemHistoryStatusClassName,
+  withdrawHistoryShowsCancel,
+  withdrawHistoryShowsRemark,
+} from "./redeemHistoryUi";
+import {
+  dispatchRedeemWithdrawReturnSuccess,
+  fetchRedeemSCListFromGateway,
+} from "./redeemApprovalWalletGet";
+import { RedeemApprovalModal } from "./RedeemApprovalModal";
+import {
+  parseRedeemPaymentState,
+  stripRedeemPaymentStateParam,
+} from "./redeemPaymentReturn";
 import { useWordData } from "../../wordData/useWordData";
 import "./RedeemPage.css";
+import "./WithdrawMarqueePill.css";
 import "./SessionPageDecor.css";
 
 const SC_INLINE_PX = 18;
 
 const ORDERS_PER_PAGE = 4;
-
-/** Aligns with withdrawOrderPaymentStatusToLabel() labels in withdrawLobbyWire. */
-const WITHDRAW_HISTORY_STATUS_MOD: Record<
-  string,
-  "positive" | "progress" | "negative" | "muted"
-> = {
-  Success: "positive",
-  Passed: "positive",
-  Reviewing: "progress",
-  Processing: "progress",
-  Rejected: "negative",
-  Failed: "negative",
-  Expired: "negative",
-  Unknown: "muted",
-};
-
-function redeemHistoryStatusClassName(statusLabel: string): string {
-  const base = "redeem-page__history-status";
-  const mod =
-    WITHDRAW_HISTORY_STATUS_MOD[statusLabel] ?? "muted";
-  return `${base} ${base}--${mod}`;
-}
 
 function ScInlineIcon() {
   return (
@@ -78,32 +89,110 @@ function ScInlineIcon() {
 /** Re-export: minimum redeemable SC shown to the user (50). */
 export const MIN_REDEEM_SC = MIN_REDEEM_SC_DISPLAY;
 
+type RedeemHistoryRowProps = {
+  row: WithdrawOrderWireRow;
+  cancelBusyUid: string | null;
+  onCancel: (uid: string) => void;
+  w: (id: number, ...args: string[]) => string;
+};
+
+function RedeemHistoryRow({
+  row,
+  cancelBusyUid,
+  onCancel,
+  w,
+}: RedeemHistoryRowProps) {
+  const linkLabel = formatRedeemHistoryRowLabel({
+    fiatAmount: row.amount,
+    feeWire: row.fee,
+    w,
+  });
+  const orderUrl = row.uuu.trim();
+  const createdAtLabel = formatWithdrawCreatedAt(
+    row.createdAtTimestampMillisecond,
+  );
+  const showRemark = withdrawHistoryShowsRemark(row.withdrawOrderPaymentStatus);
+  const showCancel = withdrawHistoryShowsCancel(row.withdrawOrderPaymentStatus);
+  const cancelBusy =
+    cancelBusyUid !== null &&
+    cancelBusyUid === row.withdrawOrderUID &&
+    row.withdrawOrderUID !== "";
+
+  return (
+    <li className="redeem-page__history-row">
+      <InfoPopover
+        align="start"
+        panelClassName="redeem-page__history-date-popover"
+        content={
+          <p className="redeem-page__history-date-text">
+            {w(510475)}
+            {createdAtLabel}
+          </p>
+        }>
+        {(p, triggerRef) => (
+          <button
+            ref={triggerRef}
+            className="redeem-page__history-icon"
+            aria-label="Order create date"
+            {...p}>
+            i
+          </button>
+        )}
+      </InfoPopover>
+      {orderUrl ? (
+        <button
+          type="button"
+          className="redeem-page__history-link"
+          onClick={() => navigateToThirdPartyPayment(orderUrl)}>
+          {linkLabel}
+        </button>
+      ) : (
+        <span className="redeem-page__history-desc">{linkLabel}</span>
+      )}
+      <div className="redeem-page__history-status-col">
+        <span
+          className={redeemHistoryStatusClassName(
+            row.withdrawOrderPaymentStatus,
+          )}>
+          {row.statusLabel}
+        </span>
+        {showRemark && row.remark ? (
+          <span className="redeem-page__history-remark">{row.remark}</span>
+        ) : null}
+        {showCancel ? (
+          <button
+            type="button"
+            className="redeem-page__history-cancel"
+            disabled={cancelBusy}
+            onClick={() => onCancel(row.withdrawOrderUID)}>
+            {cancelBusy ? "…" : w(510478)}
+          </button>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
 export function RedeemPage() {
   const w = useWordData();
   const { show } = useAlert();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const processedPaymentReturnRef = useRef<string | null>(null);
+  const queuedPaymentReturnRef = useRef<1 | 2 | null>(null);
   const {
     requestRef,
     lobbyGet,
     gatewayRequestReady,
     refreshLobbyGet,
-    subscribeWithdrawSuccessPush,
     redeemOrdersPrefetch,
   } = useGatewayLobby();
 
-  const [pillExtras, setPillExtras] = useState<string[]>([]);
-  useEffect(() => {
-    return subscribeWithdrawSuccessPush((p) => {
-      setPillExtras((prev) => {
-        const line = `${p.nickname} redeemed ${formatScFromRawWireInteger(p.actualAmountWire)} SC`;
-        return [line, ...prev].slice(0, 24);
-      });
-    });
-  }, [subscribeWithdrawSuccessPush]);
-
-  const pillMessages = useRedeemPillMessages(pillExtras);
+  const pillMessages = useWithdrawSuccessMarquee();
 
   const [methodModalOpen, setMethodModalOpen] = useState(false);
+  const [methodModalResume, setMethodModalResume] =
+    useState<RedeemMethodModalResume | null>(null);
   const [bindingModalOpen, setBindingModalOpen] = useState(false);
   const [bindingMode, setBindingMode] = useState<RedeemBindingMode>("full");
   const [ordersPage, setOrdersPage] = useState(0);
@@ -120,6 +209,9 @@ export function RedeemPage() {
   const [initialOrdersFetched, setInitialOrdersFetched] = useState(
     () => redeemOrdersPrefetch !== null,
   );
+  const [cancelBusyUid, setCancelBusyUid] = useState<string | null>(null);
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [approvalAmountsWire, setApprovalAmountsWire] = useState<string[]>([]);
 
   const { amount: scAmount, redeemableAmount, unplayedHundredths } =
     redeemScBalancesFromLobby({
@@ -221,6 +313,134 @@ export function RedeemPage() {
     await fetchOrders(0);
   }, [gatewayRequestReady, fetchOrders, refreshLobbyGet]);
 
+  const handleRedeemPaymentReturn = useCallback(
+    async (paymentState: 1 | 2) => {
+      clearPaymentCallbackPayload("redeem");
+      const pending = readPendingRedeemOrder();
+      clearPendingRedeemOrder();
+      setMethodModalOpen(false);
+      setMethodModalResume(null);
+
+      if (paymentState === 2) {
+        show("Redemption failed. Please try again.", { variant: "error" });
+        return;
+      }
+
+      await refetchOrdersAfterWithdraw();
+
+      const req = requestRef.current;
+      if (req && gatewayRequestReady) {
+        try {
+          const list = await fetchRedeemSCListFromGateway(req);
+          if (list.length > 0) {
+            setApprovalAmountsWire(list);
+            setApprovalModalOpen(true);
+            return;
+          }
+        } catch {
+          /* fall through to submit-success UI */
+        }
+      }
+
+      dispatchRedeemWithdrawReturnSuccess();
+
+      if (pending) {
+        setMethodModalResume({
+          kind: "success",
+          orderUid: pending.withdrawOrderUID,
+          amount: pending.pickAmount,
+        });
+        setMethodModalOpen(true);
+      }
+    },
+    [
+      refetchOrdersAfterWithdraw,
+      show,
+      requestRef,
+      gatewayRequestReady,
+    ],
+  );
+
+  useEffect(() => {
+    const raw = searchParams.get("paymentState");
+    if (raw == null) return;
+
+    const fingerprint = searchParams.toString();
+    if (processedPaymentReturnRef.current === fingerprint) return;
+    processedPaymentReturnRef.current = fingerprint;
+
+    const paymentState = parseRedeemPaymentState(raw);
+    setSearchParams(stripRedeemPaymentStateParam(searchParams), { replace: true });
+
+    if (paymentState == null) return;
+    queuedPaymentReturnRef.current = paymentState;
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const paymentState = queuedPaymentReturnRef.current;
+    if (paymentState == null) return;
+    if (!gatewayRequestReady) return;
+    queuedPaymentReturnRef.current = null;
+    void handleRedeemPaymentReturn(paymentState);
+  }, [gatewayRequestReady, handleRedeemPaymentReturn]);
+
+  useEffect(() => {
+    const pending = readPendingRedeemOrder();
+    if (!pending) return;
+
+    const callback = readPaymentCallbackPayload("redeem");
+    if (callback) {
+      if (queuedPaymentReturnRef.current == null) {
+        queuedPaymentReturnRef.current = callback.state;
+      }
+      return;
+    }
+
+    if (pending.paymentUrl) {
+      setMethodModalResume({
+        kind: "payment",
+        withdrawOrderUID: pending.withdrawOrderUID,
+        pickAmount: pending.pickAmount,
+        paymentUrl: pending.paymentUrl,
+      });
+      setMethodModalOpen(true);
+    }
+  }, []);
+
+  const handleCancelOrder = useCallback(
+    async (redeemOrderUID: string) => {
+      const uid = redeemOrderUID.trim();
+      if (!uid) return;
+      const req = requestRef.current;
+      if (!req || !gatewayRequestReady) {
+        show("Not connected to server. Try again.", { variant: "error" });
+        return;
+      }
+      setCancelBusyUid(uid);
+      try {
+        const r = await req({
+          type: GATEWAY_API_CANCEL_REDEEM_ORDER,
+          data: encodeCancelRedeemOrderRequestBytes(uid),
+          debugLabel: "CANCEL_REDEEM_ORDER",
+        });
+        const code = String(r.code ?? "");
+        if (!isGatewaySuccessCode(code)) {
+          show(translateGatewayError(code, r.errMessage), { variant: "error" });
+          return;
+        }
+        await refreshLobbyGet();
+        await fetchOrders(ordersPage);
+      } catch (e) {
+        show(e instanceof Error ? e.message : "Cancel failed", {
+          variant: "error",
+        });
+      } finally {
+        setCancelBusyUid(null);
+      }
+    },
+    [requestRef, gatewayRequestReady, show, fetchOrders, ordersPage, refreshLobbyGet],
+  );
+
   const pagerPrev = useCallback(() => {
     setOrdersPage((p) => Math.max(0, p - 1));
   }, []);
@@ -229,13 +449,23 @@ export function RedeemPage() {
     setOrdersPage((p) => Math.min(totalPages - 1, p + 1));
   }, [totalPages]);
 
-  const pagerLabel = useMemo(
-    () =>
-      totalPages <= 1
-        ? ""
-        : `${ordersPage + 1}/${totalPages}`,
-    [ordersPage, totalPages],
-  );
+  const handleNewRedeemClick = useCallback(async () => {
+    const binding = redeemPlayerBindingFromLobby(lobbyGet);
+    const next = resolveRedeemBindingNextStep(binding);
+    if (next.kind === "full") {
+      setBindingMode("full");
+      setBindingModalOpen(true);
+      return;
+    }
+    if (next.kind === "addressOnly") {
+      setBindingMode("addressOnly");
+      setBindingModalOpen(true);
+      return;
+    }
+    setMethodModalOpen(true);
+  }, [lobbyGet]);
+
+  const showPager = totalPages > 1;
 
   const cannotRedeem = redeemableAmount < resolveMinRedeemRaw(lobbyGet, user);
   const minRedeemDisplay = resolveMinRedeemDisplay(lobbyGet, user);
@@ -249,6 +479,30 @@ export function RedeemPage() {
 
   const showRedeemHistoryUi =
     gatewayRequestReady && !showInsufficientFullPage;
+
+  const balanceInfoPanel = useMemo(
+    () => (
+      <div className="redeem-page__info-panel">
+        <p>
+          <strong>{w(510493)}</strong> {formatScFromRaw(scAmount)}{" "}
+          <ScInlineIcon />
+        </p>
+        <p>
+          <strong>{w(510494)}</strong> {formatScFromRaw(redeemableAmount)}{" "}
+          <ScInlineIcon />
+        </p>
+        <p>
+          <strong>{w(510495)}</strong>{" "}
+          {formatScFromTruncatedHundredths(unplayedHundredths)} <ScInlineIcon />
+        </p>
+        <p>
+          <ScInlineIcon /> {w(510496)}
+        </p>
+        <p>{w(510497)}</p>
+      </div>
+    ),
+    [w, scAmount, redeemableAmount, unplayedHundredths],
+  );
 
   return (
     <section className="redeem-page page-container session-page session-page--pattern">
@@ -267,30 +521,7 @@ export function RedeemPage() {
           <InfoPopover
             align="end"
             panelClassName="redeem-page__info-popover"
-            content={
-              <div className="redeem-page__info-panel">
-                <p>
-                  <strong>Your Sweeps Coins Balance:</strong>{" "}
-                  {formatScFromRaw(scAmount)} <ScInlineIcon />
-                </p>
-                <p>
-                  <strong>Redeemable Sweeps Coins:</strong>{" "}
-                  {formatScFromRaw(redeemableAmount)} <ScInlineIcon />
-                </p>
-                <p>
-                  <strong>Unplayed Sweeps Coins Balance:</strong>{" "}
-                  {formatScFromTruncatedHundredths(unplayedHundredths)} <ScInlineIcon />
-                </p>
-                <p>
-                  <ScInlineIcon /> 1 Sweeps Coin = $1
-                </p>
-                <p>
-                  Unplayed Sweeps Coins from purchases and bonuses can be used to
-                  play in games, but cannot be redeemed. Sweeps Coins gained by
-                  winnings can be redeemed.
-                </p>
-              </div>
-            }>
+            content={balanceInfoPanel}>
             {(p, triggerRef) => (
               <button
                 ref={triggerRef}
@@ -321,7 +552,7 @@ export function RedeemPage() {
             </div>
             {!hasOrderHistory ? (
               <Link to="/" className="redeem-page__to-lobby">
-                Back to lobby
+                {w(510473)}
               </Link>
             ) : null}
           </div>
@@ -337,32 +568,7 @@ export function RedeemPage() {
       {showRedeemHistoryUi ? (
         <div className="redeem-page__card redeem-page__history-card">
           <div className="redeem-page__history-head">
-            <h2 className="redeem-page__history-title">Redemption History:</h2>
-            <div className="redeem-page__history-pager">
-              <button
-                type="button"
-                className="redeem-page__history-pager-btn"
-                aria-label="Previous page"
-                disabled={ordersPage <= 0 || ordersLoading}
-                onClick={pagerPrev}>
-                ‹
-              </button>
-              <span className="redeem-page__history-pager-link">
-                {pagerLabel}
-              </span>
-              <button
-                type="button"
-                className="redeem-page__history-pager-btn"
-                aria-label="Next page"
-                disabled={
-                  ordersLoading ||
-                  ordersPage >= totalPages - 1 ||
-                  totalPages <= 1
-                }
-                onClick={pagerNext}>
-                ›
-              </button>
-            </div>
+            <h2 className="redeem-page__history-title">{w(510474)}</h2>
           </div>
           <div
             className={
@@ -382,26 +588,16 @@ export function RedeemPage() {
                   className="redeem-page__history-list"
                   aria-label="Redemption history">
                   {ordersRows.map((row, i) => (
-                    <li
+                    <RedeemHistoryRow
                       key={
                         row.withdrawOrderUID ||
                         `${ordersPage}-${row.amount}-${row.withdrawOrderPaymentStatus}-${i}`
                       }
-                      className="redeem-page__history-row">
-                      <span className="redeem-page__history-icon" aria-hidden>
-                        i
-                      </span>
-                      <span className="redeem-page__history-desc">
-                        {formatWithdrawHistoryFiatAmount(row.amount)}{" "}
-                        {row.remark.trim() || "Redemption"}
-                      </span>
-                      <span
-                        className={redeemHistoryStatusClassName(
-                          row.statusLabel,
-                        )}>
-                        {row.statusLabel}
-                      </span>
-                    </li>
+                      row={row}
+                      cancelBusyUid={cancelBusyUid}
+                      onCancel={(uid) => void handleCancelOrder(uid)}
+                      w={w}
+                    />
                   ))}
                 </ul>
                 {ordersRows.length === 0 && !ordersError ? (
@@ -412,6 +608,40 @@ export function RedeemPage() {
               </>
             )}
           </div>
+          {showPager ? (
+            <div className="redeem-page__history-pager redeem-page__history-pager--footer">
+              <button
+                type="button"
+                className="redeem-page__history-pager-btn"
+                aria-label="Previous page"
+                disabled={ordersPage <= 0 || ordersLoading}
+                onClick={pagerPrev}>
+                ‹
+              </button>
+              <span className="redeem-page__history-pager-link">
+                {w(510484)}
+              </span>
+              {showPager ? (
+                <span
+                  className="redeem-page__history-pager-badge"
+                  aria-label={`Page ${ordersPage + 1} of ${totalPages}`}>
+                  {ordersPage + 1}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                className="redeem-page__history-pager-btn"
+                aria-label="Next page"
+                disabled={
+                  ordersLoading ||
+                  ordersPage >= totalPages - 1 ||
+                  totalPages <= 1
+                }
+                onClick={pagerNext}>
+                ›
+              </button>
+            </div>
+          ) : null}
           <button
             type="button"
             className="redeem-page__new-redeem"
@@ -421,30 +651,19 @@ export function RedeemPage() {
               cannotRedeem
             }
             onClick={() => {
-              const binding = redeemPlayerBindingFromLobby(lobbyGet);
-              if (!binding.hasCellPhone) {
-                setBindingMode("full");
-                setBindingModalOpen(true);
-                return;
-              }
-              if (!binding.hasAddress) {
-                setBindingMode("addressOnly");
-                setBindingModalOpen(true);
-                return;
-              }
-              if (!binding.hasFrontImage) {
-                void refreshLobbyGet();
-                show("Verification in progress. Please try again later.", {
-                  variant: "info",
-                });
-                return;
-              }
-              setMethodModalOpen(true);
+              void handleNewRedeemClick();
             }}>
             {w(510485)}
           </button>
         </div>
       ) : null}
+
+      <button
+        type="button"
+        className="redeem-page__support-link"
+        onClick={() => void openZendeskOrFallback()}>
+        {w(510486)}
+      </button>
 
       <RedeemBindingModal
         open={bindingModalOpen}
@@ -454,18 +673,29 @@ export function RedeemPage() {
           setBindingModalOpen(false);
           setMethodModalOpen(true);
         }}
-        bindingPrefill={{
-          email: user?.email,
-          phone: user?.phone,
-        }}
+        bindingPrefill={redeemBindingPrefillFromLobby(lobbyGet, user)}
       />
 
       <RedeemMethodModal
         open={methodModalOpen}
-        onClose={() => setMethodModalOpen(false)}
+        onClose={() => {
+          setMethodModalOpen(false);
+          setMethodModalResume(null);
+        }}
         onOrderCreated={refetchOrdersAfterWithdraw}
         redeemableAmountRaw={redeemableAmount}
         lobbyGet={lobbyGet}
+        resume={methodModalResume}
+        onResumeConsumed={() => setMethodModalResume(null)}
+      />
+
+      <RedeemApprovalModal
+        open={approvalModalOpen}
+        amountsWire={approvalAmountsWire}
+        onClose={() => {
+          setApprovalModalOpen(false);
+          setApprovalAmountsWire([]);
+        }}
       />
     </section>
   );

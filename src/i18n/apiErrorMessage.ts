@@ -1,4 +1,3 @@
-import { getWordPlain } from "../wordData/getWord";
 import i18n from "./i18n";
 
 /**
@@ -14,33 +13,22 @@ export function translateApiErrorCode(code: string | undefined | null): string {
   return i18n.t("errors:unknown");
 }
 
-function parseNumericCode(code: string | undefined | null): number | undefined {
-  const trimmed = code?.trim();
-  if (!trimmed) return undefined;
-  const n = Number(trimmed);
-  return Number.isFinite(n) ? n : undefined;
-}
-
 /**
- * Gateway / API error display: WordData[numericCode] → i18n errors:key → server errMessage → fallback.
+ * Gateway / API error display: server errMessage → i18n errors:key → fallback.
+ * Gateway `code` is not a WordData ID; do not map numeric codes to WordData.
  */
 export function translateGatewayError(
   code: string | number | undefined | null,
   errMessage?: string | null,
   fallback = "Something went wrong. Please try again.",
 ): string {
+  const serverMsg = errMessage?.trim();
+  if (serverMsg) return serverMsg;
   const codeStr =
     code === undefined || code === null ? "" : String(code).trim();
-  const numericId = parseNumericCode(codeStr);
-  if (numericId !== undefined) {
-    const fromWordData = getWordPlain(numericId);
-    if (fromWordData) return fromWordData;
-  }
   if (codeStr) {
     const fromI18n = translateApiErrorCode(codeStr);
     if (fromI18n !== i18n.t("errors:unknown")) return fromI18n;
   }
-  const serverMsg = errMessage?.trim();
-  if (serverMsg) return serverMsg;
   return fallback;
 }

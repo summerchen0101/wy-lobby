@@ -3,12 +3,22 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/useAuth";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
 import { isGatewayWsSuppressedRoute } from "../../lib/gatewayWsRoute";
+import { isLobbySessionEvicted } from "../../lib/dismissLobbySessionOverlays";
 import { usePrimaryAppTab } from "../../lib/primaryAppTab";
 import {
   isWelcomeVoiceGateOpen,
   LOBBY_WELCOME_VOICE_GATE_EVENT,
 } from "../../lib/lobbyWelcomeVoiceGate";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
+import {
+  shouldShowNoviceTeachingGeneralTutorial,
+  type LobbyGetDecoded,
+} from "../../realtime/lobbyDecode";
+import {
+  isNewbieTutorialCompletedThisSession,
+  isTutorialOverlayOpen,
+  TUTORIAL_OVERLAY_STATE_EVENT,
+} from "../tutorial/tutorialOverlayState";
 import { useDailyLoginActivity } from "./dailyLoginContext";
 import { shouldAutoPopupDailyLogin } from "./dailyLoginLogic";
 import {
@@ -24,13 +34,23 @@ function isDailyLoginAutoPopupBlockedRoute(pathname: string): boolean {
   );
 }
 
+function isNewbieTutorialBlockingDailyLogin(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): boolean {
+  if (isNewbieTutorialCompletedThisSession()) return false;
+  if (isTutorialOverlayOpen()) return true;
+  return shouldShowNoviceTeachingGeneralTutorial(lobbyGet);
+}
+
 export function DailyLoginGate() {
   const { ready, user } = useAuth();
   const location = useLocation();
   const isPrimaryAppTab = usePrimaryAppTab();
-  const { gatewayRequestReady, needsLobbyHydrationOverlay } = useGatewayLobby();
+  const { gatewayRequestReady, needsLobbyHydrationOverlay, lobbyGet } =
+    useGatewayLobby();
   const { viewModel, loading, openModal } = useDailyLoginActivity();
   const [welcomeVoiceGateVersion, setWelcomeVoiceGateVersion] = useState(0);
+  const [tutorialOverlayVersion, setTutorialOverlayVersion] = useState(0);
 
   useEffect(() => {
     const sync = () => setWelcomeVoiceGateVersion((v) => v + 1);
@@ -40,13 +60,22 @@ export function DailyLoginGate() {
   }, []);
 
   useEffect(() => {
+    const sync = () => setTutorialOverlayVersion((v) => v + 1);
+    window.addEventListener(TUTORIAL_OVERLAY_STATE_EVENT, sync);
+    return () =>
+      window.removeEventListener(TUTORIAL_OVERLAY_STATE_EVENT, sync);
+  }, []);
+
+  useEffect(() => {
     const userId = user?.id?.trim() ?? "";
     if (!ready || !userId || userId === "0") return;
+    if (isLobbySessionEvicted()) return;
     if (!isPrimaryAppTab) return;
     if (isDailyLoginAutoPopupBlockedRoute(location.pathname)) return;
     if (!isWsLobbyGamesEnabled()) return;
     if (!gatewayRequestReady || needsLobbyHydrationOverlay) return;
     if (!isWelcomeVoiceGateOpen()) return;
+    if (isNewbieTutorialBlockingDailyLogin(lobbyGet)) return;
     if (loading || !shouldAutoPopupDailyLogin(viewModel)) return;
     if (wasDailyLoginAutoPopupShown(userId)) return;
 
@@ -62,6 +91,8 @@ export function DailyLoginGate() {
     loading,
     viewModel,
     welcomeVoiceGateVersion,
+    tutorialOverlayVersion,
+    lobbyGet,
     openModal,
   ]);
 

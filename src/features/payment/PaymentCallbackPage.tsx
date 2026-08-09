@@ -7,11 +7,13 @@ import {
 } from "./paymentCallbackStorage";
 import "./PaymentCallbackPage.css";
 
-type Props = {
+export type PaymentCallbackPageProps = {
   channel: PaymentCallbackChannel;
   returnPath: string;
   returnLabel: string;
 };
+
+type Props = PaymentCallbackPageProps;
 
 export function PaymentCallbackPage({
   channel,
@@ -20,10 +22,11 @@ export function PaymentCallbackPage({
 }: Props) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const state = useMemo(
-    () => parseCallbackState(params.get("state")),
-    [params],
-  );
+  const state = useMemo(() => {
+    const raw =
+      params.get("paymentState") ?? params.get("state");
+    return parseCallbackState(raw);
+  }, [params]);
 
   useEffect(() => {
     if (state == null) return;
@@ -37,7 +40,11 @@ export function PaymentCallbackPage({
         window.close();
         return;
       }
-      navigate(returnPath, { replace: true });
+      const destination =
+        channel === "redeem" && state != null
+          ? `/redeem?paymentState=${state}`
+          : returnPath;
+      navigate(destination, { replace: true });
     }, 1200);
     return () => window.clearTimeout(t);
   }, [channel, navigate, returnPath, state]);
