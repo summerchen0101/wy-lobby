@@ -1,4 +1,5 @@
 import SigmaDeviceManager from "@socure-inc/device-risk-sdk";
+import { isDevConsoleEnabled } from "../env";
 import { getSocureSdkKey } from "./socureSdkKey";
 
 let initialized = false;
@@ -11,6 +12,12 @@ export function isSocureDeviceEnabled(): boolean {
 
 export function initSocureDevice(): boolean {
   const sdkKey = getSocureSdkKey();
+  if (isDevConsoleEnabled()) {
+    console.info(
+      "[Socure] VITE_SOCURE_SDK_KEY",
+      sdkKey ?? "(missing — set at build time)",
+    );
+  }
   if (!sdkKey) return false;
   if (!initialized) {
     SigmaDeviceManager.initialize({ sdkKey });
@@ -20,12 +27,26 @@ export function initSocureDevice(): boolean {
 }
 
 export async function getSocureDiSessionToken(): Promise<string | undefined> {
-  if (!initSocureDevice()) return undefined;
+  if (!initSocureDevice()) {
+    if (isDevConsoleEnabled()) {
+      console.warn("[Socure] getSessionToken skipped: SDK key missing");
+    }
+    return undefined;
+  }
   try {
     const token = await SigmaDeviceManager.getSessionToken();
     const trimmed = token?.trim();
+    if (isDevConsoleEnabled()) {
+      console.info(
+        "[Socure] getSessionToken",
+        trimmed ? `${trimmed.slice(0, 8)}…` : "(empty)",
+      );
+    }
     return trimmed || undefined;
-  } catch {
+  } catch (err) {
+    if (isDevConsoleEnabled()) {
+      console.warn("[Socure] getSessionToken failed", err);
+    }
     return undefined;
   }
 }
