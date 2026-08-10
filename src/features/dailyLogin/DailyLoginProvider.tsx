@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -174,16 +175,22 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const [viewModelNowMs, setViewModelNowMs] = useState(0);
+
+  useLayoutEffect(() => {
+    setViewModelNowMs(Date.now());
+  }, [activity, loading, activityFromCache, vipLevel]);
+
   const viewModel = useMemo(
     () =>
       activity
-        ? buildDailyLoginViewModel(activity, Date.now(), {
+        ? buildDailyLoginViewModel(activity, viewModelNowMs, {
             suppressClaimableFromStaleCache:
               loading && activityFromCache,
             vipLevel,
           })
         : null,
-    [activity, loading, activityFromCache, vipLevel],
+    [activity, loading, activityFromCache, vipLevel, viewModelNowMs],
   );
 
   const canDismissModal = useMemo(

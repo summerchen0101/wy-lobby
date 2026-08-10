@@ -913,7 +913,6 @@ describe("dailyLoginLogic", () => {
           claimableMissionIds: ["3"],
         },
       ],
-      2,
     );
     expect(days.filter((day) => day.status === "claimable").length).toBe(3);
   });

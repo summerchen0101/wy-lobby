@@ -531,7 +531,6 @@ export function groupFlatMissionsByDate(
 export function computeSevenDayWindow(
   flat: FlatMission[],
   vipLevel: number = 0,
-  achievedCredit?: number,
 ): {
   startIndex: number;
   days: DayViewModel[];
@@ -600,7 +599,6 @@ export function applyMissionDateClaimGate(days: DayViewModel[]): DayViewModel[] 
 /** @deprecated 已完成未領取一律亮燈，不再額外 cap。 */
 export function applyBacklogAwareDayStatuses(
   days: DayViewModel[],
-  _leadingCollectableDayGroups?: number,
 ): DayViewModel[] {
   return days;
 }
@@ -686,10 +684,9 @@ export function findClaimableCreditRewards(
 export function canClaimTodayUtc(
   flat: FlatMission[],
   vipLevel: number = 0,
-  achievedCredit?: number,
 ): boolean {
   if (flat.length === 0) return false;
-  const { days } = computeSevenDayWindow(flat, vipLevel, achievedCredit);
+  const { days } = computeSevenDayWindow(flat, vipLevel);
   return days.some((day) => isDayCollectable(day));
 }
 
@@ -716,12 +713,7 @@ export function buildDailyLoginViewModel(
   );
 
   const flat = flattenDailyMissions(activity);
-  const achievedCredit = parseWireInt64(activity.achievedCreditAmount) ?? 0;
-  const { days: rawDays } = computeSevenDayWindow(
-    flat,
-    vipLevel,
-    achievedCredit,
-  );
+  const { days: rawDays } = computeSevenDayWindow(flat, vipLevel);
   let days = rawDays;
   if (options?.suppressClaimableFromStaleCache) {
     days = days.map((day) => {

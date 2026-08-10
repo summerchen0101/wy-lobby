@@ -15,7 +15,7 @@ const GetActivityResponseType = root.lookup(
 ) as protobuf.Type;
 
 function encodeGetActivityResponseBytesFromActivity(
-  activity: protobuf.Message<{}>,
+  activity: protobuf.Message<object>,
 ): Uint8Array {
   const msg = GetActivityResponseType.create({ activity });
   return Uint8Array.from(GetActivityResponseType.encode(msg).finish());
