@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   claimPrimaryTabLeaseIfVisible,
   isSecondaryAppTab,
+  tryCloseBrowserTab,
 } from "./primaryAppTab";
 
 function installStorageMocks(): void {
@@ -101,5 +102,25 @@ describe("primaryAppTab", () => {
     claimPrimaryTabLeaseIfVisible();
 
     expect(isSecondaryAppTab()).toBe(true);
+  });
+
+  it("falls back to about:blank when window.close is ignored", () => {
+    const close = vi.fn();
+    const replace = vi.fn();
+    const setTimeout = vi.fn((fn: () => void) => {
+      fn();
+      return 0;
+    });
+    vi.stubGlobal("window", {
+      close,
+      setTimeout,
+      location: { replace },
+      opener: null,
+    });
+
+    tryCloseBrowserTab();
+
+    expect(close).toHaveBeenCalledOnce();
+    expect(replace).toHaveBeenCalledWith("about:blank");
   });
 });

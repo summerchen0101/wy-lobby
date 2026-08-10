@@ -16,6 +16,7 @@ import {
   GATEWAY_API_PING_PONG,
   GATEWAY_API_SERVER_LOGIN,
   GATEWAY_API_UPDATE_NOVICE_TEACHING,
+  GATEWAY_API_WALLET_GET,
   GATEWAY_API_WALLET_USE,
 } from './gatewayApi'
 import {
@@ -34,6 +35,7 @@ import {
   decodeGetActivityRequestForDevLog,
 } from './activityLobbyWire'
 import { decodeDeletePlayerInfoRequestForDevLog } from './deleteAccountWire'
+import { decodeWalletGetRequestForDevLog } from './walletGetLobbyWire'
 
 const HEX_MAX = 48
 
@@ -102,6 +104,14 @@ export function decodeGatewayRequestDataForDevLog(
   if (apiType === GATEWAY_API_MEGA_ACCOUNT_BINDING) {
     try {
       return decodeMegaAccountBindingRequestForDevLog(raw)
+    } catch (e) {
+      return fallbackHex(raw, e)
+    }
+  }
+
+  if (apiType === GATEWAY_API_WALLET_GET) {
+    try {
+      return decodeWalletGetRequestForDevLog(raw)
     } catch (e) {
       return fallbackHex(raw, e)
     }

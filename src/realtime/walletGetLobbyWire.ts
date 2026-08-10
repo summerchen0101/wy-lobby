@@ -120,3 +120,39 @@ export function encodeWalletGetResponseBytes(subsidyAmount: number): Uint8Array 
   const msg = WalletGetResponseType.create({ subsidyAmount });
   return Uint8Array.from(WalletGetResponseType.encode(msg).finish());
 }
+
+function walletTypeLabelFromWire(raw: string | number | undefined): string {
+  const n = Number(raw);
+  if (n === 1) return "GC";
+  if (n === 2) return "SC";
+  return String(raw ?? "");
+}
+
+/** Dev log: decode WalletGetRequest inner `data` bytes. */
+export function decodeWalletGetRequestForDevLog(raw: Uint8Array): Record<string, unknown> {
+  const msg = WalletGetRequestType.decode(raw);
+  const o = WalletGetRequestType.toObject(msg, {
+    enums: String,
+  }) as { walletType?: string | number };
+  return {
+    walletType: walletTypeLabelFromWire(o.walletType),
+    walletTypeWire: o.walletType,
+  };
+}
+
+/** Dev log: decode WalletGetResponse inner `data` bytes. */
+export function decodeWalletGetResponseForDevLog(raw: Uint8Array): Record<string, unknown> {
+  const decoded = decodeWalletGetResponseBytes(raw);
+  const bagKeys =
+    decoded.bag && typeof decoded.bag === "object"
+      ? Object.keys(decoded.bag).slice(0, 12)
+      : [];
+  return {
+    subsidyAmount: parseSubsidyAmount(decoded.subsidyAmount),
+    vipLevelBonusList: parseVipLevelBonusList(decoded.vipLevelBonusList),
+    redeemSCList: parseRedeemSCList(decoded.redeemSCList),
+    reKYC: decoded.reKYC ?? false,
+    hasBag: bagKeys.length > 0,
+    ...(bagKeys.length > 0 ? { bagKeysPreview: bagKeys } : {}),
+  };
+}

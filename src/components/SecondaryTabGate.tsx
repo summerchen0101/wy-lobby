@@ -1,13 +1,12 @@
 import { useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
-import { usePrimaryAppTab } from "../lib/primaryAppTab";
+import {
+  tryCloseBrowserTab,
+  usePrimaryAppTab,
+} from "../lib/primaryAppTab";
 import { isSecondaryTabGateExemptRoute } from "../lib/secondaryTabGateRoute";
 import "./ForceUpdateGate.css";
-
-function tryCloseSecondaryTabWindow(): void {
-  window.close();
-}
 
 /**
  * 嚴格單分頁：次分頁全螢幕封鎖，須關閉主分頁後才能使用（聚焦不會搶佔主分頁）。
@@ -16,7 +15,7 @@ export function SecondaryTabGate() {
   const { pathname } = useLocation();
   const isPrimaryAppTab = usePrimaryAppTab();
   const closeTab = useCallback(() => {
-    tryCloseSecondaryTabWindow();
+    tryCloseBrowserTab();
   }, []);
 
   if (isPrimaryAppTab || isSecondaryTabGateExemptRoute(pathname)) {

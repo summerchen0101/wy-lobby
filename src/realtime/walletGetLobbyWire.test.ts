@@ -3,6 +3,8 @@ import * as protobuf from "protobufjs/light.js";
 import schema from "../gen/lobby_wire.schema.js";
 import {
   decodeWalletGetResponseBytes,
+  decodeWalletGetRequestForDevLog,
+  decodeWalletGetResponseForDevLog,
   encodeWalletGetRequestBytes,
   encodeWalletGetResponseBytes,
   parseRedeemSCList,
@@ -94,6 +96,43 @@ describe("decodeWalletGetResponseBytes", () => {
       { vipLevel: 2, gcAmountWire: "50000", scAmountWire: "25000" },
       { vipLevel: 5, gcAmountWire: "200000", scAmountWire: "100000" },
     ]);
+  });
+});
+
+describe("decodeWalletGetRequestForDevLog", () => {
+  it("labels GC and SC wallet types", () => {
+    expect(
+      decodeWalletGetRequestForDevLog(encodeWalletGetRequestBytes("GC")),
+    ).toMatchObject({ walletType: "GC" });
+    expect(
+      decodeWalletGetRequestForDevLog(encodeWalletGetRequestBytes("SC")),
+    ).toMatchObject({ walletType: "SC" });
+  });
+});
+
+describe("decodeWalletGetResponseForDevLog", () => {
+  it("returns parsed lobby extras for dev console", () => {
+    const msg = WalletGetResponsePb.create({
+      subsidyAmount: 100000,
+      redeemSCList: [WalletGetResponseRedeemSCPb.create({ scAmount: 1000000 })],
+      vipLevelBonusList: [
+        WalletGetResponseVIPLevelBonusPb.create({
+          vipLevel: 6,
+          gcAmount: 100000,
+          scAmount: 100000,
+        }),
+      ],
+    });
+    const raw = Uint8Array.from(WalletGetResponsePb.encode(msg).finish());
+    expect(decodeWalletGetResponseForDevLog(raw)).toEqual({
+      subsidyAmount: 100000,
+      vipLevelBonusList: [
+        { vipLevel: 6, gcAmountWire: "100000", scAmountWire: "100000" },
+      ],
+      redeemSCList: ["1000000"],
+      reKYC: false,
+      hasBag: false,
+    });
   });
 });
 

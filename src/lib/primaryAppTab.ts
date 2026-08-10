@@ -69,6 +69,26 @@ export function claimPrimaryTabLeaseIfVisible(): void {
   writeLease(mine);
 }
 
+/**
+ * 嘗試關閉分頁。手動新開分頁貼網址時 window.close() 常被瀏覽器拒絕，改導向 fallback。
+ */
+export function tryCloseBrowserTab(fallbackLocation = "about:blank"): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.opener?.focus();
+  } catch {
+    /* ignore */
+  }
+  window.close();
+  window.setTimeout(() => {
+    try {
+      window.location.replace(fallbackLocation);
+    } catch {
+      /* ignore */
+    }
+  }, 0);
+}
+
 /** 是否為另開的分頁（已有其他分頁持有主分頁 lease）。 */
 export function isSecondaryAppTab(): boolean {
   if (typeof sessionStorage === "undefined" || typeof localStorage === "undefined") {

@@ -24,6 +24,7 @@ import {
   GATEWAY_API_SLOT_JACKPOT_PUSH,
   GATEWAY_API_USER_KICK_BEFORE,
   GATEWAY_API_UPDATE_PLAYER_AVATAR,
+  GATEWAY_API_WALLET_GET,
   GATEWAY_API_WALLET_USE,
   GATEWAY_API_WITHDRAW_SUCCESS_PUSH,
 } from "./gatewayApi";
@@ -67,6 +68,7 @@ import {
   decodeGetActivityResponseBytes,
   decodeListActivitiesResponseBytes,
 } from "./activityLobbyWire";
+import { decodeWalletGetResponseForDevLog } from "./walletGetLobbyWire";
 
 const HEX_MAX = 48;
 
@@ -168,6 +170,14 @@ export function decodeGatewayResponseDataForDevLog(
         return { kind: "SLOT_JACKPOT", slot };
       }
       return fallbackHex(raw, new Error("jackpot wire decode failed"));
+    }
+    if (type === GATEWAY_API_WALLET_GET) {
+      try {
+        const data = decodeWalletGetResponseForDevLog(raw);
+        return { kind: "WALLET_GET", data };
+      } catch (e) {
+        return fallbackHex(raw, e);
+      }
     }
     if (type === GATEWAY_API_WALLET_USE) {
       const w = tryDecodeWalletUseRequestForDev(raw);
