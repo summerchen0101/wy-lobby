@@ -922,13 +922,13 @@ export function LandingPage() {
     const filterEl = lobbyGameFilterRef.current;
     const tabEl = document.getElementById(lobbyTabDomId(lobbyFilter));
     if (!filterEl || !tabEl) return;
+    const stickyEl =
+      (tabEl.closest(".lobby-provider-tab") as HTMLElement | null) ?? tabEl;
     const filterRect = filterEl.getBoundingClientRect();
-    const tabRect = tabEl.getBoundingClientRect();
-    const tabCenter =
-      tabRect.left - filterRect.left + tabRect.width / 2 + filterEl.scrollLeft;
+    const stickyRect = stickyEl.getBoundingClientRect();
+    const tabLeft = stickyRect.left - filterRect.left + filterEl.scrollLeft;
     const maxScroll = Math.max(0, filterEl.scrollWidth - filterEl.clientWidth);
-    const targetScroll = tabCenter - filterEl.clientWidth / 2;
-    const left = Math.max(0, Math.min(maxScroll, targetScroll));
+    const left = Math.max(0, Math.min(maxScroll, tabLeft));
     filterEl.scrollTo({ left, behavior: "smooth" });
   }, [user, lobbyFilter]);
 

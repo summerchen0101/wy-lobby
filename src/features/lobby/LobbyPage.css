@@ -508,6 +508,20 @@ html.session-lobby-page {
   color: var(--lobby-filter-active-fg);
 }
 
+/* 橫向捲動時，當前選中分類固定在分類列左緣 */
+.lobby-game-filter__tab.is-active:not(.lobby-game-filter__tab--providers) {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.lobby-provider-tab:has(.lobby-game-filter__tab.is-active),
+.lobby-provider-tab:has(.lobby-game-filter__tab.is-menu-open) {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
 .lobby-game-filter__tab.is-active:hover {
   color: var(--lobby-filter-active-fg);
 }
