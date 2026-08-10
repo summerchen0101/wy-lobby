@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
@@ -37,13 +37,16 @@ function bonusDisplayKey(bonus: VipLevelBonusItem): string {
 export function VipLevelUpModal({ open, bonus, onClose }: Props) {
   const titleId = useId();
   const [exiting, setExiting] = useState(false);
-  const bonusRef = useRef<VipLevelBonusItem | null>(null);
+  const [displayBonus, setDisplayBonus] = useState<VipLevelBonusItem | null>(
+    null,
+  );
 
-  if (bonus) {
-    bonusRef.current = bonus;
-  }
+  useEffect(() => {
+    if (bonus) {
+      setDisplayBonus(bonus);
+    }
+  }, [bonus]);
 
-  const displayBonus = bonus ?? bonusRef.current;
   const shouldRender = displayBonus && (open || exiting);
 
   useEffect(() => {
@@ -55,13 +58,13 @@ export function VipLevelUpModal({ open, bonus, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !exiting && bonusRef.current) {
+      if (e.key === "Escape" && !exiting && displayBonus) {
         setExiting(true);
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, exiting]);
+  }, [open, exiting, displayBonus]);
 
   useEffect(() => {
     if (!exiting) return;
