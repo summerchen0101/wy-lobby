@@ -17,6 +17,7 @@ import {
   canClaimTodayUtc,
   getMissionStatus,
   isActivityInDisplayWindow,
+  listUserDailyMissionsByDatesSorted,
 } from "./dailyLoginLogic";
 
 function buildMissionsByDate(
@@ -53,6 +54,30 @@ function buildMissionsByDate(
 }
 
 describe("dailyLoginLogic", () => {
+  it("getMissionStatus follows ActionTimes / AchievedActionTimes / IsCollected rules", () => {
+    expect(
+      getMissionStatus({
+        actionTimes: 0,
+        achievedActionTimes: 1,
+        isCollected: false,
+      }),
+    ).toBe("locked");
+    expect(
+      getMissionStatus({
+        actionTimes: 1,
+        achievedActionTimes: 1,
+        isCollected: false,
+      }),
+    ).toBe("claimable");
+    expect(
+      getMissionStatus({
+        actionTimes: 1,
+        achievedActionTimes: 1,
+        isCollected: true,
+      }),
+    ).toBe("claimed");
+  });
+
   it("getMissionStatus uses actionTimes progress vs achievedActionTimes target", () => {
     expect(
       getMissionStatus({
@@ -156,6 +181,39 @@ describe("dailyLoginLogic", () => {
     const advanced = computeSevenDayWindow(flat);
     expect(advanced.startIndex).toBe(7);
     expect(advanced.days[0].status).toBe("claimable");
+  });
+
+  it("advances to week two when day 8 is already claimed (production field shape)", () => {
+    const base = Date.UTC(2026, 5, 1);
+    const dayMs = 86400000;
+    const missions: ActivityDataDecoded["UserDailyMissionsByDates"] = {};
+    for (let i = 0; i < 14; i++) {
+      const dateMs = base + i * dayMs;
+      const key = String(dateMs);
+      const collected = i < 8;
+      missions[key] = {
+        date: key,
+        userDailyMissions: [
+          {
+            dailyMissionID: String(5000 + i),
+            date: key,
+            actionTimes: 1,
+            achievedActionTimes: collected ? 1 : 0,
+            isCollected: collected,
+            itemID: 1,
+            itemAmount: 100000,
+            sort: String((i % 7) + 1),
+          },
+        ],
+      };
+    }
+    const flat = flattenDailyMissions(
+      buildMockDailyLoginActivity({ UserDailyMissionsByDates: missions }),
+    );
+    const { startIndex, days } = computeSevenDayWindow(flat);
+    expect(startIndex).toBe(7);
+    expect(days[0].status).toBe("claimed");
+    expect(days[0].dateMs).toBe(base + 7 * dayMs);
   });
 
   it("21st claim window starts at cycle index 14", () => {
@@ -736,7 +794,7 @@ describe("dailyLoginLogic", () => {
     expect(vm?.days.filter((day) => day.status === "claimable").length).toBe(1);
   });
 
-  it("caps falsely claimable future days to only one lit slot", () => {
+  it("lights every completed-unclaimed day in the current window", () => {
     const now = Date.UTC(2026, 6, 15, 12, 0, 0);
     const dayMs = 86400000;
     const missions = buildMissionsByDate(10, now - 2 * dayMs, (i) => ({
@@ -750,7 +808,7 @@ describe("dailyLoginLogic", () => {
 
     const vm = buildDailyLoginViewModel(activity, now);
     expect(vm?.days.filter((day) => day.status === "claimable").length).toBe(
-      1,
+      3,
     );
   });
 
@@ -824,7 +882,7 @@ describe("dailyLoginLogic", () => {
     expect(vm?.days.some((day) => day.status === "claimable")).toBe(false);
   });
 
-  it("applyBacklogAwareDayStatuses keeps at most two claimable days lit", () => {
+  it("applyBacklogAwareDayStatuses keeps all claimable days lit", () => {
     const days = applyBacklogAwareDayStatuses(
       [
         {
@@ -857,46 +915,10 @@ describe("dailyLoginLogic", () => {
       ],
       2,
     );
-    expect(days[0].status).toBe("claimable");
-    expect(days[1].status).toBe("claimable");
-    expect(days[2].status).toBe("locked");
-
-    const single = applyBacklogAwareDayStatuses(
-      [
-        {
-          dayNumber: 1,
-          index: 0,
-          missions: [],
-          dateMs: 0,
-          status: "claimable",
-          rewards: [],
-          claimableMissionIds: ["1"],
-        },
-        {
-          dayNumber: 2,
-          index: 1,
-          missions: [],
-          dateMs: 0,
-          status: "claimable",
-          rewards: [],
-          claimableMissionIds: ["2"],
-        },
-        {
-          dayNumber: 3,
-          index: 2,
-          missions: [],
-          dateMs: 0,
-          status: "claimable",
-          rewards: [],
-          claimableMissionIds: ["3"],
-        },
-      ],
-      5,
-    );
-    expect(single.filter((day) => day.status === "claimable").length).toBe(1);
+    expect(days.filter((day) => day.status === "claimable").length).toBe(3);
   });
 
-  it("does not claim by calendar date when cumulative progress is incomplete", () => {
+  it("does not light incomplete missions even when later map keys exist", () => {
     const now = Date.UTC(2026, 6, 30, 12, 0, 0);
     const july28 = 1785211200000;
     const july30 = 1785384000000;
@@ -926,7 +948,7 @@ describe("dailyLoginLogic", () => {
             {
               dailyMissionID: "2",
               date: String(july30),
-              actionTimes: 1,
+              actionTimes: 0,
               achievedActionTimes: 1,
               isCollected: false,
               itemID: 1,
@@ -943,10 +965,10 @@ describe("dailyLoginLogic", () => {
     expect(vm?.days.some((day) => day.status === "claimable")).toBe(false);
   });
 
-  it("orders cumulative records by sort, not map date key", () => {
+  it("orders cumulative records by map key, not mission sort", () => {
     const earlyDate = 1785211200000;
     const lateDate = 1785384000000;
-    const flat = flattenDailyMissions(
+    const sorted = listUserDailyMissionsByDatesSorted(
       buildMockDailyLoginActivity({
         UserDailyMissionsByDates: {
           [String(lateDate)]: {
@@ -960,7 +982,7 @@ describe("dailyLoginLogic", () => {
                 isCollected: false,
                 itemID: 1,
                 itemAmount: 1,
-                sort: "2",
+                sort: "1",
               },
             ],
           },
@@ -975,14 +997,50 @@ describe("dailyLoginLogic", () => {
                 isCollected: false,
                 itemID: 1,
                 itemAmount: 1,
-                sort: "1",
+                sort: "99",
               },
             ],
           },
         },
       }),
     );
-    expect(flat.map((row) => row.mission.dailyMissionID)).toEqual(["1", "2"]);
+    expect(sorted.map((e) => e.mapKeyMs)).toEqual([earlyDate, lateDate]);
+    expect(flattenDailyMissions(
+      buildMockDailyLoginActivity({
+        UserDailyMissionsByDates: {
+          [String(lateDate)]: {
+            date: String(lateDate),
+            userDailyMissions: [
+              {
+                dailyMissionID: "2",
+                date: String(lateDate),
+                actionTimes: 0,
+                achievedActionTimes: 1,
+                isCollected: false,
+                itemID: 1,
+                itemAmount: 1,
+                sort: "1",
+              },
+            ],
+          },
+          [String(earlyDate)]: {
+            date: String(earlyDate),
+            userDailyMissions: [
+              {
+                dailyMissionID: "1",
+                date: String(earlyDate),
+                actionTimes: 1,
+                achievedActionTimes: 1,
+                isCollected: false,
+                itemID: 1,
+                itemAmount: 1,
+                sort: "99",
+              },
+            ],
+          },
+        },
+      }),
+    ).map((row) => row.mission.dailyMissionID)).toEqual(["1", "2"]);
   });
 
   it("marks earliest unclaimed completed record claimable (production payload shape)", () => {

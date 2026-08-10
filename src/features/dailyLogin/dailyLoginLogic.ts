@@ -78,15 +78,17 @@ export function getMissionProgress(m: UserDailyMissionDecoded): {
 }
 
 /**
- * PDF / API：未完成 ActionTimes < AchievedActionTimes；
- * 可領 ActionTimes >= AchievedActionTimes && !IsCollected。
- * 登入後後端才把當前筆 actionTimes 從 0 同步為 1，不可用任務 date 判斷。
+ * PDF / API：
+ * - 未完成：ActionTimes < AchievedActionTimes
+ * - 已完成未領取：ActionTimes >= AchievedActionTimes && !IsCollected
+ * - 已完成已領取：ActionTimes >= AchievedActionTimes && IsCollected
  */
 export function getMissionStatus(m: UserDailyMissionDecoded): MissionStatus {
-  if (m.isCollected) return "claimed";
-  const { progress, target } = getMissionProgress(m);
-  if (target <= 0) return "locked";
+  const progress = parseWireInt64(m.actionTimes) ?? 0;
+  const target = parseWireInt64(m.achievedActionTimes);
+  if (target === null || target <= 0) return "locked";
   if (progress < target) return "locked";
+  if (m.isCollected) return "claimed";
   return "claimable";
 }
 
@@ -178,45 +180,59 @@ export function isActivityInDisplayWindow(
   return true;
 }
 
+export type UserDailyMissionsByDateEntry = {
+  mapKey: string;
+  mapKeyMs: number;
+  date?: string | number;
+  userDailyMissions: UserDailyMissionDecoded[];
+};
+
+/** UserDailyMissionsByDates → array，依 map key（時間戳）遞增排序。 */
+export function listUserDailyMissionsByDatesSorted(
+  activity: ActivityDataDecoded,
+): UserDailyMissionsByDateEntry[] {
+  const map = activity.UserDailyMissionsByDates ?? {};
+  return Object.entries(map)
+    .map(([key, group]) => {
+      const mapKeyMs = normalizeWireTimestampToMs(key) ?? 0;
+      const missions = [...(group?.userDailyMissions ?? [])].sort((a, b) => {
+        const sortDiff =
+          (parseWireInt64(a.sort) ?? 0) - (parseWireInt64(b.sort) ?? 0);
+        if (sortDiff !== 0) return sortDiff;
+        return (
+          (parseWireInt64(a.dailyMissionID) ?? 0) -
+          (parseWireInt64(b.dailyMissionID) ?? 0)
+        );
+      });
+      return {
+        mapKey: key,
+        mapKeyMs,
+        date: group?.date ?? key,
+        userDailyMissions: missions,
+      };
+    })
+    .sort(
+      (a, b) => a.mapKeyMs - b.mapKeyMs || a.mapKey.localeCompare(b.mapKey),
+    );
+}
+
 export function flattenDailyMissions(
   activity: ActivityDataDecoded,
 ): FlatMission[] {
-  const map = activity.UserDailyMissionsByDates ?? {};
-  const rows: Array<{
-    mission: UserDailyMissionDecoded;
-    groupDateMs: number;
-  }> = [];
-
-  for (const [key, group] of Object.entries(map)) {
-    const dateFromKey = normalizeWireTimestampToMs(key);
-    const dateFromGroup = normalizeWireTimestampToMs(group?.date);
-    const groupDateMs = dateFromGroup ?? dateFromKey ?? 0;
-    for (const mission of group?.userDailyMissions ?? []) {
-      rows.push({ mission, groupDateMs });
+  const flat: FlatMission[] = [];
+  for (const entry of listUserDailyMissionsByDatesSorted(activity)) {
+    const groupDateMs =
+      normalizeWireTimestampToMs(entry.date) ?? entry.mapKeyMs;
+    for (const mission of entry.userDailyMissions) {
+      flat.push({
+        index: flat.length,
+        mission,
+        groupDateMs:
+          normalizeWireTimestampToMs(mission.date) ?? groupDateMs,
+      });
     }
   }
-
-  rows.sort((a, b) => {
-    const sortDiff =
-      (parseWireInt64(a.mission.sort) ?? 0) -
-      (parseWireInt64(b.mission.sort) ?? 0);
-    if (sortDiff !== 0) return sortDiff;
-    const dateA =
-      normalizeWireTimestampToMs(a.mission.date) ?? a.groupDateMs;
-    const dateB =
-      normalizeWireTimestampToMs(b.mission.date) ?? b.groupDateMs;
-    if (dateA !== dateB) return dateA - dateB;
-    const idA = parseWireInt64(a.mission.dailyMissionID) ?? 0;
-    const idB = parseWireInt64(b.mission.dailyMissionID) ?? 0;
-    return idA - idB;
-  });
-
-  return rows.map((row, index) => ({
-    index,
-    mission: row.mission,
-    groupDateMs:
-      normalizeWireTimestampToMs(row.mission.date) ?? row.groupDateMs,
-  }));
+  return flat;
 }
 
 function rewardsFromMissions(
@@ -251,15 +267,6 @@ type DayGroup = {
   missions: UserDailyMissionDecoded[];
   indices: number[];
 };
-
-/** @deprecated Cumulative sign-in: only mission progress gates claimability. */
-export function isDayGroupEligibleByAchievedCredit(
-  _groupIndex: number,
-  _achievedCredit?: number,
-  missions?: UserDailyMissionDecoded[],
-): boolean {
-  return missions?.some((m) => isMissionClaimable(m)) ?? false;
-}
 
 function groupFlatIntoDayGroups(flat: FlatMission[]): DayGroup[] {
   const groups: DayGroup[] = [];
@@ -321,56 +328,36 @@ function createPlaceholderDayGroup(dateMs: number): DayGroup {
 }
 
 /**
- * 累計簽到今日點位：已領日數 + 目前可領日數（積壓最多 2）− 1。
- * 不用任務 date；避免 API 誤標未來多筆可領時把點位推到最後。
+ * 累計簽到進度點：最後一筆已領或已完成未領取的索引（用於 7 日窗口定位）。
  */
-export function findCumulativeProgressDayGroupIndex(
-  groups: DayGroup[],
-  achievedCredit?: number,
-): number {
-  let collected = 0;
-  for (const group of groups) {
-    if (dayStatusFromMissions(group.missions) === "claimed") {
-      collected++;
+export function findCumulativeProgressDayGroupIndex(groups: DayGroup[]): number {
+  let lastActive = 0;
+  for (let i = 0; i < groups.length; i++) {
+    const status = dayStatusFromMissions(groups[i]!.missions);
+    if (status === "claimed" || status === "claimable") {
+      lastActive = i;
       continue;
     }
     break;
   }
-  const leadingClaimable = countLeadingCollectableDayGroupsFromGroups(
-    groups,
-    achievedCredit,
-  );
-  if (leadingClaimable <= 0) {
-    return Math.max(0, collected - 1);
-  }
-  const activeSpan = leadingClaimable === 2 ? 2 : 1;
-  return collected + activeSpan - 1;
+  return lastActive;
 }
 
 export function findCumulativeProgressDayIndexFromFlat(
   flat: FlatMission[],
-  achievedCredit?: number,
 ): number {
-  return findCumulativeProgressDayGroupIndex(
-    groupFlatIntoDayGroups(flat),
-    achievedCredit,
-  );
+  return findCumulativeProgressDayGroupIndex(groupFlatIntoDayGroups(flat));
 }
 
-/** 從第一筆未領起，連續可領的「日」數（GC+SC 同日只算 1 日）。 */
+/** 連續可領的「日」數（GC+SC 同日只算 1 日）。 */
 export function countLeadingCollectableDayGroupsFromGroups(
   groups: DayGroup[],
-  achievedCredit?: number,
 ): number {
   let count = 0;
-  for (let i = 0; i < groups.length; i++) {
-    const group = groups[i]!;
+  for (const group of groups) {
     const status = dayStatusFromMissions(group.missions);
     if (status === "claimed") continue;
     if (status === "claimable") {
-      if (!isDayGroupEligibleByAchievedCredit(i, achievedCredit, group.missions)) {
-        break;
-      }
       count++;
       continue;
     }
@@ -381,104 +368,32 @@ export function countLeadingCollectableDayGroupsFromGroups(
 
 export function countLeadingCollectableDayGroupsFromFlat(
   flat: FlatMission[],
-  achievedCredit?: number,
 ): number {
   return countLeadingCollectableDayGroupsFromGroups(
     groupFlatIntoDayGroups(flat),
-    achievedCredit,
   );
 }
 
 export function countLeadingCollectableDayGroups(
   activity: ActivityDataDecoded,
 ): number {
-  const achievedCredit = parseWireInt64(activity.achievedCreditAmount) ?? 0;
   return countLeadingCollectableDayGroupsFromFlat(
     flattenDailyMissions(activity),
-    achievedCredit,
   );
-}
-
-function computeLitClaimableDayIndices(
-  groups: DayGroup[],
-  achievedCredit?: number,
-): Set<number> {
-  const leading = countLeadingCollectableDayGroupsFromGroups(
-    groups,
-    achievedCredit,
-  );
-  const maxLit = leading === 2 ? 2 : 1;
-  const lit = new Set<number>();
-  let count = 0;
-  for (let i = 0; i < groups.length; i++) {
-    const status = dayStatusFromMissions(groups[i]!.missions);
-    if (status === "claimed") continue;
-    if (status === "claimable") {
-      if (
-        count < maxLit &&
-        isDayGroupEligibleByAchievedCredit(
-          i,
-          achievedCredit,
-          groups[i]!.missions,
-        )
-      ) {
-        lit.add(i);
-        count++;
-      }
-      continue;
-    }
-    break;
-  }
-  return lit;
-}
-
-function displayStatusForDayGroup(
-  group: DayGroup,
-  groupIndex: number,
-  cumulativeProgressIndex: number,
-  litClaimableIndices: Set<number>,
-): MissionStatus {
-  if (groupIndex > cumulativeProgressIndex) return "locked";
-  const raw = dayStatusFromMissions(group.missions);
-  if (raw === "claimable") {
-    return litClaimableIndices.has(groupIndex) ? "claimable" : "locked";
-  }
-  return raw;
 }
 
 function applyDisplayDayStatusesToWindow(
   windowGroups: DayGroup[],
-  windowStartIndex: number,
-  allDayGroups: DayGroup[],
   vipLevel: number,
-  achievedCredit?: number,
 ): DayViewModel[] {
-  const cumulativeProgressIndex = findCumulativeProgressDayGroupIndex(
-    allDayGroups,
-    achievedCredit,
-  );
-  const litClaimableIndices = computeLitClaimableDayIndices(
-    allDayGroups,
-    achievedCredit,
-  );
-
   return windowGroups.map((group, i) => {
-    const groupIndex = windowStartIndex + i;
-    const status = displayStatusForDayGroup(
-      group,
-      groupIndex,
-      cumulativeProgressIndex,
-      litClaimableIndices,
-    );
+    const status = dayStatusFromMissions(group.missions);
     return dayViewModelFromGroup(group, i + 1, status, vipLevel);
   });
 }
 
-function computeActiveDayIndex(
-  groups: DayGroup[],
-  achievedCredit?: number,
-): number {
-  return findCumulativeProgressDayGroupIndex(groups, achievedCredit);
+function computeActiveDayIndex(groups: DayGroup[]): number {
+  return findCumulativeProgressDayGroupIndex(groups);
 }
 
 function isWindowFullyClaimed(
@@ -508,8 +423,12 @@ function firstUnclaimedIndexInWindow(
 function shouldHoldCompletedWindow(
   groups: DayGroup[],
   cycleStart: number,
+  activeIndex: number,
 ): boolean {
   if (!isWindowFullyClaimed(groups, cycleStart)) return false;
+
+  // 累計進度已進入下一輪（例如第 8 天已領）→ 切到下一個 7 日窗口。
+  if (activeIndex >= cycleStart + 7) return false;
 
   const nextWindowStart = cycleStart + 7;
   if (nextWindowStart >= groups.length) return true;
@@ -530,18 +449,15 @@ function shouldHoldCompletedWindow(
   return true;
 }
 
-function computeCycleStartDayIndex(
-  groups: DayGroup[],
-  achievedCredit?: number,
-): number {
-  const activeIndex = computeActiveDayIndex(groups, achievedCredit);
+function computeCycleStartDayIndex(groups: DayGroup[]): number {
+  const activeIndex = computeActiveDayIndex(groups);
   const naturalCycle = Math.floor(activeIndex / 7) * 7;
   const prevStart = naturalCycle - 7;
 
   if (
     prevStart >= 0 &&
     isWindowFullyClaimed(groups, prevStart) &&
-    shouldHoldCompletedWindow(groups, prevStart)
+    shouldHoldCompletedWindow(groups, prevStart, activeIndex)
   ) {
     return prevStart;
   }
@@ -631,7 +547,7 @@ export function computeSevenDayWindow(
     };
   }
 
-  const cycleStart = computeCycleStartDayIndex(allDayGroups, achievedCredit);
+  const cycleStart = computeCycleStartDayIndex(allDayGroups);
   const windowGroups = padDayGroupsToSeven(
     allDayGroups.slice(cycleStart, cycleStart + 7),
     allDayGroups,
@@ -641,13 +557,7 @@ export function computeSevenDayWindow(
 
   return {
     startIndex,
-    days: applyDisplayDayStatusesToWindow(
-      windowGroups,
-      cycleStart,
-      allDayGroups,
-      vipLevel,
-      achievedCredit,
-    ),
+    days: applyDisplayDayStatusesToWindow(windowGroups, vipLevel),
   };
 }
 
@@ -687,25 +597,12 @@ export function applyMissionDateClaimGate(days: DayViewModel[]): DayViewModel[] 
   return days;
 }
 
-/** 積壓 (恰好 2 日) 時亮 2 日；否則只亮最早 1 日。 */
+/** @deprecated 已完成未領取一律亮燈，不再額外 cap。 */
 export function applyBacklogAwareDayStatuses(
   days: DayViewModel[],
-  leadingCollectableDayGroups: number,
+  _leadingCollectableDayGroups?: number,
 ): DayViewModel[] {
-  const maxLit = leadingCollectableDayGroups === 2 ? 2 : 1;
-  let lit = 0;
-  return days.map((day) => {
-    if (day.status !== "claimable") return day;
-    if (lit < maxLit) {
-      lit++;
-      return day;
-    }
-    return {
-      ...day,
-      status: "locked" as const,
-      claimableMissionIds: [],
-    };
-  });
+  return days;
 }
 
 export function enforceSequentialDayStatuses(
