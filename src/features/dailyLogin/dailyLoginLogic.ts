@@ -7,7 +7,6 @@ import {
   normalizeWireTimestampToSec,
   parseWireInt64,
 } from "../../realtime/activityLobbyWire";
-import type { LobbyGetDecoded } from "../../realtime/lobbyDecode";
 import { applyDailyLoginVipBonus } from "./dailyLoginVipBonus";
 
 export type MissionStatus = "locked" | "claimable" | "claimed";
@@ -64,7 +63,7 @@ function walletFromItemId(itemID: number): "GC" | "SC" {
 
 function missionRequiredActionTimes(m: UserDailyMissionDecoded): number {
   const parsed = parseWireInt64(m.achievedActionTimes);
-  if (parsed === null || parsed <= 0) return 1;
+  if (parsed === null || parsed <= 0) return 0;
   return parsed;
 }
 
@@ -78,11 +77,16 @@ export function getMissionProgress(m: UserDailyMissionDecoded): {
   };
 }
 
+/**
+ * PDF / API：未完成 ActionTimes < AchievedActionTimes；
+ * 可領 ActionTimes >= AchievedActionTimes && !IsCollected。
+ * 登入後後端才把當前筆 actionTimes 從 0 同步為 1，不可用任務 date 判斷。
+ */
 export function getMissionStatus(m: UserDailyMissionDecoded): MissionStatus {
-  const { progress, target } = getMissionProgress(m);
   if (m.isCollected) return "claimed";
-  // 小強：登入才會把 actionTimes 從 0 改 1；0 表示尚未完成
-  if (progress <= 0 || progress < target) return "locked";
+  const { progress, target } = getMissionProgress(m);
+  if (target <= 0) return "locked";
+  if (progress < target) return "locked";
   return "claimable";
 }
 
@@ -119,29 +123,6 @@ export function calendarDayKeyInTimeZone(
   const month = Number(parts.find((p) => p.type === "month")?.value ?? "0");
   const day = Number(parts.find((p) => p.type === "day")?.value ?? "0");
   return year * 10000 + month * 100 + day;
-}
-
-export function isSameCalendarDayInTimeZone(
-  aMs: number,
-  bMs: number,
-  timeZone: string = DAILY_LOGIN_CALENDAR_TIME_ZONE,
-): boolean {
-  return (
-    calendarDayKeyInTimeZone(aMs, timeZone) ===
-    calendarDayKeyInTimeZone(bMs, timeZone)
-  );
-}
-
-/** LOBBY_GET campaign.dailyRewardRecivedAtMs — 帳號層級，換瀏覽器仍有效。 */
-export function hasClaimedDailyRewardTodayFromLobbyGet(
-  lobbyGet: LobbyGetDecoded | null | undefined,
-  nowMs: number = Date.now(),
-): boolean {
-  const receivedAtMs = normalizeWireTimestampToMs(
-    lobbyGet?.campaign?.dailyRewardRecivedAtMs,
-  );
-  if (receivedAtMs == null) return false;
-  return isSameCalendarDayInTimeZone(receivedAtMs, nowMs);
 }
 
 export function isDayCollectable(
@@ -201,28 +182,41 @@ export function flattenDailyMissions(
   activity: ActivityDataDecoded,
 ): FlatMission[] {
   const map = activity.UserDailyMissionsByDates ?? {};
-  const groups = Object.entries(map)
-    .map(([key, group]) => {
-      const dateFromKey = normalizeWireTimestampToMs(key);
-      const dateFromGroup = normalizeWireTimestampToMs(group?.date);
-      const dateMs = dateFromGroup ?? dateFromKey ?? 0;
-      return { dateMs, missions: group?.userDailyMissions ?? [] };
-    })
-    .sort((a, b) => a.dateMs - b.dateMs);
+  const rows: Array<{
+    mission: UserDailyMissionDecoded;
+    groupDateMs: number;
+  }> = [];
 
-  const flat: FlatMission[] = [];
-  for (const { dateMs, missions } of groups) {
-    const sorted = [...missions].sort(
-      (a, b) =>
-        (parseWireInt64(a.sort) ?? 0) - (parseWireInt64(b.sort) ?? 0),
-    );
-    for (const mission of sorted) {
-      const missionDate =
-        normalizeWireTimestampToMs(mission.date) ?? dateMs;
-      flat.push({ index: flat.length, mission, groupDateMs: missionDate });
+  for (const [key, group] of Object.entries(map)) {
+    const dateFromKey = normalizeWireTimestampToMs(key);
+    const dateFromGroup = normalizeWireTimestampToMs(group?.date);
+    const groupDateMs = dateFromGroup ?? dateFromKey ?? 0;
+    for (const mission of group?.userDailyMissions ?? []) {
+      rows.push({ mission, groupDateMs });
     }
   }
-  return flat;
+
+  rows.sort((a, b) => {
+    const sortDiff =
+      (parseWireInt64(a.mission.sort) ?? 0) -
+      (parseWireInt64(b.mission.sort) ?? 0);
+    if (sortDiff !== 0) return sortDiff;
+    const dateA =
+      normalizeWireTimestampToMs(a.mission.date) ?? a.groupDateMs;
+    const dateB =
+      normalizeWireTimestampToMs(b.mission.date) ?? b.groupDateMs;
+    if (dateA !== dateB) return dateA - dateB;
+    const idA = parseWireInt64(a.mission.dailyMissionID) ?? 0;
+    const idB = parseWireInt64(b.mission.dailyMissionID) ?? 0;
+    return idA - idB;
+  });
+
+  return rows.map((row, index) => ({
+    index,
+    mission: row.mission,
+    groupDateMs:
+      normalizeWireTimestampToMs(row.mission.date) ?? row.groupDateMs,
+  }));
 }
 
 function rewardsFromMissions(
@@ -258,20 +252,13 @@ type DayGroup = {
   indices: number[];
 };
 
-/**
- * 累計簽到積分須涵蓋該日序（1-based），才允許亮燈／可領。0 表示後端尚未回傳積分，不套用。
- * 登入後 `actionTimes` 已達標時以任務進度為準，避免 `achievedCreditAmount` 滯後導致多日無法亮燈。
- */
+/** @deprecated Cumulative sign-in: only mission progress gates claimability. */
 export function isDayGroupEligibleByAchievedCredit(
-  groupIndex: number,
-  achievedCredit: number | undefined,
+  _groupIndex: number,
+  _achievedCredit?: number,
   missions?: UserDailyMissionDecoded[],
 ): boolean {
-  if (missions?.some((m) => isMissionClaimable(m))) {
-    return true;
-  }
-  if (achievedCredit === undefined || achievedCredit <= 0) return true;
-  return achievedCredit >= groupIndex + 1;
+  return missions?.some((m) => isMissionClaimable(m)) ?? false;
 }
 
 function groupFlatIntoDayGroups(flat: FlatMission[]): DayGroup[] {
@@ -695,108 +682,9 @@ export function countCollectableMissions(
   return countCollectableMissionsFromFlat(flattenDailyMissions(activity));
 }
 
-/**
- * Infer same-day daily claim from GET_ACTIVITY when local storage was cleared.
- * Cumulative sign-in: the next uncollected mission still has actionTimes < target
- * after today's check-in (login syncs only the current slot).
- */
-export function inferClaimedDailyTodayFromActivity(
-  activity: ActivityDataDecoded,
-): boolean {
-  const flat = flattenDailyMissions(activity);
-  if (flat.length === 0) return false;
-
-  const achievedCredit = parseWireInt64(activity.achievedCreditAmount) ?? 0;
-  const groups = groupFlatIntoDayGroups(flat);
-  for (let i = 0; i < groups.length; i++) {
-    const status = dayStatusFromMissions(groups[i]!.missions);
-    if (status === "claimed") continue;
-    if (
-      status === "claimable" &&
-      achievedCredit > 0 &&
-      !isDayGroupEligibleByAchievedCredit(i, achievedCredit, groups[i]!.missions)
-    ) {
-      return true;
-    }
-    break;
-  }
-
-  const collectableCount = countCollectableMissionsFromFlat(flat);
-
-  const firstPending = flat.find((row) => !row.mission.isCollected);
-  if (!firstPending) {
-    const collectedCount = flat.filter((row) => row.mission.isCollected).length;
-    const achievedCredit = parseWireInt64(activity.achievedCreditAmount) ?? 0;
-    return collectedCount > 0 && achievedCredit >= collectedCount;
-  }
-
-  const hasPriorCollected = flat.some(
-    (row) => row.index < firstPending.index && row.mission.isCollected,
-  );
-  if (!hasPriorCollected) return false;
-
-  const { progress, target } = getMissionProgress(firstPending.mission);
-  if (progress < target) return true;
-
-  if (collectableCount === 0) {
-    const collectedCount = flat.filter((row) => row.mission.isCollected).length;
-    const achievedCredit = parseWireInt64(activity.achievedCreditAmount) ?? 0;
-    return collectedCount > 0 && achievedCredit >= collectedCount;
-  }
-
-  return false;
-}
-
 /** @deprecated Cumulative sign-in: mission date is not a claim gate. */
 export function applyMissionDateClaimGate(days: DayViewModel[]): DayViewModel[] {
   return days;
-}
-
-export type SameDayDailyClaimCapState = {
-  claimedDailyToday: boolean;
-  collectableCount: number;
-  initialCollectableCount: number | null;
-};
-
-export function shouldApplySameDayDailyClaimCap(
-  state: SameDayDailyClaimCapState,
-): boolean {
-  if (!state.claimedDailyToday) return false;
-
-  const { collectableCount, initialCollectableCount } = state;
-  if (
-    initialCollectableCount != null &&
-    initialCollectableCount === 2 &&
-    collectableCount > 0
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-/** 當日已領後其餘「可領」格改為 locked；積壓模式 (>=2) 可連續領完。 */
-export function applySameDayDailyClaimCap(
-  days: DayViewModel[],
-  state: SameDayDailyClaimCapState | boolean,
-): DayViewModel[] {
-  const capState: SameDayDailyClaimCapState =
-    typeof state === "boolean"
-      ? {
-          claimedDailyToday: state,
-          collectableCount: 0,
-          initialCollectableCount: null,
-        }
-      : state;
-  if (!shouldApplySameDayDailyClaimCap(capState)) return days;
-  return days.map((day) => {
-    if (day.status !== "claimable") return day;
-    return {
-      ...day,
-      status: "locked" as const,
-      claimableMissionIds: [],
-    };
-  });
 }
 
 /** 積壓 (恰好 2 日) 時亮 2 日；否則只亮最早 1 日。 */
@@ -909,12 +797,6 @@ export function canClaimTodayUtc(
 }
 
 export type BuildDailyLoginViewModelOptions = {
-  /** 當日 ET 是否已成功領取過每日簽到（每天僅能打卡一次）。 */
-  claimedDailyToday?: boolean;
-  /** LOBBY_GET 帳號層級每日獎勵領取時間（換瀏覽器仍有效）。 */
-  claimedDailyTodayFromLobby?: boolean;
-  /** 本 ET 日首次 GET_ACTIVITY 時的連續可領日數（積壓判斷）。 */
-  initialCollectableCount?: number | null;
   /** 快取資料刷新中：不顯示 claimable 避免閃爍。 */
   suppressClaimableFromStaleCache?: boolean;
   /** 玩家 VIP 等級（獎勵顯示加乘）。 */
@@ -938,24 +820,12 @@ export function buildDailyLoginViewModel(
 
   const flat = flattenDailyMissions(activity);
   const achievedCredit = parseWireInt64(activity.achievedCreditAmount) ?? 0;
-  const leadingCollectableDayGroups = countLeadingCollectableDayGroupsFromFlat(
-    flat,
-    achievedCredit,
-  );
   const { days: rawDays } = computeSevenDayWindow(
     flat,
     vipLevel,
     achievedCredit,
   );
-  const claimedDailyToday =
-    options?.claimedDailyToday === true ||
-    options?.claimedDailyTodayFromLobby === true ||
-    inferClaimedDailyTodayFromActivity(activity);
-  let days = applySameDayDailyClaimCap(rawDays, {
-    claimedDailyToday,
-    collectableCount: leadingCollectableDayGroups,
-    initialCollectableCount: options?.initialCollectableCount ?? null,
-  });
+  let days = rawDays;
   if (options?.suppressClaimableFromStaleCache) {
     days = days.map((day) => {
       if (day.status !== "claimable") return day;
