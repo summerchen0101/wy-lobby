@@ -8,6 +8,7 @@ import { RequireAuth } from "./auth/RequireAuth";
 import { AlertProvider } from "./components/alert/AlertProvider";
 import { LoadingOverlayProvider } from "./components/loading/LoadingOverlayProvider";
 import { ForceUpdateGate } from "./components/ForceUpdateGate";
+import { SecondaryTabGate } from "./components/SecondaryTabGate";
 import { FullScreenLoadingOverlay } from "./components/loading/FullScreenLoadingOverlay";
 import { LobbyBgmOrchestrator } from "./components/LobbyBgmOrchestrator";
 import { LobbyLoginWelcomeOrchestrator } from "./components/LobbyLoginWelcomeOrchestrator";
@@ -107,6 +108,7 @@ export default function App() {
       <LocaleHtmlSync />
       <AuthProvider>
         <ForceUpdateGate />
+        <SecondaryTabGate />
         <LoadingOverlayProvider>
           <WalletProvider>
             <AlertProvider>

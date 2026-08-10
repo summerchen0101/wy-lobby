@@ -46,3 +46,7 @@
   text-decoration: none;
   cursor: pointer;
 }
+
+.secondary-tab-overlay {
+  cursor: pointer;
+}

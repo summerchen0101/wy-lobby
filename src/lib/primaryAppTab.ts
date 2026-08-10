@@ -51,11 +51,22 @@ function releaseLease(tabId: string): void {
   }
 }
 
-/** 目前可見的分頁搶佔主分頁 lease（最後聚焦的分頁負責 Gateway WS）。 */
+/**
+ * 主分頁寫入 lease。嚴格單分頁：若其他分頁仍持有有效 lease 則不搶佔（聚焦也不接管）。
+ */
 export function claimPrimaryTabLeaseIfVisible(): void {
   if (typeof document === "undefined") return;
   if (document.visibilityState !== "visible") return;
-  writeLease(getOrCreateTabId());
+  const mine = getOrCreateTabId();
+  const lease = readLease();
+  if (
+    lease &&
+    lease.tabId !== mine &&
+    Date.now() - lease.at < LEASE_TTL_MS
+  ) {
+    return;
+  }
+  writeLease(mine);
 }
 
 /** 是否為另開的分頁（已有其他分頁持有主分頁 lease）。 */
@@ -96,7 +107,7 @@ function startPrimaryLeaseHeartbeat(tabId: string): () => void {
 
 /**
  * 主分頁：負責 Gateway WS 與每日登入自動彈窗。
- * 背景分頁回傳 false；聚焦時搶佔 lease，原主分頁會讓出 WS。
+ * 次分頁回傳 false；嚴格單分頁下聚焦不會搶佔 lease，須關閉主分頁後次分頁才可接管。
  */
 export function usePrimaryAppTab(): boolean {
   const [isPrimary, setIsPrimary] = useState(() => !isSecondaryAppTab());

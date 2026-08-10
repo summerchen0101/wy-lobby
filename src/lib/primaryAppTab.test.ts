@@ -71,7 +71,7 @@ describe("primaryAppTab", () => {
     expect(isSecondaryAppTab()).toBe(false);
   });
 
-  it("visible tab can claim lease from another tab", () => {
+  it("visible tab does not steal lease from another tab (strict single-tab)", () => {
     localStorage.setItem(
       "ffgt:primary-tab-lease",
       JSON.stringify({ tabId: "tab-a", at: Date.now() }),
@@ -83,9 +83,9 @@ describe("primaryAppTab", () => {
     });
     claimPrimaryTabLeaseIfVisible();
 
-    expect(isSecondaryAppTab()).toBe(false);
+    expect(isSecondaryAppTab()).toBe(true);
     expect(JSON.parse(localStorage.getItem("ffgt:primary-tab-lease")!)).toEqual(
-      expect.objectContaining({ tabId: "tab-b" }),
+      expect.objectContaining({ tabId: "tab-a" }),
     );
   });
 
