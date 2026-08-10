@@ -23,7 +23,7 @@ function encodeGetActivityResponseBytesFromActivity(
 
 describe("normalizeProtobufInt64MapKey", () => {
   it("converts protobufjs int64 map hash keys to decimal strings", () => {
-    const hash = protobuf.util.LongBits.fromNumber(1735689600000, false).toHash();
+    const hash = protobuf.util.LongBits.fromNumber(1735689600000).toHash();
     expect(normalizeProtobufInt64MapKey(hash)).toBe("1735689600000");
     expect(normalizeProtobufInt64MapKey("1735689600")).toBe("1735689600");
   });
