@@ -296,10 +296,15 @@
 }
 
 .profile-page__progress {
+  --profile-bar-height: 1.35rem;
   --profile-bar-badge-size: 2.25rem;
+  --profile-bar-badge-bleed: calc(
+    (var(--profile-bar-badge-size) - var(--profile-bar-height)) / 2
+  );
   margin-bottom: var(--space-4);
-  /* Room for VIP badge half past the bar end */
-  padding-right: calc(var(--profile-bar-badge-size) * 0.5);
+  /* Room for VIP badge past bar edges */
+  padding: var(--profile-bar-badge-bleed)
+    calc(var(--profile-bar-badge-size) * 0.5) var(--profile-bar-badge-bleed) 0;
 }
 
 .profile-page__bar-row {
@@ -322,6 +327,7 @@
   left: 0;
   top: 0;
   bottom: 0;
+  z-index: 0;
   border-radius: inherit;
   max-width: 100%;
   overflow: hidden;
@@ -352,7 +358,7 @@
   position: absolute;
   left: 100%;
   top: 50%;
-  z-index: 2;
+  z-index: 3;
   width: var(--profile-bar-badge-size, 2.25rem);
   height: var(--profile-bar-badge-size, 2.25rem);
   transform: translate(-50%, -50%);
@@ -367,6 +373,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgb(0 0 0 / 45%));
 }
 
 .profile-page__settings {
