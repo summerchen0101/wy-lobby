@@ -32,24 +32,6 @@ type VideoFrameRect = {
   height: number;
 };
 
-function measureTopWidthVideoFrame(
-  containerWidth: number,
-  videoWidth: number,
-  videoHeight: number,
-): VideoFrameRect | null {
-  if (containerWidth <= 0 || videoWidth <= 0 || videoHeight <= 0) {
-    return null;
-  }
-  const width = containerWidth;
-  const height = Math.ceil((videoHeight / videoWidth) * width);
-  return {
-    top: 0,
-    left: 0,
-    width,
-    height,
-  };
-}
-
 type ClipLayout = {
   top: number;
   left: number;
@@ -81,11 +63,40 @@ function measureTopHeightVideoFrame(
   };
 }
 
+/** Mobile cover: fill viewport, top-aligned; avoids letterbox gap over lobby chrome. */
+function measureCoverVideoFrame(
+  containerWidth: number,
+  containerHeight: number,
+  videoWidth: number,
+  videoHeight: number,
+): VideoFrameRect | null {
+  if (
+    containerWidth <= 0 ||
+    containerHeight <= 0 ||
+    videoWidth <= 0 ||
+    videoHeight <= 0
+  ) {
+    return null;
+  }
+  const scale = Math.max(
+    containerWidth / videoWidth,
+    containerHeight / videoHeight,
+  );
+  const width = Math.ceil(videoWidth * scale);
+  const height = Math.ceil(videoHeight * scale);
+  return {
+    top: 0,
+    left: (containerWidth - width) / 2,
+    width,
+    height,
+  };
+}
+
 function getTutorialLayoutHeight(stack: HTMLElement): number {
-  if (stack.clientHeight > 0) return Math.round(stack.clientHeight);
   if (typeof window !== "undefined" && window.visualViewport?.height) {
     return Math.round(window.visualViewport.height);
   }
+  if (stack.clientHeight > 0) return Math.round(stack.clientHeight);
   if (typeof window !== "undefined") return Math.round(window.innerHeight);
   return 0;
 }
@@ -94,17 +105,20 @@ function measureClipLayout(
   stack: HTMLElement,
   videoWidth: number,
   videoHeight: number,
-  fitByWidth: boolean,
+  useMobileCover: boolean,
 ): ClipLayout | null {
-  const measured = fitByWidth
-    ? measureTopWidthVideoFrame(
-        getTutorialLayoutWidth(stack),
+  const containerWidth = getTutorialLayoutWidth(stack);
+  const containerHeight = getTutorialLayoutHeight(stack);
+  const measured = useMobileCover
+    ? measureCoverVideoFrame(
+        containerWidth,
+        containerHeight,
         videoWidth,
         videoHeight,
       )
     : measureTopHeightVideoFrame(
-        getTutorialLayoutWidth(stack),
-        getTutorialLayoutHeight(stack),
+        containerWidth,
+        containerHeight,
         videoWidth,
         videoHeight,
       );
@@ -798,6 +812,9 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
                 style={layoutStyle}
                 src={clip.src}
                 playsInline
+                controls={false}
+                disablePictureInPicture
+                disableRemotePlayback
                 muted={!videoSoundOn || !isLobbySoundEnabled()}
                 preload={
                   useMobileLayeredStack || i === index || i === index + 1

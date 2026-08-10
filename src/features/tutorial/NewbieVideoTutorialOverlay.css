@@ -26,7 +26,7 @@
 }
 
 .newbie-video-tutorial--mobile {
-  background: transparent;
+  background: #000;
 }
 
 .newbie-video-tutorial--playing {
@@ -66,6 +66,15 @@
   position: absolute;
   top: 0;
   left: 0;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.newbie-video-tutorial__video::-webkit-media-controls,
+.newbie-video-tutorial__video::-webkit-media-controls-enclosure,
+.newbie-video-tutorial__video::-webkit-media-controls-panel {
+  display: none !important;
+  appearance: none;
 }
 
 .newbie-video-tutorial__video--mobile-active {
