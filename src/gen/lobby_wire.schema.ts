@@ -85,10 +85,43 @@ export default {
               "type": "int64",
               "id": 2
             },
+            "vipLevelBonusList": {
+              "rule": "repeated",
+              "type": "WalletGetResponseVIPLevelBonus",
+              "id": 3
+            },
+            "reKYC": {
+              "type": "bool",
+              "id": 4
+            },
             "redeemSCList": {
               "rule": "repeated",
-              "type": "string",
+              "type": "WalletGetResponseRedeemSC",
+              "id": 5
+            }
+          }
+        },
+        "WalletGetResponseVIPLevelBonus": {
+          "fields": {
+            "vipLevel": {
+              "type": "uint64",
+              "id": 1
+            },
+            "gcAmount": {
+              "type": "uint64",
+              "id": 2
+            },
+            "scAmount": {
+              "type": "uint64",
               "id": 3
+            }
+          }
+        },
+        "WalletGetResponseRedeemSC": {
+          "fields": {
+            "scAmount": {
+              "type": "uint64",
+              "id": 1
             }
           }
         },

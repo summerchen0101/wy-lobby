@@ -53,6 +53,10 @@ interface ImportMetaEnv {
    * 僅 dev：提領核准彈窗 WALLET_GET mock。逗號分隔 wire SC，如 `1000000` 或 `500000,1200000`。
    */
   readonly VITE_DEV_WALLET_GET_REDEEM_SC_LIST?: string;
+  /**
+   * 僅 dev：VIP 升級彈窗 WALLET_GET mock。逗號分隔 `vip:gc:sc`，如 `6:100000:100000` 或 `2:50000:25000,5:200000:100000`。
+   */
+  readonly VITE_DEV_WALLET_GET_VIP_BONUS?: string;
   /** 寫入 Gateway RequestBasic.clientVer */
   readonly VITE_CLIENT_VER?: string;
   /**

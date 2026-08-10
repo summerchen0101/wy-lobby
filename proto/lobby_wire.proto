@@ -77,7 +77,19 @@ message WalletGetRequest {
 message WalletGetResponse {
   Bag bag = 1;
   int64 subsidyAmount = 2;
-  repeated string redeemSCList = 3;
+  repeated WalletGetResponseVIPLevelBonus vipLevelBonusList = 3;
+  bool reKYC = 4;
+  repeated WalletGetResponseRedeemSC redeemSCList = 5;
+}
+
+message WalletGetResponseVIPLevelBonus {
+  uint64 vipLevel = 1;
+  uint64 gcAmount = 2;
+  uint64 scAmount = 3;
+}
+
+message WalletGetResponseRedeemSC {
+  uint64 scAmount = 1;
 }
 
 // Gateway push（如 SLOT_JACKPOT_INFO_PUSH 14）：累積獎池；jackpot_amounts 前三個元素對應大廳 JP1～JP3。

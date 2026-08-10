@@ -1,0 +1,395 @@
+.vip-level-up-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--modal-z-index);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(var(--page-pad), var(--safe-top)) var(--page-pad-inline)
+    max(var(--page-pad), var(--safe-bottom));
+  overflow: hidden;
+  background: radial-gradient(
+    circle at 50% 38%,
+    rgb(12 28 72 / 92%) 0%,
+    rgb(4 8 22 / 96%) 55%,
+    rgb(2 4 12 / 98%) 100%
+  );
+  animation: vip-level-up-overlay-in 0.35s ease-out;
+}
+
+.vip-level-up-overlay__glow {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: min(120vw, 30rem);
+  height: min(120vw, 30rem);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgb(70 150 255 / 28%) 0%,
+    rgb(40 110 220 / 14%) 38%,
+    transparent 70%
+  );
+}
+
+.vip-level-up-overlay__rays {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: 220vmax;
+  height: 220vmax;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    rgb(72 148 255 / 9%) 18deg,
+    transparent 36deg,
+    rgb(72 148 255 / 7%) 54deg,
+    transparent 72deg,
+    rgb(72 148 255 / 11%) 90deg,
+    transparent 108deg,
+    rgb(72 148 255 / 7%) 126deg,
+    transparent 144deg,
+    rgb(72 148 255 / 9%) 162deg,
+    transparent 180deg,
+    rgb(72 148 255 / 7%) 198deg,
+    transparent 216deg,
+    rgb(72 148 255 / 11%) 234deg,
+    transparent 252deg,
+    rgb(72 148 255 / 7%) 270deg,
+    transparent 288deg,
+    rgb(72 148 255 / 9%) 306deg,
+    transparent 324deg,
+    rgb(72 148 255 / 7%) 342deg,
+    transparent 360deg
+  );
+  opacity: 0.8;
+  mask-image: radial-gradient(
+    circle at 50% 50%,
+    rgb(0 0 0 / 100%) 0%,
+    rgb(0 0 0 / 90%) 14%,
+    rgb(0 0 0 / 55%) 28%,
+    transparent 46%
+  );
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 50%,
+    rgb(0 0 0 / 100%) 0%,
+    rgb(0 0 0 / 90%) 14%,
+    rgb(0 0 0 / 55%) 28%,
+    transparent 46%
+  );
+  animation: vip-level-up-rays-spin 24s linear infinite;
+}
+
+.vip-level-up-overlay__close {
+  position: fixed;
+  top: max(0.85rem, var(--safe-top));
+  right: max(0.85rem, var(--page-pad-inline));
+  z-index: calc(var(--modal-z-index) + 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--modal-close-size);
+  height: var(--modal-close-size);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  opacity: 0.92;
+}
+
+.vip-level-up-overlay__close:hover {
+  opacity: 1;
+  background: rgb(255 255 255 / 10%);
+}
+
+.vip-level-up-overlay__close:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.vip-level-up-overlay--out {
+  animation: vip-level-up-overlay-out 0.28s ease-in forwards;
+  pointer-events: none;
+}
+
+.vip-level-up-overlay--out .vip-level-up-modal {
+  animation: vip-level-up-modal-out 0.28s ease-in forwards;
+}
+
+.vip-level-up-overlay--out .vip-level-up-overlay__glow,
+.vip-level-up-overlay--out .vip-level-up-overlay__rays {
+  animation: vip-level-up-overlay-out 0.28s ease-in forwards;
+}
+
+.vip-level-up-modal {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 22rem);
+  text-align: center;
+  color: var(--color-text);
+}
+
+.vip-level-up-modal__badge-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.65rem;
+}
+
+.vip-level-up-modal__badge-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 7.5rem;
+  height: 7.5rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgb(120 190 255 / 55%) 0%,
+    rgb(40 120 220 / 35%) 45%,
+    rgb(20 60 140 / 20%) 100%
+  );
+  box-shadow:
+    0 0 0 3px rgb(90 170 255 / 35%),
+    0 0 28px rgb(60 140 255 / 45%);
+  animation: vip-level-up-badge-pop 0.5s ease-out;
+}
+
+.vip-level-up-modal__badge-ring::before {
+  content: "";
+  position: absolute;
+  inset: -0.35rem;
+  border-radius: 50%;
+  border: 2px solid rgb(100 170 255 / 25%);
+  animation: vip-level-up-badge-glow 2.4s ease-in-out infinite;
+}
+
+.vip-level-up-modal__badge-img {
+  display: block;
+  width: 5.25rem;
+  height: 5.25rem;
+  object-fit: contain;
+}
+
+.vip-level-up-modal__title {
+  margin: 0 0 0.85rem;
+  font-size: clamp(1.75rem, 1.4rem + 1.8vw, 2.35rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 18px rgb(180 220 255 / 55%),
+    0 2px 12px rgb(0 0 0 / 45%);
+  animation: vip-level-up-title-in 0.45s ease-out 0.08s both;
+}
+
+.vip-level-up-modal__divider {
+  position: relative;
+  height: 1px;
+  margin: 0 1.25rem 1.15rem;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(90 160 255 / 55%) 20%,
+    rgb(140 200 255 / 85%) 50%,
+    rgb(90 160 255 / 55%) 80%,
+    transparent 100%
+  );
+  animation: vip-level-up-divider-in 0.4s ease-out 0.15s both;
+}
+
+.vip-level-up-modal__divider::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: rgb(120 190 255 / 90%);
+  box-shadow: 0 0 10px rgb(100 170 255 / 70%);
+}
+
+.vip-level-up-modal__rewards {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: center;
+  padding: 0 0.25rem;
+}
+
+.vip-level-up-modal__reward {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 9.5rem;
+  padding: 0.85rem 0.5rem 0.75rem;
+  border-radius: 0.85rem;
+  background: linear-gradient(
+    180deg,
+    rgb(30 70 140 / 72%) 0%,
+    rgb(18 42 96 / 88%) 100%
+  );
+  border: 1px solid rgb(100 170 255 / 28%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%);
+  animation: vip-level-up-reward-in 0.45s ease-out both;
+}
+
+.vip-level-up-modal__reward:nth-child(1) {
+  animation-delay: 0.2s;
+}
+
+.vip-level-up-modal__reward:nth-child(2) {
+  animation-delay: 0.32s;
+}
+
+.vip-level-up-modal__reward-icon {
+  display: block;
+  width: 3.25rem;
+  height: 3.25rem;
+  margin: 0 auto 0.45rem;
+  object-fit: contain;
+}
+
+.vip-level-up-modal__reward-value {
+  display: block;
+  font-size: clamp(1.15rem, 1rem + 0.8vw, 1.45rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 35%);
+}
+
+@keyframes vip-level-up-overlay-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vip-level-up-overlay-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vip-level-up-modal-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+@keyframes vip-level-up-rays-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes vip-level-up-badge-pop {
+  0% {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes vip-level-up-badge-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes vip-level-up-title-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vip-level-up-divider-in {
+  from {
+    opacity: 0;
+    transform: scaleX(0.4);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes vip-level-up-reward-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.65rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vip-level-up-overlay__rays {
+    animation: none;
+  }
+
+  .vip-level-up-overlay--out,
+  .vip-level-up-overlay--out .vip-level-up-modal,
+  .vip-level-up-overlay--out .vip-level-up-overlay__glow,
+  .vip-level-up-overlay--out .vip-level-up-overlay__rays {
+    animation: none;
+    opacity: 0;
+  }
+
+  .vip-level-up-modal__badge-ring,
+  .vip-level-up-modal__badge-ring::before,
+  .vip-level-up-modal__title,
+  .vip-level-up-modal__divider,
+  .vip-level-up-modal__reward {
+    animation: none;
+  }
+}
