@@ -8,9 +8,14 @@
   z-index: var(--modal-z-index);
   display: grid;
   place-items: center;
+  padding-top: max(var(--page-pad), var(--safe-top));
+  padding-bottom: max(var(--page-pad), var(--safe-bottom));
   padding-left: var(--page-pad-inline);
   padding-right: var(--page-pad-inline);
   box-sizing: border-box;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   background: var(--modal-overlay-scrim);
   backdrop-filter: blur(var(--modal-overlay-blur));
 }
@@ -27,6 +32,10 @@
   border-radius: var(--modal-radius);
   box-shadow: var(--modal-shadow);
   border: var(--modal-panel-border);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .app-modal--scroll-y {
@@ -38,6 +47,17 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* Column modals: header/rule fixed, main content scrolls (landscape-safe). */
+.app-modal__scroll,
+.app-modal--col > .app-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .app-modal.shop-checkout.app-modal--redeem-binding {
