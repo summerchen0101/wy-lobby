@@ -523,6 +523,23 @@
   z-index: 1;
 }
 
+.session-footer__claim-dot {
+  position: absolute;
+  top: -0.05rem;
+  right: calc(50% - 0.95rem);
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #26ff8b;
+  box-shadow: 0 0 0.35rem rgb(38 255 139 / 80%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.session-footer__link--claimable:not(.is-active) .session-footer__icon {
+  filter: drop-shadow(0 0 0.25rem rgb(38 255 139 / 55%));
+}
+
 /* active 凸起（lobby-sel-gc）；五格 inactive 樣式一致 */
 .session-footer__link.is-active::before {
   content: "";

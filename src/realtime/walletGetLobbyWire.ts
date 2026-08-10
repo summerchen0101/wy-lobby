@@ -15,10 +15,24 @@ function mustLookup(name: string): protobuf.Type {
 const WalletGetRequestType = mustLookup("megaman.WalletGetRequest");
 const WalletGetResponseType = mustLookup("megaman.WalletGetResponse");
 
+export type VipLevelBonusItem = {
+  vipLevel: number;
+  gcAmountWire: string;
+  scAmountWire: string;
+};
+
 export type WalletGetResponseDecoded = {
   bag?: Record<string, unknown>;
   subsidyAmount?: string | number;
-  redeemSCList?: string[];
+  vipLevelBonusList?: Array<{
+    vipLevel?: string | number;
+    gcAmount?: string | number;
+    scAmount?: string | number;
+  }>;
+  reKYC?: boolean;
+  redeemSCList?: Array<{
+    scAmount?: string | number;
+  }>;
 };
 
 /** WalletType.GC = 1, SC = 2 */
@@ -43,13 +57,52 @@ export function decodeWalletGetResponseBytes(
   }) as WalletGetResponseDecoded;
 }
 
+function normalizeWireInteger(raw: string | number | undefined | null): string {
+  if (raw === undefined || raw === null) return "0";
+  const s = String(raw).trim().replace(/,/g, "");
+  return /^\d+$/.test(s) ? s : "0";
+}
+
 export function parseRedeemSCList(
-  raw: string[] | undefined | null,
+  raw:
+    | WalletGetResponseDecoded["redeemSCList"]
+    | string[]
+    | undefined
+    | null,
 ): string[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .map((v) => String(v ?? "").trim().replace(/,/g, ""))
-    .filter((v) => /^\d+$/.test(v));
+    .map((entry) => {
+      if (typeof entry === "string" || typeof entry === "number") {
+        return normalizeWireInteger(entry);
+      }
+      if (entry && typeof entry === "object") {
+        return normalizeWireInteger(entry.scAmount);
+      }
+      return "0";
+    })
+    .filter((v) => v !== "0" && /^\d+$/.test(v));
+}
+
+export function parseVipLevelBonusList(
+  raw: WalletGetResponseDecoded["vipLevelBonusList"] | undefined | null,
+): VipLevelBonusItem[] {
+  if (!Array.isArray(raw)) return [];
+  const items: VipLevelBonusItem[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const vipLevel = Number(normalizeWireInteger(entry.vipLevel));
+    if (!Number.isFinite(vipLevel)) continue;
+    const gcAmountWire = normalizeWireInteger(entry.gcAmount);
+    const scAmountWire = normalizeWireInteger(entry.scAmount);
+    if (gcAmountWire === "0" && scAmountWire === "0") continue;
+    items.push({
+      vipLevel: Math.floor(vipLevel),
+      gcAmountWire,
+      scAmountWire,
+    });
+  }
+  return items.sort((a, b) => a.vipLevel - b.vipLevel);
 }
 
 export function parseSubsidyAmount(
@@ -66,4 +119,40 @@ export function encodeWalletGetResponseBytes(subsidyAmount: number): Uint8Array 
   if (err) throw new Error(`WalletGetResponse: ${err}`);
   const msg = WalletGetResponseType.create({ subsidyAmount });
   return Uint8Array.from(WalletGetResponseType.encode(msg).finish());
+}
+
+function walletTypeLabelFromWire(raw: string | number | undefined): string {
+  const n = Number(raw);
+  if (n === 1) return "GC";
+  if (n === 2) return "SC";
+  return String(raw ?? "");
+}
+
+/** Dev log: decode WalletGetRequest inner `data` bytes. */
+export function decodeWalletGetRequestForDevLog(raw: Uint8Array): Record<string, unknown> {
+  const msg = WalletGetRequestType.decode(raw);
+  const o = WalletGetRequestType.toObject(msg, {
+    enums: String,
+  }) as { walletType?: string | number };
+  return {
+    walletType: walletTypeLabelFromWire(o.walletType),
+    walletTypeWire: o.walletType,
+  };
+}
+
+/** Dev log: decode WalletGetResponse inner `data` bytes. */
+export function decodeWalletGetResponseForDevLog(raw: Uint8Array): Record<string, unknown> {
+  const decoded = decodeWalletGetResponseBytes(raw);
+  const bagKeys =
+    decoded.bag && typeof decoded.bag === "object"
+      ? Object.keys(decoded.bag).slice(0, 12)
+      : [];
+  return {
+    subsidyAmount: parseSubsidyAmount(decoded.subsidyAmount),
+    vipLevelBonusList: parseVipLevelBonusList(decoded.vipLevelBonusList),
+    redeemSCList: parseRedeemSCList(decoded.redeemSCList),
+    reKYC: decoded.reKYC ?? false,
+    hasBag: bagKeys.length > 0,
+    ...(bagKeys.length > 0 ? { bagKeysPreview: bagKeys } : {}),
+  };
 }

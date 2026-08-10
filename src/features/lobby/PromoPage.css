@@ -177,6 +177,31 @@
     inset 0 1px 0 rgb(0 0 0 / 12%);
 }
 
+.promo-page__btn--pending {
+  animation: promo-page-pending-pulse 1.6s ease-in-out infinite;
+  box-shadow:
+    0 0 0.55rem rgb(255 237 0 / 70%),
+    0 2px 0 var(--crown-gold-shadow),
+    inset 0 1px 0 rgb(0 0 0 / 12%);
+}
+
+.promo-page__card--claimable {
+  box-shadow:
+    0 0 0.85rem rgb(38 255 139 / 45%),
+    0 0.3rem 0.75rem rgb(0 0 0 / 28%);
+}
+
+@keyframes promo-page-pending-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.12);
+  }
+}
+
 button.promo-page__btn {
   appearance: none;
   margin: 0;

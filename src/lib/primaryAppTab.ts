@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 
 const TAB_ID_KEY = "ffgt:tab-id";
 const LEASE_KEY = "ffgt:primary-tab-lease";
+const PRIMARY_TAB_CHANNEL = "ffgt:primary-tab";
 const HEARTBEAT_MS = 2_000;
 const LEASE_TTL_MS = 6_000;
+const SECONDARY_TAB_CLOSE_BLOCKED_MS = 150;
 
 type TabLease = { tabId: string; at: number };
 
@@ -51,11 +53,82 @@ function releaseLease(tabId: string): void {
   }
 }
 
-/** 目前可見的分頁搶佔主分頁 lease（最後聚焦的分頁負責 Gateway WS）。 */
+/**
+ * 主分頁寫入 lease。嚴格單分頁：若其他分頁仍持有有效 lease 則不搶佔（聚焦也不接管）。
+ */
 export function claimPrimaryTabLeaseIfVisible(): void {
   if (typeof document === "undefined") return;
   if (document.visibilityState !== "visible") return;
-  writeLease(getOrCreateTabId());
+  const mine = getOrCreateTabId();
+  const lease = readLease();
+  if (
+    lease &&
+    lease.tabId !== mine &&
+    Date.now() - lease.at < LEASE_TTL_MS
+  ) {
+    return;
+  }
+  writeLease(mine);
+}
+
+/** 請主分頁聚焦（BroadcastChannel；手動新開分頁無 window.opener 時仍可用）。 */
+export function requestPrimaryTabFocus(): void {
+  if (typeof BroadcastChannel === "undefined") return;
+  try {
+    const channel = new BroadcastChannel(PRIMARY_TAB_CHANNEL);
+    channel.postMessage({ type: "focus" });
+    channel.close();
+  } catch {
+    /* ignore */
+  }
+}
+
+export function startPrimaryTabFocusListener(): () => void {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return () => {};
+  }
+  const channel = new BroadcastChannel(PRIMARY_TAB_CHANNEL);
+  channel.onmessage = (event: MessageEvent) => {
+    if (event.data?.type === "focus") {
+      window.focus();
+    }
+  };
+  return () => channel.close();
+}
+
+/** 無法 window.close() 時清空次分頁（手動新開分頁貼網址時瀏覽器常拒絕 close）。 */
+export function blankSecondaryTabPage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.stop();
+  } catch {
+    /* ignore */
+  }
+  try {
+    window.location.replace("about:blank");
+  } catch {
+    try {
+      document.documentElement.replaceChildren();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/**
+ * 次分頁關閉：先聚焦主分頁再 window.close()。
+ * 手動新開分頁無法關閉時改導向 about:blank 清空內容。
+ */
+export function tryDismissSecondaryTab(): void {
+  if (typeof window === "undefined") return;
+  requestPrimaryTabFocus();
+  try {
+    window.opener?.focus();
+  } catch {
+    /* ignore */
+  }
+  window.close();
+  window.setTimeout(blankSecondaryTabPage, SECONDARY_TAB_CLOSE_BLOCKED_MS);
 }
 
 /** 是否為另開的分頁（已有其他分頁持有主分頁 lease）。 */
@@ -96,7 +169,7 @@ function startPrimaryLeaseHeartbeat(tabId: string): () => void {
 
 /**
  * 主分頁：負責 Gateway WS 與每日登入自動彈窗。
- * 背景分頁回傳 false；聚焦時搶佔 lease，原主分頁會讓出 WS。
+ * 次分頁回傳 false；嚴格單分頁下聚焦不會搶佔 lease，須關閉主分頁後次分頁才可接管。
  */
 export function usePrimaryAppTab(): boolean {
   const [isPrimary, setIsPrimary] = useState(() => !isSecondaryAppTab());
@@ -124,7 +197,12 @@ export function usePrimaryAppTab(): boolean {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!isPrimary) return;
-    return startPrimaryLeaseHeartbeat(getOrCreateTabId());
+    const stopFocusListener = startPrimaryTabFocusListener();
+    const stopHeartbeat = startPrimaryLeaseHeartbeat(getOrCreateTabId());
+    return () => {
+      stopFocusListener();
+      stopHeartbeat();
+    };
   }, [isPrimary]);
 
   return isPrimary;

@@ -83,6 +83,65 @@ const toObjectOpts = {
   enums: String,
 } as const;
 
+const DECIMAL_INT64_KEY_RE = /^-?\d+$/;
+
+/** protobufjs map<int64, …> keys are 8-byte hashes; `longs: String` does not apply. */
+export function normalizeProtobufInt64MapKey(key: string): string {
+  if (DECIMAL_INT64_KEY_RE.test(key)) return key;
+  if (key.length !== 8) return key;
+  const value = protobuf.util.longFromHash(key, false);
+  return typeof value === "object" && value !== null && "toString" in value
+    ? value.toString()
+    : String(value);
+}
+
+function normalizeUserDailyMissionsByDates(
+  map: ActivityDataDecoded["UserDailyMissionsByDates"],
+): ActivityDataDecoded["UserDailyMissionsByDates"] {
+  if (!map) return map;
+  const normalized: NonNullable<ActivityDataDecoded["UserDailyMissionsByDates"]> =
+    {};
+  for (const [key, value] of Object.entries(map)) {
+    normalized[normalizeProtobufInt64MapKey(key)] = value;
+  }
+  return normalized;
+}
+
+function normalizeActivityData(
+  activity: ActivityDataDecoded | undefined,
+): ActivityDataDecoded | undefined {
+  if (!activity) return activity;
+  if (!activity.UserDailyMissionsByDates) return activity;
+  return {
+    ...activity,
+    UserDailyMissionsByDates: normalizeUserDailyMissionsByDates(
+      activity.UserDailyMissionsByDates,
+    ),
+  };
+}
+
+function normalizeListActivitiesResponse(
+  decoded: ListActivitiesResponseDecoded,
+): ListActivitiesResponseDecoded {
+  if (!decoded.activities?.length) return decoded;
+  return {
+    ...decoded,
+    activities: decoded.activities.map(
+      (activity) => normalizeActivityData(activity) ?? activity,
+    ),
+  };
+}
+
+function normalizeGetActivityResponse(
+  decoded: GetActivityResponseDecoded,
+): GetActivityResponseDecoded {
+  if (!decoded.activity) return decoded;
+  return {
+    ...decoded,
+    activity: normalizeActivityData(decoded.activity),
+  };
+}
+
 export function encodeListActivitiesRequestBytes(): Uint8Array {
   const msg = ListActivitiesRequestType.create({});
   return Uint8Array.from(ListActivitiesRequestType.encode(msg).finish());
@@ -92,10 +151,12 @@ export function decodeListActivitiesResponseBytes(
   data: Uint8Array,
 ): ListActivitiesResponseDecoded {
   const msg = ListActivitiesResponseType.decode(data);
-  return ListActivitiesResponseType.toObject(
-    msg,
-    toObjectOpts,
-  ) as ListActivitiesResponseDecoded;
+  return normalizeListActivitiesResponse(
+    ListActivitiesResponseType.toObject(
+      msg,
+      toObjectOpts,
+    ) as ListActivitiesResponseDecoded,
+  );
 }
 
 export function encodeGetActivityRequestBytes(
@@ -111,10 +172,12 @@ export function decodeGetActivityResponseBytes(
   data: Uint8Array,
 ): GetActivityResponseDecoded {
   const msg = GetActivityResponseType.decode(data);
-  return GetActivityResponseType.toObject(
-    msg,
-    toObjectOpts,
-  ) as GetActivityResponseDecoded;
+  return normalizeGetActivityResponse(
+    GetActivityResponseType.toObject(
+      msg,
+      toObjectOpts,
+    ) as GetActivityResponseDecoded,
+  );
 }
 
 export type ActivityCollectRewardFields = {

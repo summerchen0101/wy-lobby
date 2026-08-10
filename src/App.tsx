@@ -8,6 +8,7 @@ import { RequireAuth } from "./auth/RequireAuth";
 import { AlertProvider } from "./components/alert/AlertProvider";
 import { LoadingOverlayProvider } from "./components/loading/LoadingOverlayProvider";
 import { ForceUpdateGate } from "./components/ForceUpdateGate";
+import { SecondaryTabGate } from "./components/SecondaryTabGate";
 import { FullScreenLoadingOverlay } from "./components/loading/FullScreenLoadingOverlay";
 import { LobbyBgmOrchestrator } from "./components/LobbyBgmOrchestrator";
 import { LobbyLoginWelcomeOrchestrator } from "./components/LobbyLoginWelcomeOrchestrator";
@@ -15,8 +16,7 @@ import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
 import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
-import { BeggarRedEnvelopeGate } from "./features/lobby/BeggarRedEnvelopeGate";
-import { RedeemApprovalGate } from "./features/lobby/RedeemApprovalGate";
+import { WalletGetLobbyOrchestrator } from "./features/lobby/WalletGetLobbyOrchestrator";
 import { DailyLoginGate } from "./features/dailyLogin/DailyLoginGate";
 import { DailyLoginModalHost } from "./features/dailyLogin/DailyLoginModalHost";
 import { DailyLoginProvider } from "./features/dailyLogin/DailyLoginProvider";
@@ -106,6 +106,7 @@ export default function App() {
       <LocaleHtmlSync />
       <AuthProvider>
         <ForceUpdateGate />
+        <SecondaryTabGate />
         <LoadingOverlayProvider>
           <WalletProvider>
             <AlertProvider>
@@ -122,8 +123,7 @@ export default function App() {
                       <PwaInstallBanner />
                       <IosInstallGuide />
                       <NewbieTutorialGate />
-                      <BeggarRedEnvelopeGate />
-                      <RedeemApprovalGate />
+                      <WalletGetLobbyOrchestrator />
                       <DailyLoginGate />
                       <DailyLoginModalHost />
                       <GeoGate />

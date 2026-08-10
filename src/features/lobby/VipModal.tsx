@@ -124,7 +124,7 @@ export function VipModal({ open, onClose }: Props) {
           </button>
         </div>
         <hr className="app-modal__rule app-modal__rule--flush" />
-        <div className="vip-modal__body">
+        <div className="vip-modal__body app-modal__scroll">
           <div className="vip-modal__progress">
             <div
               className="vip-modal__bar"

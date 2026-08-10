@@ -331,7 +331,7 @@ export function RedeemPage() {
       const req = requestRef.current;
       if (req && gatewayRequestReady) {
         try {
-          const list = await fetchRedeemSCListFromGateway(req);
+          const list = await fetchRedeemSCListFromGateway(req, { force: true });
           if (list.length > 0) {
             setApprovalAmountsWire(list);
             setApprovalModalOpen(true);

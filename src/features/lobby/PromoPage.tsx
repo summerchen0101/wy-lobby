@@ -25,7 +25,8 @@ const PROMO_CARDS = [
 type PromoCardId = (typeof PROMO_CARDS)[number]['id']
 
 export function PromoPage() {
-  const { openModal } = useDailyLoginActivity()
+  const { viewModel, openModal } = useDailyLoginActivity()
+  const dailyClaimable = viewModel?.claimable === true
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const onCardAction = useCallback(
     (id: PromoCardId) => {
@@ -53,10 +54,15 @@ export function PromoPage() {
       <div className="promo-page__inner">
         <h1 className="promo-page__title">PROMOTIONS</h1>
         <ul className="promo-page__list">
-          {PROMO_CARDS.map(({ id, title, bg, cta }) => (
+          {PROMO_CARDS.map(({ id, title, bg, cta }) => {
+            const claimable = id === 'daily' && dailyClaimable
+            return (
               <li key={id} className="promo-page__card-slot">
                 <div
-                  className="promo-page__card"
+                  className={
+                    'promo-page__card' +
+                    (claimable ? ' promo-page__card--claimable' : '')
+                  }
                   role="button"
                   tabIndex={0}
                   aria-label={title}
@@ -76,7 +82,10 @@ export function PromoPage() {
                     <div className="promo-page__actions">
                       <button
                         type="button"
-                        className="promo-page__btn promo-page__btn--light"
+                        className={
+                          'promo-page__btn promo-page__btn--light' +
+                          (claimable ? ' promo-page__btn--pending' : '')
+                        }
                         onClick={(e) => {
                           e.stopPropagation()
                           onCardAction(id)
@@ -88,7 +97,8 @@ export function PromoPage() {
                   </div>
                 </div>
               </li>
-          ))}
+            )
+          })}
         </ul>
       </div>
 
