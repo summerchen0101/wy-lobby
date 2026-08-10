@@ -16,9 +16,7 @@ import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
 import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
-import { BeggarRedEnvelopeGate } from "./features/lobby/BeggarRedEnvelopeGate";
-import { RedeemApprovalGate } from "./features/lobby/RedeemApprovalGate";
-import { VipLevelUpGate } from "./features/lobby/VipLevelUpGate";
+import { WalletGetLobbyOrchestrator } from "./features/lobby/WalletGetLobbyOrchestrator";
 import { DailyLoginGate } from "./features/dailyLogin/DailyLoginGate";
 import { DailyLoginModalHost } from "./features/dailyLogin/DailyLoginModalHost";
 import { DailyLoginProvider } from "./features/dailyLogin/DailyLoginProvider";
@@ -125,9 +123,7 @@ export default function App() {
                       <PwaInstallBanner />
                       <IosInstallGuide />
                       <NewbieTutorialGate />
-                      <BeggarRedEnvelopeGate />
-                      <RedeemApprovalGate />
-                      <VipLevelUpGate />
+                      <WalletGetLobbyOrchestrator />
                       <DailyLoginGate />
                       <DailyLoginModalHost />
                       <GeoGate />

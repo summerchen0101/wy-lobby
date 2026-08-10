@@ -1,13 +1,6 @@
-import { getDevVipLevelBonusList } from "../../lib/vipLevelUpDevMock";
-import { GATEWAY_API_WALLET_GET } from "../../realtime/gatewayApi";
-import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
+import { fetchWalletGetLobbyExtras } from "../../realtime/walletGetGateway";
 import type { GatewayWsRequestFn } from "../../realtime/gatewayWs";
-import {
-  decodeWalletGetResponseBytes,
-  encodeWalletGetRequestBytes,
-  parseVipLevelBonusList,
-  type VipLevelBonusItem,
-} from "../../realtime/walletGetLobbyWire";
+import type { VipLevelBonusItem } from "../../realtime/walletGetLobbyWire";
 
 export function vipLevelBonusFingerprint(bonuses: VipLevelBonusItem[]): string {
   return bonuses
@@ -22,19 +15,8 @@ export function vipLevelBonusItemFingerprint(bonus: VipLevelBonusItem): string {
 /** WalletGet (12) — read pending VIP level-up bonuses. */
 export async function fetchVipLevelBonusListFromGateway(
   request: GatewayWsRequestFn,
+  options?: { force?: boolean },
 ): Promise<VipLevelBonusItem[]> {
-  const devMock = getDevVipLevelBonusList();
-  if (devMock !== null) return devMock;
-
-  const r = await request({
-    type: GATEWAY_API_WALLET_GET,
-    data: encodeWalletGetRequestBytes("GC"),
-    debugLabel: "WALLET_GET_VIP_LEVEL_UP",
-  });
-  const code = String(r.code ?? "");
-  if (!isGatewaySuccessCode(code) || !(r.data instanceof Uint8Array)) {
-    return [];
-  }
-  const decoded = decodeWalletGetResponseBytes(r.data);
-  return parseVipLevelBonusList(decoded.vipLevelBonusList);
+  const extras = await fetchWalletGetLobbyExtras(request, options);
+  return extras.vipLevelBonusList;
 }
