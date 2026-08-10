@@ -96,11 +96,30 @@ export function startPrimaryTabFocusListener(): () => void {
   return () => channel.close();
 }
 
+/** 無法 window.close() 時清空次分頁（手動新開分頁貼網址時瀏覽器常拒絕 close）。 */
+export function blankSecondaryTabPage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.stop();
+  } catch {
+    /* ignore */
+  }
+  try {
+    window.location.replace("about:blank");
+  } catch {
+    try {
+      document.documentElement.replaceChildren();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 /**
  * 次分頁關閉：先聚焦主分頁再 window.close()。
- * 手動新開分頁貼網址時瀏覽器常拒絕 close；onCloseBlocked 供 UI 改顯示手動關閉指引。
+ * 手動新開分頁無法關閉時改導向 about:blank 清空內容。
  */
-export function tryDismissSecondaryTab(onCloseBlocked?: () => void): void {
+export function tryDismissSecondaryTab(): void {
   if (typeof window === "undefined") return;
   requestPrimaryTabFocus();
   try {
@@ -109,9 +128,7 @@ export function tryDismissSecondaryTab(onCloseBlocked?: () => void): void {
     /* ignore */
   }
   window.close();
-  if (onCloseBlocked) {
-    window.setTimeout(onCloseBlocked, SECONDARY_TAB_CLOSE_BLOCKED_MS);
-  }
+  window.setTimeout(blankSecondaryTabPage, SECONDARY_TAB_CLOSE_BLOCKED_MS);
 }
 
 /** 是否為另開的分頁（已有其他分頁持有主分頁 lease）。 */

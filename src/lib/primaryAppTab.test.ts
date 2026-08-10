@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  blankSecondaryTabPage,
   claimPrimaryTabLeaseIfVisible,
   isSecondaryAppTab,
   requestPrimaryTabFocus,
@@ -125,8 +126,8 @@ describe("primaryAppTab", () => {
     expect(close).toHaveBeenCalledOnce();
   });
 
-  it("notifies when automatic close is blocked", () => {
-    const onBlocked = vi.fn();
+  it("blanks page when automatic close is blocked", () => {
+    const replace = vi.fn();
     const setTimeout = vi.fn((fn: () => void) => {
       fn();
       return 0;
@@ -135,15 +136,39 @@ describe("primaryAppTab", () => {
       postMessage = vi.fn();
       close = vi.fn();
     });
+    vi.stubGlobal("document", {
+      documentElement: { replaceChildren: vi.fn() },
+    });
     vi.stubGlobal("window", {
       close: vi.fn(),
+      stop: vi.fn(),
       setTimeout,
       opener: null,
+      location: { replace },
     });
 
-    tryDismissSecondaryTab(onBlocked);
+    tryDismissSecondaryTab();
 
-    expect(onBlocked).toHaveBeenCalledOnce();
+    expect(replace).toHaveBeenCalledWith("about:blank");
+  });
+
+  it("falls back to clearing document when about:blank navigation fails", () => {
+    const replaceChildren = vi.fn();
+    vi.stubGlobal("document", {
+      documentElement: { replaceChildren },
+    });
+    vi.stubGlobal("window", {
+      stop: vi.fn(),
+      location: {
+        replace: () => {
+          throw new Error("blocked");
+        },
+      },
+    });
+
+    blankSecondaryTabPage();
+
+    expect(replaceChildren).toHaveBeenCalledOnce();
   });
 
   it("posts focus message on requestPrimaryTabFocus", () => {
