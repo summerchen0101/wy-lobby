@@ -138,10 +138,11 @@ export function RedeemProtectAccountView({
 
   const pi = "shop-checkout__input shop-checkout__input--protect";
 
+  const isAddressOnly = mode === "addressOnly";
   const emailReadOnly = Boolean(
     bindingPrefill?.email?.trim() || user?.email?.trim(),
   );
-  const phoneReadOnly = mode === "addressOnly";
+  const phoneReadOnly = isAddressOnly;
   const wasOpenRef = useRef(false);
 
   useEffect(() => {
@@ -254,20 +255,27 @@ export function RedeemProtectAccountView({
   }, [documentType, documentNumber]);
 
   const validateProfile = useCallback((): boolean => {
-    if (!email.trim()) {
-      setError("Missing account email.");
-      return false;
-    }
-    const phoneDigits = normalizePhoneDigits(phoneNumber);
-    if (!phoneDigits) {
-      setError("Missing account phone number.");
-      return false;
-    }
-    const cc = phoneCountry.trim() || "1";
-    if (cc === "1" && !isValidUsPhoneDigits(phoneDigits)) {
-      const wordId = usPhoneValidationWordId(phoneDigits);
-      setError(wordId !== null ? getWord(wordId) : getWord(555));
-      return false;
+    if (!isAddressOnly) {
+      if (!email.trim()) {
+        setError("Missing account email.");
+        return false;
+      }
+      const phoneDigits = normalizePhoneDigits(phoneNumber);
+      if (!phoneDigits) {
+        setError("Missing account phone number.");
+        return false;
+      }
+      const cc = phoneCountry.trim() || "1";
+      if (cc === "1" && !isValidUsPhoneDigits(phoneDigits)) {
+        const wordId = usPhoneValidationWordId(phoneDigits);
+        setError(wordId !== null ? getWord(wordId) : getWord(555));
+        return false;
+      }
+    } else {
+      if (!normalizePhoneDigits(phoneNumber)) {
+        setError("Missing account phone number.");
+        return false;
+      }
     }
     if (
       !firstName.trim() ||
@@ -282,6 +290,7 @@ export function RedeemProtectAccountView({
     if (!validateAddress()) return false;
     return validateDocument();
   }, [
+    isAddressOnly,
     email,
     phoneCountry,
     phoneNumber,
@@ -493,18 +502,20 @@ export function RedeemProtectAccountView({
         />
       </label>
       <p className="redeem-protect__addr-hint">{w(510458)}</p>
-      <label className="shop-checkout__field" htmlFor={`${idPrefix}-addr2`}>
-        <input
-          id={`${idPrefix}-addr2`}
-          className={pi}
-          name="addressLine2"
-          autoComplete="address-line2"
-          placeholder={w(510459)}
-          value={address2}
-          onChange={(e) => setAddress2(e.target.value)}
-          disabled={busy}
-        />
-      </label>
+      {!isAddressOnly ? (
+        <label className="shop-checkout__field" htmlFor={`${idPrefix}-addr2`}>
+          <input
+            id={`${idPrefix}-addr2`}
+            className={pi}
+            name="addressLine2"
+            autoComplete="address-line2"
+            placeholder={w(510459)}
+            value={address2}
+            onChange={(e) => setAddress2(e.target.value)}
+            disabled={busy}
+          />
+        </label>
+      ) : null}
       <div className="shop-checkout__field shop-checkout__field--stack">
         <span
           className="shop-checkout__field-heading"
@@ -778,7 +789,7 @@ export function RedeemProtectAccountView({
       <fieldset disabled={busy} className="shop-checkout__fieldset-reset">
         <p className="shop-checkout__protect-lead">{w(510454)}</p>
         <div className="shop-checkout__fields shop-checkout__fields--protect">
-          {renderContactFields()}
+          {!isAddressOnly ? renderContactFields() : null}
           {renderDobFields()}
           {renderNameFields()}
           {renderAddressFields()}
