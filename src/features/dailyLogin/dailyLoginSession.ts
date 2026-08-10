@@ -1,6 +1,10 @@
+import type { ActivityDataDecoded } from "../../realtime/activityLobbyWire";
+import type { LobbyGetDecoded } from "../../realtime/lobbyDecode";
 import {
   calendarDayKeyInTimeZone,
   DAILY_LOGIN_CALENDAR_TIME_ZONE,
+  hasClaimedDailyRewardTodayFromLobbyGet,
+  inferClaimedDailyTodayFromActivity,
 } from "./dailyLoginLogic";
 
 const DAILY_CLAIM_DATE_KEY_PREFIX = "dailyLogin.claimedEtDateKey";
@@ -136,6 +140,37 @@ export function hasClaimedDailyToday(
     dateKey ===
     calendarDayKeyInTimeZone(nowMs, DAILY_LOGIN_CALENDAR_TIME_ZONE)
   );
+}
+
+export type ResolveClaimedDailyTodayOptions = {
+  nowMs?: number;
+  lobbyGet?: LobbyGetDecoded | null;
+  syncStorage?: boolean;
+};
+
+/**
+ * 合併 localStorage、LOBBY_GET 領取時間與 GET_ACTIVITY 推斷。
+ * 換瀏覽器時 localStorage 為空，改由後端狀態還原「今日已領」。
+ */
+export function resolveClaimedDailyToday(
+  userId: string,
+  activity: ActivityDataDecoded | null | undefined,
+  options?: ResolveClaimedDailyTodayOptions,
+): boolean {
+  const nowMs = options?.nowMs ?? Date.now();
+  if (hasClaimedDailyToday(userId, nowMs)) return true;
+
+  if (hasClaimedDailyRewardTodayFromLobbyGet(options?.lobbyGet, nowMs)) {
+    if (options?.syncStorage) markDailyClaimedToday(userId, nowMs);
+    return true;
+  }
+
+  if (activity && inferClaimedDailyTodayFromActivity(activity)) {
+    if (options?.syncStorage) markDailyClaimedToday(userId, nowMs);
+    return true;
+  }
+
+  return false;
 }
 
 /** 記錄本 ET 日首次 GET_ACTIVITY 時的全量可領筆數（積壓判斷用）。 */

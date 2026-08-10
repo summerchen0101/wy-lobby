@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   claimPrimaryTabLeaseIfVisible,
   isSecondaryAppTab,
-  tryCloseBrowserTab,
+  requestPrimaryTabFocus,
+  tryDismissSecondaryTab,
 } from "./primaryAppTab";
 
 function installStorageMocks(): void {
@@ -104,23 +105,56 @@ describe("primaryAppTab", () => {
     expect(isSecondaryAppTab()).toBe(true);
   });
 
-  it("falls back to about:blank when window.close is ignored", () => {
+  it("requests primary focus and closes secondary tab", () => {
     const close = vi.fn();
-    const replace = vi.fn();
+    const postMessage = vi.fn();
+    const channelClose = vi.fn();
+    vi.stubGlobal("BroadcastChannel", class {
+      postMessage = postMessage;
+      close = channelClose;
+    });
+    vi.stubGlobal("window", {
+      close,
+      setTimeout: vi.fn(),
+      opener: null,
+    });
+
+    tryDismissSecondaryTab();
+
+    expect(postMessage).toHaveBeenCalledWith({ type: "focus" });
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("notifies when automatic close is blocked", () => {
+    const onBlocked = vi.fn();
     const setTimeout = vi.fn((fn: () => void) => {
       fn();
       return 0;
     });
+    vi.stubGlobal("BroadcastChannel", class {
+      postMessage = vi.fn();
+      close = vi.fn();
+    });
     vi.stubGlobal("window", {
-      close,
+      close: vi.fn(),
       setTimeout,
-      location: { replace },
       opener: null,
     });
 
-    tryCloseBrowserTab();
+    tryDismissSecondaryTab(onBlocked);
 
-    expect(close).toHaveBeenCalledOnce();
-    expect(replace).toHaveBeenCalledWith("about:blank");
+    expect(onBlocked).toHaveBeenCalledOnce();
+  });
+
+  it("posts focus message on requestPrimaryTabFocus", () => {
+    const postMessage = vi.fn();
+    vi.stubGlobal("BroadcastChannel", class {
+      postMessage = postMessage;
+      close = vi.fn();
+    });
+
+    requestPrimaryTabFocus();
+
+    expect(postMessage).toHaveBeenCalledWith({ type: "focus" });
   });
 });

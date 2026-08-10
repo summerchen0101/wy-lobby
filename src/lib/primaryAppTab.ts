@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 
 const TAB_ID_KEY = "ffgt:tab-id";
 const LEASE_KEY = "ffgt:primary-tab-lease";
+const PRIMARY_TAB_CHANNEL = "ffgt:primary-tab";
 const HEARTBEAT_MS = 2_000;
 const LEASE_TTL_MS = 6_000;
+const SECONDARY_TAB_CLOSE_BLOCKED_MS = 150;
 
 type TabLease = { tabId: string; at: number };
 
@@ -69,24 +71,47 @@ export function claimPrimaryTabLeaseIfVisible(): void {
   writeLease(mine);
 }
 
+/** 請主分頁聚焦（BroadcastChannel；手動新開分頁無 window.opener 時仍可用）。 */
+export function requestPrimaryTabFocus(): void {
+  if (typeof BroadcastChannel === "undefined") return;
+  try {
+    const channel = new BroadcastChannel(PRIMARY_TAB_CHANNEL);
+    channel.postMessage({ type: "focus" });
+    channel.close();
+  } catch {
+    /* ignore */
+  }
+}
+
+export function startPrimaryTabFocusListener(): () => void {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return () => {};
+  }
+  const channel = new BroadcastChannel(PRIMARY_TAB_CHANNEL);
+  channel.onmessage = (event: MessageEvent) => {
+    if (event.data?.type === "focus") {
+      window.focus();
+    }
+  };
+  return () => channel.close();
+}
+
 /**
- * 嘗試關閉分頁。手動新開分頁貼網址時 window.close() 常被瀏覽器拒絕，改導向 fallback。
+ * 次分頁關閉：先聚焦主分頁再 window.close()。
+ * 手動新開分頁貼網址時瀏覽器常拒絕 close；onCloseBlocked 供 UI 改顯示手動關閉指引。
  */
-export function tryCloseBrowserTab(fallbackLocation = "about:blank"): void {
+export function tryDismissSecondaryTab(onCloseBlocked?: () => void): void {
   if (typeof window === "undefined") return;
+  requestPrimaryTabFocus();
   try {
     window.opener?.focus();
   } catch {
     /* ignore */
   }
   window.close();
-  window.setTimeout(() => {
-    try {
-      window.location.replace(fallbackLocation);
-    } catch {
-      /* ignore */
-    }
-  }, 0);
+  if (onCloseBlocked) {
+    window.setTimeout(onCloseBlocked, SECONDARY_TAB_CLOSE_BLOCKED_MS);
+  }
 }
 
 /** 是否為另開的分頁（已有其他分頁持有主分頁 lease）。 */
@@ -155,7 +180,12 @@ export function usePrimaryAppTab(): boolean {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!isPrimary) return;
-    return startPrimaryLeaseHeartbeat(getOrCreateTabId());
+    const stopFocusListener = startPrimaryTabFocusListener();
+    const stopHeartbeat = startPrimaryLeaseHeartbeat(getOrCreateTabId());
+    return () => {
+      stopFocusListener();
+      stopHeartbeat();
+    };
   }, [isPrimary]);
 
   return isPrimary;

@@ -9,6 +9,7 @@ import {
   countCollectableMissions,
   countLeadingCollectableDayGroups,
   inferClaimedDailyTodayFromActivity,
+  hasClaimedDailyRewardTodayFromLobbyGet,
   shouldAutoPopupDailyLogin,
   computeSevenDayWindow,
   enforceSequentialDayStatuses,
@@ -671,6 +672,27 @@ describe("dailyLoginLogic", () => {
       UserDailyMissionsByDates: missions,
     });
     expect(inferClaimedDailyTodayFromActivity(activity)).toBe(false);
+  });
+
+  it("hasClaimedDailyRewardTodayFromLobbyGet uses ET calendar day", () => {
+    const now = Date.UTC(2026, 6, 16, 3, 30, 0);
+    const lobbyGet = {
+      campaign: { dailyRewardRecivedAtMs: String(Date.UTC(2026, 6, 16, 1, 0, 0)) },
+    };
+    expect(hasClaimedDailyRewardTodayFromLobbyGet(lobbyGet, now)).toBe(true);
+    expect(
+      hasClaimedDailyRewardTodayFromLobbyGet(lobbyGet, now + 86400000),
+    ).toBe(false);
+    expect(hasClaimedDailyRewardTodayFromLobbyGet(null, now)).toBe(false);
+  });
+
+  it("buildDailyLoginViewModel caps claimable when lobby says claimed today", () => {
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    const vm = buildDailyLoginViewModel(buildMockDailyLoginActivity(), now, {
+      claimedDailyTodayFromLobby: true,
+    });
+    expect(vm?.hasClaimableDaily).toBe(false);
+    expect(vm?.days.some((day) => day.status === "claimable")).toBe(false);
   });
 
   it("locks next day when session claim cap survives logout re-login", () => {

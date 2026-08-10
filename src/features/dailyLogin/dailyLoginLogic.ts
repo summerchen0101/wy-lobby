@@ -7,6 +7,7 @@ import {
   normalizeWireTimestampToSec,
   parseWireInt64,
 } from "../../realtime/activityLobbyWire";
+import type { LobbyGetDecoded } from "../../realtime/lobbyDecode";
 import { applyDailyLoginVipBonus } from "./dailyLoginVipBonus";
 
 export type MissionStatus = "locked" | "claimable" | "claimed";
@@ -129,6 +130,18 @@ export function isSameCalendarDayInTimeZone(
     calendarDayKeyInTimeZone(aMs, timeZone) ===
     calendarDayKeyInTimeZone(bMs, timeZone)
   );
+}
+
+/** LOBBY_GET campaign.dailyRewardRecivedAtMs — 帳號層級，換瀏覽器仍有效。 */
+export function hasClaimedDailyRewardTodayFromLobbyGet(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+  nowMs: number = Date.now(),
+): boolean {
+  const receivedAtMs = normalizeWireTimestampToMs(
+    lobbyGet?.campaign?.dailyRewardRecivedAtMs,
+  );
+  if (receivedAtMs == null) return false;
+  return isSameCalendarDayInTimeZone(receivedAtMs, nowMs);
 }
 
 export function isDayCollectable(
@@ -898,6 +911,8 @@ export function canClaimTodayUtc(
 export type BuildDailyLoginViewModelOptions = {
   /** 當日 ET 是否已成功領取過每日簽到（每天僅能打卡一次）。 */
   claimedDailyToday?: boolean;
+  /** LOBBY_GET 帳號層級每日獎勵領取時間（換瀏覽器仍有效）。 */
+  claimedDailyTodayFromLobby?: boolean;
   /** 本 ET 日首次 GET_ACTIVITY 時的連續可領日數（積壓判斷）。 */
   initialCollectableCount?: number | null;
   /** 快取資料刷新中：不顯示 claimable 避免閃爍。 */
@@ -934,6 +949,7 @@ export function buildDailyLoginViewModel(
   );
   const claimedDailyToday =
     options?.claimedDailyToday === true ||
+    options?.claimedDailyTodayFromLobby === true ||
     inferClaimedDailyTodayFromActivity(activity);
   let days = applySameDayDailyClaimCap(rawDays, {
     claimedDailyToday,

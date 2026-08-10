@@ -1,8 +1,9 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 import {
-  tryCloseBrowserTab,
+  requestPrimaryTabFocus,
+  tryDismissSecondaryTab,
   usePrimaryAppTab,
 } from "../lib/primaryAppTab";
 import { isSecondaryTabGateExemptRoute } from "../lib/secondaryTabGateRoute";
@@ -14,8 +15,19 @@ import "./ForceUpdateGate.css";
 export function SecondaryTabGate() {
   const { pathname } = useLocation();
   const isPrimaryAppTab = usePrimaryAppTab();
+  const [closeBlocked, setCloseBlocked] = useState(false);
+
+  const focusPrimaryTab = useCallback(() => {
+    requestPrimaryTabFocus();
+    try {
+      window.opener?.focus();
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const closeTab = useCallback(() => {
-    tryCloseBrowserTab();
+    tryDismissSecondaryTab(() => setCloseBlocked(true));
   }, []);
 
   if (isPrimaryAppTab || isSecondaryTabGateExemptRoute(pathname)) {
@@ -29,28 +41,22 @@ export function SecondaryTabGate() {
       aria-modal="true"
       aria-labelledby="secondary-tab-title"
       aria-describedby="secondary-tab-desc"
-      onClick={closeTab}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          closeTab();
-        }
-      }}
     >
       <div className="force-update-overlay__panel">
         <h2 id="secondary-tab-title" className="force-update-overlay__title">
-          Close this tab
+          {closeBlocked ? "Close this tab manually" : "Close this tab"}
         </h2>
         <p id="secondary-tab-desc" className="force-update-overlay__message">
-          This game only supports one browser tab at a time. Please close this
-          tab and return to your original tab to continue playing.
+          {closeBlocked
+            ? "Your browser blocked automatic tab closing. Press Ctrl+W (Windows) or Cmd+W (Mac), or click the × on this tab. Your original tab should already be focused."
+            : "This game only supports one browser tab at a time. Please close this tab and return to your original tab to continue playing."}
         </p>
         <button
           type="button"
           className="force-update-overlay__link"
-          onClick={closeTab}
+          onClick={closeBlocked ? focusPrimaryTab : closeTab}
         >
-          Close
+          {closeBlocked ? "Go to original tab" : "Close"}
         </button>
       </div>
     </div>,

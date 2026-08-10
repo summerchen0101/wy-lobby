@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { buildMockDailyLoginActivity } from "./dailyLoginLogic";
 import {
   clearDailyLoginAutoPopupSession,
   clearDailyLoginClaimRecord,
@@ -7,6 +8,7 @@ import {
   markDailyClaimedToday,
   markDailyLoginAutoPopupShown,
   recordInitialCollectableCount,
+  resolveClaimedDailyToday,
   wasDailyLoginAutoPopupShown,
 } from "./dailyLoginSession";
 
@@ -86,5 +88,59 @@ describe("dailyLoginSession", () => {
     recordInitialCollectableCount("42", 5, now);
     expect(getInitialCollectableCount("42", now)).toBe(2);
     expect(getInitialCollectableCount("42", now + 86400000)).toBeNull();
+  });
+
+  it("resolveClaimedDailyToday restores same-day cap from GET_ACTIVITY when storage is empty", () => {
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    const dayMs = 86400000;
+    const missions: Record<string, { date: string; userDailyMissions: unknown[] }> =
+      {};
+    for (let i = 0; i < 3; i++) {
+      const dateMs = now - (2 - i) * dayMs;
+      const key = String(dateMs);
+      missions[key] = {
+        date: key,
+        userDailyMissions: [
+          {
+            dailyMissionID: String(1000 + i),
+            date: key,
+            actionTimes: i < 2 ? 1 : 0,
+            achievedActionTimes: 1,
+            isCollected: i < 2,
+            itemID: 1,
+            itemAmount: 1000,
+            sort: "0",
+          },
+        ],
+      };
+    }
+    const activity = buildMockDailyLoginActivity({
+      UserDailyMissionsByDates: missions,
+    });
+
+    expect(hasClaimedDailyToday("42", now)).toBe(false);
+    expect(
+      resolveClaimedDailyToday("42", activity, { nowMs: now, syncStorage: true }),
+    ).toBe(true);
+    expect(hasClaimedDailyToday("42", now)).toBe(true);
+  });
+
+  it("resolveClaimedDailyToday uses LOBBY_GET daily reward timestamp across browsers", () => {
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    const activity = buildMockDailyLoginActivity();
+    const lobbyGet = {
+      campaign: {
+        dailyRewardRecivedAtMs: String(now - 3_600_000),
+      },
+    };
+
+    expect(
+      resolveClaimedDailyToday("42", activity, {
+        nowMs: now,
+        lobbyGet,
+        syncStorage: true,
+      }),
+    ).toBe(true);
+    expect(hasClaimedDailyToday("42", now)).toBe(true);
   });
 });
