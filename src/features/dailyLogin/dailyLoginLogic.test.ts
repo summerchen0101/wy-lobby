@@ -568,7 +568,7 @@ describe("dailyLoginLogic", () => {
     expect(vm?.days.some((day) => day.status === "claimable")).toBe(false);
   });
 
-  it("does not light next day on refresh when API falsely marks it claimable", () => {
+  it("lights when login progress synced even if achievedCredit lags", () => {
     const now = Date.UTC(2026, 6, 15, 12, 0, 0);
     const dayMs = 86400000;
     const missions = buildMissionsByDate(8, now - 6 * dayMs, (i) => ({
@@ -582,9 +582,9 @@ describe("dailyLoginLogic", () => {
     const vm = buildDailyLoginViewModel(activity, now, {
       claimedDailyToday: false,
     });
-    expect(vm?.hasClaimableDaily).toBe(false);
-    expect(vm?.days.some((day) => day.status === "claimable")).toBe(false);
-    expect(inferClaimedDailyTodayFromActivity(activity)).toBe(true);
+    expect(vm?.hasClaimableDaily).toBe(true);
+    expect(vm?.days.some((day) => day.status === "claimable")).toBe(true);
+    expect(inferClaimedDailyTodayFromActivity(activity)).toBe(false);
   });
 
   it("lights today when achievedCredit matches cumulative sign-in slot", () => {

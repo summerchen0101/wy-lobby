@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom'
 import { NavLink } from 'react-router-dom'
+import { useDailyLoginActivity } from '../../features/dailyLogin/dailyLoginContext'
 import { useGatewayLobby } from '../../realtime/useGatewayLobby'
 import {
   footerIconUrl,
@@ -23,6 +24,8 @@ const footerItems: Item[] = [
 export function SessionFooter() {
   const { activeWallet } = useWallet()
   const { refreshLobbyGet } = useGatewayLobby()
+  const { viewModel } = useDailyLoginActivity()
+  const promoClaimable = viewModel?.claimable === true
 
   const footer = (
     <nav
@@ -49,7 +52,11 @@ export function SessionFooter() {
                   : undefined
               }
               className={({ isActive }) =>
-                'session-footer__link' + (isActive ? ' is-active' : '')
+                'session-footer__link' +
+                (isActive ? ' is-active' : '') +
+                (icon === 'promo' && promoClaimable
+                  ? ' session-footer__link--claimable'
+                  : '')
               }
             >
               {({ isActive }) => (
@@ -62,6 +69,12 @@ export function SessionFooter() {
                     height={56}
                     decoding="async"
                   />
+                  {icon === 'promo' && promoClaimable ? (
+                    <span
+                      className="session-footer__claim-dot"
+                      aria-hidden
+                    />
+                  ) : null}
                   <span className="session-footer__label">{label}</span>
                 </span>
               )}

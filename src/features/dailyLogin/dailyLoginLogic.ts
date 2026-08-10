@@ -245,11 +245,18 @@ type DayGroup = {
   indices: number[];
 };
 
-/** 累計簽到積分須涵蓋該日序（1-based），才允許亮燈／可領。0 表示後端尚未回傳積分，不套用。 */
+/**
+ * 累計簽到積分須涵蓋該日序（1-based），才允許亮燈／可領。0 表示後端尚未回傳積分，不套用。
+ * 登入後 `actionTimes` 已達標時以任務進度為準，避免 `achievedCreditAmount` 滯後導致多日無法亮燈。
+ */
 export function isDayGroupEligibleByAchievedCredit(
   groupIndex: number,
   achievedCredit: number | undefined,
+  missions?: UserDailyMissionDecoded[],
 ): boolean {
+  if (missions?.some((m) => isMissionClaimable(m))) {
+    return true;
+  }
   if (achievedCredit === undefined || achievedCredit <= 0) return true;
   return achievedCredit >= groupIndex + 1;
 }
@@ -361,7 +368,9 @@ export function countLeadingCollectableDayGroupsFromGroups(
     const status = dayStatusFromMissions(group.missions);
     if (status === "claimed") continue;
     if (status === "claimable") {
-      if (!isDayGroupEligibleByAchievedCredit(i, achievedCredit)) break;
+      if (!isDayGroupEligibleByAchievedCredit(i, achievedCredit, group.missions)) {
+        break;
+      }
       count++;
       continue;
     }
@@ -372,16 +381,22 @@ export function countLeadingCollectableDayGroupsFromGroups(
 
 export function countLeadingCollectableDayGroupsFromFlat(
   flat: FlatMission[],
+  achievedCredit?: number,
 ): number {
   return countLeadingCollectableDayGroupsFromGroups(
     groupFlatIntoDayGroups(flat),
+    achievedCredit,
   );
 }
 
 export function countLeadingCollectableDayGroups(
   activity: ActivityDataDecoded,
 ): number {
-  return countLeadingCollectableDayGroupsFromFlat(flattenDailyMissions(activity));
+  const achievedCredit = parseWireInt64(activity.achievedCreditAmount) ?? 0;
+  return countLeadingCollectableDayGroupsFromFlat(
+    flattenDailyMissions(activity),
+    achievedCredit,
+  );
 }
 
 function computeLitClaimableDayIndices(
@@ -401,7 +416,11 @@ function computeLitClaimableDayIndices(
     if (status === "claimable") {
       if (
         count < maxLit &&
-        isDayGroupEligibleByAchievedCredit(i, achievedCredit)
+        isDayGroupEligibleByAchievedCredit(
+          i,
+          achievedCredit,
+          groups[i]!.missions,
+        )
       ) {
         lit.add(i);
         count++;
@@ -682,7 +701,7 @@ export function inferClaimedDailyTodayFromActivity(
     if (
       status === "claimable" &&
       achievedCredit > 0 &&
-      !isDayGroupEligibleByAchievedCredit(i, achievedCredit)
+      !isDayGroupEligibleByAchievedCredit(i, achievedCredit, groups[i]!.missions)
     ) {
       return true;
     }
@@ -904,8 +923,10 @@ export function buildDailyLoginViewModel(
 
   const flat = flattenDailyMissions(activity);
   const achievedCredit = parseWireInt64(activity.achievedCreditAmount) ?? 0;
-  const leadingCollectableDayGroups =
-    countLeadingCollectableDayGroupsFromFlat(flat);
+  const leadingCollectableDayGroups = countLeadingCollectableDayGroupsFromFlat(
+    flat,
+    achievedCredit,
+  );
   const { days: rawDays } = computeSevenDayWindow(
     flat,
     vipLevel,
