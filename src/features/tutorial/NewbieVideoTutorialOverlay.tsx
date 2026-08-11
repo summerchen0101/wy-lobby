@@ -387,7 +387,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     }
   }, [syncVideoSoundOn]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) {
       releaseVideos(videoRefs.current);
       syncVideoSoundOn(false);
@@ -747,6 +747,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
     !awaitingClick &&
     !showResumeHint &&
     !iosBootNeedsTap;
+  const showBootCover = open && index === 0 && !activeVideoReady;
 
   if (!open) return null;
 
@@ -757,6 +758,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
           ? "newbie-video-tutorial newbie-video-tutorial--mobile"
           : "newbie-video-tutorial") +
         (activeVideoReady ? " newbie-video-tutorial--playing" : "") +
+        (showBootCover ? " newbie-video-tutorial--booting" : "") +
         (isTapTarget ? " newbie-video-tutorial--awaiting-tap" : "")
       }
       role="dialog"
@@ -816,11 +818,7 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
                 disablePictureInPicture
                 disableRemotePlayback
                 muted={!videoSoundOn || !isLobbySoundEnabled()}
-                preload={
-                  useMobileLayeredStack || i === index || i === index + 1
-                    ? "auto"
-                    : "metadata"
-                }
+                preload={i === index || i === index + 1 ? "auto" : "metadata"}
                 draggable={false}
                 controlsList="nodownload nofullscreen noremoteplayback"
                 aria-hidden={!active}
@@ -832,6 +830,12 @@ export function NewbieVideoTutorialOverlay({ open, onComplete }: Props) {
             );
           })}
         </div>
+        {showBootCover ? (
+          <div
+            className="newbie-video-tutorial__boot-cover"
+            aria-hidden="true"
+          />
+        ) : null}
         {videoFrame ? (
           <div
             className="newbie-video-tutorial__video-frame"
