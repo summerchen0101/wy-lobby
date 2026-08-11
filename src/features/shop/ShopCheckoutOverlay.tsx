@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { IoChevronBack } from "react-icons/io5";
+import { BindingResultView } from "../../components/binding/BindingResultView";
 import { useWordData } from "../../wordData/useWordData";
 import "./ShopCheckout.css";
 import { ProtectAccountView } from "./ProtectAccountView";
@@ -153,19 +154,10 @@ function PaymentFrameView({
 function BindingSuccessView({ onConfirm }: { onConfirm: () => void }) {
   const w = useWordData();
   return (
-    <div
-      className="shop-checkout__summary-body shop-checkout__binding-success-body"
-      role="status">
-      <p className="shop-checkout__binding-success-text">
-        {w(SHOP_WORD_BINDING_SUCCESS)}
-      </p>
-      <button
-        type="button"
-        className="shop-checkout__submit shop-checkout__submit--blue"
-        onClick={onConfirm}>
-        {w(57)}
-      </button>
-    </div>
+    <BindingResultView
+      message={w(SHOP_WORD_BINDING_SUCCESS)}
+      onConfirm={onConfirm}
+    />
   );
 }
 

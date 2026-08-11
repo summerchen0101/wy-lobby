@@ -1,5 +1,7 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { BindingResultView } from "../../components/binding/BindingResultView";
+import { useWordData } from "../../wordData/useWordData";
 import {
   RedeemProtectAccountView,
   type RedeemBindingMode,
@@ -7,6 +9,8 @@ import {
 } from "./RedeemProtectAccountView";
 
 export type { RedeemBindingMode };
+
+type BindingResult = "verified" | "pending";
 
 type Props = {
   open: boolean;
@@ -23,19 +27,41 @@ export function RedeemBindingModal({
   onBound,
   bindingPrefill,
 }: Props) {
+  const w = useWordData();
+  const [bindingResult, setBindingResult] = useState<BindingResult | null>(null);
+
+  useEffect(() => {
+    if (!open) setBindingResult(null);
+  }, [open]);
+
   const handleBackdrop = useCallback(() => {
+    if (bindingResult) return;
     onClose();
-  }, [onClose]);
+  }, [bindingResult, onClose]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (bindingResult) return;
       onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, bindingResult, onClose]);
+
+  const handleBindingComplete = useCallback((result: BindingResult) => {
+    setBindingResult(result);
+  }, []);
+
+  const handleResultConfirm = useCallback(() => {
+    if (bindingResult === "verified") {
+      onBound();
+    } else {
+      onClose();
+    }
+    setBindingResult(null);
+  }, [bindingResult, onBound, onClose]);
 
   if (!open) return null;
 
@@ -50,13 +76,20 @@ export function RedeemBindingModal({
         aria-modal="true"
         aria-labelledby="redeem-protect-dialog-title"
         onClick={(e) => e.stopPropagation()}>
-        <RedeemProtectAccountView
-          open={open}
-          mode={mode}
-          onClose={onClose}
-          onBound={onBound}
-          bindingPrefill={bindingPrefill}
-        />
+        {bindingResult ? (
+          <BindingResultView
+            message={w(bindingResult === "verified" ? 1209 : 510512)}
+            onConfirm={handleResultConfirm}
+          />
+        ) : (
+          <RedeemProtectAccountView
+            open={open}
+            mode={mode}
+            onClose={onClose}
+            onBindingComplete={handleBindingComplete}
+            bindingPrefill={bindingPrefill}
+          />
+        )}
       </div>
     </div>,
     document.body,

@@ -9,7 +9,6 @@ import {
 } from "react";
 import { IoChevronBack } from "react-icons/io5";
 import { Plus } from "lucide-react";
-import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import {
   readImageFileAsBase64,
@@ -59,7 +58,7 @@ type Props = {
   open: boolean;
   mode: RedeemBindingMode;
   onClose: () => void;
-  onBound: () => void;
+  onBindingComplete: (result: "verified" | "pending") => void;
   bindingPrefill?: RedeemBindingPrefill;
 };
 
@@ -102,11 +101,10 @@ export function RedeemProtectAccountView({
   open,
   mode,
   onClose,
-  onBound,
+  onBindingComplete,
   bindingPrefill,
 }: Props) {
   const w = useWordData();
-  const { show } = useAlert();
   const { user, mergeUser } = useAuth();
   const { requestRef, gatewayRequestReady, refreshLobbyGet, lobbyGet } =
     useGatewayLobby();
@@ -225,17 +223,15 @@ export function RedeemProtectAccountView({
         await refreshLobbyGet();
         const binding = await fetchBindingState();
         if (binding.hasFrontImage) {
-          onBound();
-          show(w(1209), { variant: "success" });
+          onBindingComplete("verified");
           return;
         }
-        show(w(510512), { variant: "info" });
-        onClose();
+        onBindingComplete("pending");
       } finally {
         setBusy(false);
       }
     },
-    [mergeUser, refreshLobbyGet, fetchBindingState, onBound, show, onClose, w],
+    [mergeUser, refreshLobbyGet, fetchBindingState, onBindingComplete],
   );
 
   const validateAddress = useCallback((): boolean => {
