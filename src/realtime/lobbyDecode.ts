@@ -477,7 +477,7 @@ export function lobbyDecodedPlayerToUserPatch(
 export type RedeemPlayerBindingState = {
   hasCellPhone: boolean;
   hasAddress: boolean;
-  /** KYC 證件已上傳（playerInfo.frontImage 有值）。 */
+  /** LOBBY_GET 子集可能帶 frontImage；提領 KYC 請用 GET_PLAYER_INFO (20)。 */
   hasFrontImage: boolean;
   /** 後端 minTxWdraw 原始單位；未提供時 undefined */
   minTxWdrawRaw: number | undefined;

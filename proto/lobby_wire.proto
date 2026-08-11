@@ -216,6 +216,19 @@ message UpdatePlayerCurrentAvatarRequest {
   YesNo isFBAvatar = 3;
 }
 
+// 對齊 proto/playerinfo/playerinfo.proto GetPlayerInfoRequest / GetPlayerInfoResponse（Gateway GET_PLAYER_INFO=20）
+message GetPlayerInfoRequest {
+  uint64 userID = 1;
+  YesNo isFake = 2;
+  string versionName = 3;
+  string nickName = 4;
+  bool notNeedPreload = 5;
+}
+
+message GetPlayerInfoResponse {
+  PlayerInfo playerInfo = 1;
+}
+
 // 對齊 proto/megaman/playerinfo.proto UpdateNoviceTeaching / proto/playerinfo/model.proto NoviceTeaching
 message NoviceTeaching {
   int64 general = 1;

@@ -464,6 +464,38 @@ export default {
             }
           }
         },
+        "GetPlayerInfoRequest": {
+          "fields": {
+            "userID": {
+              "type": "uint64",
+              "id": 1
+            },
+            "isFake": {
+              "type": "YesNo",
+              "id": 2
+            },
+            "versionName": {
+              "type": "string",
+              "id": 3
+            },
+            "nickName": {
+              "type": "string",
+              "id": 4
+            },
+            "notNeedPreload": {
+              "type": "bool",
+              "id": 5
+            }
+          }
+        },
+        "GetPlayerInfoResponse": {
+          "fields": {
+            "playerInfo": {
+              "type": "PlayerInfo",
+              "id": 1
+            }
+          }
+        },
         "NoviceTeaching": {
           "fields": {
             "general": {

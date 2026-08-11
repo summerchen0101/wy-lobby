@@ -17,10 +17,9 @@ import {
 import { GATEWAY_API_MEGA_ACCOUNT_BINDING } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
-  fetchRedeemPlayerBindingFromGateway,
+  fetchPlayerKycFrontImageFromGateway,
   translateRedeemBindingGatewayError,
 } from "./redeemBindingGate";
-import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
 import {
   decodeMegaAccountBindingResponseBytes,
   encodeMegaAccountBindingRequestBytes,
@@ -58,7 +57,7 @@ type Props = {
   open: boolean;
   mode: RedeemBindingMode;
   onClose: () => void;
-  onBindingComplete: (result: "verified" | "pending") => void;
+  onBindingComplete: (result: "verified" | "failed") => void;
   bindingPrefill?: RedeemBindingPrefill;
 };
 
@@ -207,31 +206,35 @@ export function RedeemProtectAccountView({
     setAddress1((prev) => (prev.trim() ? prev : prefillAddress));
   }, [open, bindingPrefill, user, lobbyGet]);
 
-  const fetchBindingState = useCallback(async () => {
-    const req = requestRef.current;
-    if (!req || !gatewayRequestReady) {
-      return redeemPlayerBindingFromLobby(null);
-    }
-    return fetchRedeemPlayerBindingFromGateway(req);
-  }, [requestRef, gatewayRequestReady]);
-
   const finalizeBindingSuccess = useCallback(
     async (fullAddress: string, boundPhone: string) => {
+      const req = requestRef.current;
+      const uid = user?.id?.trim();
       try {
         if (boundPhone) mergeUser({ phone: boundPhone });
         if (fullAddress) mergeUser({ address: fullAddress });
         await refreshLobbyGet();
-        const binding = await fetchBindingState();
-        if (binding.hasFrontImage) {
+        const hasFrontImage =
+          req && gatewayRequestReady && uid && /^\d+$/.test(uid)
+            ? await fetchPlayerKycFrontImageFromGateway(req, uid)
+            : false;
+        if (hasFrontImage) {
           onBindingComplete("verified");
           return;
         }
-        onBindingComplete("pending");
+        onBindingComplete("failed");
       } finally {
         setBusy(false);
       }
     },
-    [mergeUser, refreshLobbyGet, fetchBindingState, onBindingComplete],
+    [
+      mergeUser,
+      refreshLobbyGet,
+      requestRef,
+      gatewayRequestReady,
+      user?.id,
+      onBindingComplete,
+    ],
   );
 
   const validateAddress = useCallback((): boolean => {

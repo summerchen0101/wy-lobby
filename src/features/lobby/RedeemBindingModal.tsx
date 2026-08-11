@@ -10,7 +10,7 @@ import {
 
 export type { RedeemBindingMode };
 
-type BindingResult = "verified" | "pending";
+type BindingResult = "verified" | "failed";
 
 type Props = {
   open: boolean;
@@ -78,7 +78,7 @@ export function RedeemBindingModal({
         onClick={(e) => e.stopPropagation()}>
         {bindingResult ? (
           <BindingResultView
-            message={w(bindingResult === "verified" ? 1209 : 510512)}
+            message={w(bindingResult === "verified" ? 1209 : 1222)}
             onConfirm={handleResultConfirm}
           />
         ) : (

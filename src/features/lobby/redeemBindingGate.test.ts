@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  fetchPlayerKycFrontImageFromGateway,
   fetchRedeemPlayerBindingFromGateway,
   redeemBindingPrefillFromLobby,
   resolveRedeemBindingNextStep,
@@ -110,5 +111,34 @@ describe("fetchRedeemPlayerBindingFromGateway", () => {
     const binding = await fetchRedeemPlayerBindingFromGateway(request);
     expect(binding.hasAddress).toBe(false);
     expect(binding.hasCellPhone).toBe(false);
+  });
+});
+
+describe("fetchPlayerKycFrontImageFromGateway", () => {
+  function encodeGetPlayerInfo(playerInfo: Record<string, unknown>): Uint8Array {
+    const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
+    const GetPlayerInfoResponseType = root.lookupType("megaman.GetPlayerInfoResponse");
+    const msg = GetPlayerInfoResponseType.create({ playerInfo });
+    return Uint8Array.from(GetPlayerInfoResponseType.encode(msg).finish());
+  }
+
+  it("returns true when GET_PLAYER_INFO has frontImage", async () => {
+    const data = encodeGetPlayerInfo({ frontImage: "https://cdn/id-front.jpg" });
+    const request = (async (opts) => {
+      expect(opts.type).toBe(20);
+      return { code: "200", data };
+    }) as GatewayWsRequestFn;
+
+    await expect(
+      fetchPlayerKycFrontImageFromGateway(request, "12345"),
+    ).resolves.toBe(true);
+  });
+
+  it("returns false when frontImage is empty", async () => {
+    const data = encodeGetPlayerInfo({ frontImage: "" });
+    const request = (async () => ({ code: "200", data })) as GatewayWsRequestFn;
+    await expect(
+      fetchPlayerKycFrontImageFromGateway(request, "99"),
+    ).resolves.toBe(false);
   });
 });
