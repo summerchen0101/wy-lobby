@@ -16,6 +16,7 @@ import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
 import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
+import { WelcomeGiftGate } from "./features/welcomeGift/WelcomeGiftGate";
 import { WalletGetLobbyOrchestrator } from "./features/lobby/WalletGetLobbyOrchestrator";
 import { DailyLoginGate } from "./features/dailyLogin/DailyLoginGate";
 import { DailyLoginModalHost } from "./features/dailyLogin/DailyLoginModalHost";
@@ -122,6 +123,7 @@ export default function App() {
                       <ZendeskLoader />
                       <PwaInstallBanner />
                       <IosInstallGuide />
+                      <WelcomeGiftGate />
                       <NewbieTutorialGate />
                       <WalletGetLobbyOrchestrator />
                       <DailyLoginGate />
