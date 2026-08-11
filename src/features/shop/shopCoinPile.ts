@@ -1,4 +1,8 @@
 import { publicImageUrl } from "../../lib/publicImageUrl";
+import {
+  REWARD_GC_COIN_SRC,
+  REWARD_SC_COIN_SRC,
+} from "../../lib/rewardCoinPileAssets";
 
 const PANEL = publicImageUrl("/images/shop");
 
@@ -18,5 +22,5 @@ export function shopCoinScSrc(n: 3): string {
 }
 
 /** 储值成功奖励动画固定资源。 */
-export const SHOP_REWARD_GC_COIN_SRC = shopCoinGcSrc(3);
-export const SHOP_REWARD_SC_COIN_SRC = shopCoinScSrc(3);
+export const SHOP_REWARD_GC_COIN_SRC = REWARD_GC_COIN_SRC;
+export const SHOP_REWARD_SC_COIN_SRC = REWARD_SC_COIN_SRC;

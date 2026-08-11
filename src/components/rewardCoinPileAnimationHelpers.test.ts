@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   flyOriginRectFromPiles,
-  shopPurchaseRewardFlyDelayMs,
-} from "./shopPurchaseRewardAnimationHelpers";
+  rewardCoinPileFlyDelayMs,
+} from "./rewardCoinPileAnimationHelpers";
 
-describe("shopPurchaseRewardFlyDelayMs", () => {
+describe("rewardCoinPileFlyDelayMs", () => {
   it("starts coin fly after sequential pile exit (GC only)", () => {
-    expect(shopPurchaseRewardFlyDelayMs(false)).toBe(1440);
+    expect(rewardCoinPileFlyDelayMs(false)).toBe(1440);
   });
 
   it("starts coin fly after both piles exit when SC bonus exists", () => {
-    expect(shopPurchaseRewardFlyDelayMs(true)).toBe(1940);
+    expect(rewardCoinPileFlyDelayMs(true)).toBe(1940);
   });
 });
 

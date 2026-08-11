@@ -12,3 +12,7 @@
   object-fit: contain;
   will-change: transform, opacity, left, top;
 }
+
+.coin-fly-layer--elevated {
+  z-index: calc(var(--modal-z-index) + 40);
+}

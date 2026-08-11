@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useAuth } from "../../auth/useAuth";
 import { useAlert } from "../../components/alert/alertContext";
+import type { RewardCoinPileLabels } from "../../components/RewardCoinPileAnimation";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
 import { formatCompactGcAmount } from "../../lib/formatCompactGcAmount";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
@@ -29,6 +30,7 @@ import {
 } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import { useGatewayLobby } from "../../realtime/useGatewayLobby";
+import { formatWalletScAmountForDisplay } from "../../wallet/formatWalletAmount";
 import {
   buildDailyLoginViewModel,
   findClaimableCreditRewardAmounts,
@@ -62,6 +64,15 @@ function translateDailyLoginClaimError(
     errMessage,
     `Claim failed (${code})`,
   );
+}
+
+function hasRewardAnimLabels(labels: RewardCoinPileLabels | null): boolean {
+  if (!labels) return false;
+  const gc = labels.gcLabel?.trim().replace(/^\+/, "") ?? "";
+  const sc = labels.scLabel?.trim().replace(/^\+/, "") ?? "";
+  if (gc && gc !== "0") return true;
+  if (sc && sc !== "0") return true;
+  return false;
 }
 
 type GatewayRequestFn = NonNullable<
@@ -154,6 +165,8 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [claiming, setClaiming] = useState(false);
   const [flying, setFlying] = useState(false);
+  const [rewardAnimLabels, setRewardAnimLabels] =
+    useState<RewardCoinPileLabels | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [postClaimDismissible, setPostClaimDismissible] = useState(false);
   const claimSummaryRef = useRef("");
@@ -274,6 +287,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
     setPostClaimDismissible(false);
     setClaiming(false);
     setFlying(false);
+    setRewardAnimLabels(null);
     setModalOpen(false);
   }, [clearAutoCloseTimer]);
 
@@ -330,8 +344,9 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   }, [claiming, flying, canDismissModal, closeModalInternal]);
 
   const finishClaimSuccess = useCallback(
-    async (flyFromRect: DOMRect | null, hasGcReward: boolean) => {
-      if (flyFromRect && hasGcReward) {
+    async (labels: RewardCoinPileLabels | null) => {
+      if (hasRewardAnimLabels(labels)) {
+        setRewardAnimLabels(labels);
         setFlying(true);
         flyCompleteRef.current = () => {
           void completeClaimFlowRef.current();
@@ -354,14 +369,12 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       dailyMissionIds,
       creditAmounts,
       rewardParts,
-      hasGcReward,
-      flyFromRect,
+      rewardAnimLabels: nextRewardAnimLabels,
     }: {
       dailyMissionIds: string[];
       creditAmounts: number[];
       rewardParts: string[];
-      hasGcReward: boolean;
-      flyFromRect: DOMRect | null;
+      rewardAnimLabels: RewardCoinPileLabels | null;
     }) => {
       if (!viewModel || claiming || flying) return;
       const req = requestRef.current;
@@ -416,7 +429,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
             : "Rewards claimed!";
 
         await reload();
-        await finishClaimSuccess(flyFromRect, hasGcReward);
+        await finishClaimSuccess(nextRewardAnimLabels);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Claim failed");
       } finally {
@@ -434,7 +447,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
   );
 
   const claimDay = useCallback(
-    async (day: DayViewModel, flyFromRect: DOMRect | null) => {
+    async (day: DayViewModel) => {
       if (!isDayCollectable(day)) {
         closeModalInternal();
         return;
@@ -455,30 +468,31 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       }
 
       const rewardParts: string[] = [];
-      let hasGcReward = false;
+      let gcLabel: string | undefined;
+      let scLabel: string | undefined;
       for (const reward of day.rewards) {
         const amt = formatItemAmountForDisplay(reward.itemID, reward.itemAmount);
-        if (reward.wallet === "GC") hasGcReward = true;
-        rewardParts.push(
-          reward.wallet === "GC"
-            ? `${formatCompactGcAmount(amt)} GC`
-            : `${amt} SC`,
-        );
+        if (reward.wallet === "GC") {
+          gcLabel = formatCompactGcAmount(amt);
+          rewardParts.push(`${gcLabel} GC`);
+        } else {
+          scLabel = formatWalletScAmountForDisplay(amt);
+          rewardParts.push(`${scLabel} SC`);
+        }
       }
 
       await executeClaim({
         dailyMissionIds,
         creditAmounts: [],
         rewardParts,
-        hasGcReward,
-        flyFromRect,
+        rewardAnimLabels: { gcLabel, scLabel },
       });
     },
     [executeClaim, closeModalInternal],
   );
 
   const claimCreditReward = useCallback(
-    async (requiredCreditAmount: number, flyFromRect: DOMRect | null) => {
+    async (requiredCreditAmount: number) => {
       const vm = activityRef.current
         ? buildDailyLoginViewModel(activityRef.current, Date.now(), { vipLevel })
         : viewModel;
@@ -501,8 +515,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
         dailyMissionIds: [],
         creditAmounts: [requiredCreditAmount],
         rewardParts,
-        hasGcReward: false,
-        flyFromRect,
+        rewardAnimLabels: null,
       });
     },
     [viewModel, executeClaim, vipLevel],
@@ -514,14 +527,14 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       : null;
     const nextDaily = findCollectableDay(vm);
     if (nextDaily) {
-      await claimDay(nextDaily, null);
+      await claimDay(nextDaily);
       return;
     }
     const [nextCredit] = findClaimableCreditRewardAmounts(
       vm?.creditRewards ?? [],
     );
     if (nextCredit != null) {
-      await claimCreditReward(nextCredit, null);
+      await claimCreditReward(nextCredit);
       return;
     }
     enterDismissible();
@@ -539,13 +552,13 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
         /* balance refresh best-effort */
       } finally {
         setFlying(false);
+        setRewardAnimLabels(null);
         flyCompleteRef.current();
       }
     })();
   }, [refreshLobbyGet]);
 
-  const handlePrimaryAction = useCallback(
-    (flyFromRect?: DOMRect | null) => {
+  const handlePrimaryAction = useCallback(() => {
       if (claiming || flying) return;
 
       const action = resolveDailyLoginPrimaryAction(viewModel, {
@@ -557,13 +570,10 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
 
       switch (action.type) {
         case "claim-day":
-          void claimDay(action.day, flyFromRect ?? null);
+          void claimDay(action.day);
           break;
         case "claim-credit":
-          void claimCreditReward(
-            action.requiredCreditAmount,
-            flyFromRect ?? null,
-          );
+          void claimCreditReward(action.requiredCreditAmount);
           break;
         case "dismiss":
           closeModalInternal();
@@ -597,6 +607,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       error,
       claiming,
       flying,
+      rewardAnimLabels,
       modalOpen,
       postClaimDismissible,
       canDismissModal,
@@ -615,6 +626,7 @@ export function DailyLoginProvider({ children }: { children: ReactNode }) {
       error,
       claiming,
       flying,
+      rewardAnimLabels,
       modalOpen,
       postClaimDismissible,
       canDismissModal,

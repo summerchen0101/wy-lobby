@@ -35,7 +35,7 @@ export function flyOriginRectFromPiles(
   return gc ?? sc ?? null;
 }
 
-export function shopPurchaseRewardFlyDelayMs(showSc: boolean): number {
+export function rewardCoinPileFlyDelayMs(showSc: boolean): number {
   const gcEnterAt = INITIAL_DELAY_MS;
   const scEnterAt = showSc ? gcEnterAt + PILE_STAGGER_MS : null;
   const lastEnterDoneAt = (scEnterAt ?? gcEnterAt) + PILE_ENTER_MS;
