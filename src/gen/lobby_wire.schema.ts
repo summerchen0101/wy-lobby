@@ -703,12 +703,48 @@ export default {
               "id": 96
             },
             "minTxWdraw": {
-              "type": "int64",
+              "type": "int32",
               "id": 97
             },
-            "frontImage": {
+            "middleName": {
               "type": "string",
               "id": 98
+            },
+            "addressLine1": {
+              "type": "string",
+              "id": 99
+            },
+            "documentType": {
+              "type": "string",
+              "id": 100
+            },
+            "documentNumber": {
+              "type": "string",
+              "id": 101
+            },
+            "frontImageContentType": {
+              "type": "string",
+              "id": 102
+            },
+            "frontImageBase64": {
+              "type": "string",
+              "id": 103
+            },
+            "backImageContentType": {
+              "type": "string",
+              "id": 104
+            },
+            "backImageBase64": {
+              "type": "string",
+              "id": 105
+            },
+            "depositAmount": {
+              "type": "string",
+              "id": 106
+            },
+            "ssn": {
+              "type": "string",
+              "id": 107
             }
           }
         },

@@ -33,36 +33,36 @@ function encodeGetInfoResponse(params: {
 }
 
 describe("playerInfoWire", () => {
-  it("roundtrips frontImage on GET_PLAYER_INFO response", () => {
+  it("roundtrips frontImageBase64 on GET_PLAYER_INFO response", () => {
     const data = encodeGetPlayerInfoResponse({
-      frontImage: "https://cdn/id-front.jpg",
+      frontImageBase64: "aGVsbG8=",
     });
     const decoded = decodeGetPlayerInfoResponseBytes(data);
-    expect(decoded.playerInfo?.frontImage).toBe("https://cdn/id-front.jpg");
+    expect(decoded.playerInfo?.frontImageBase64).toBe("aGVsbG8=");
     expect(hasPlayerFrontImageFromGetPlayerInfo(decoded)).toBe(true);
   });
 
   it("unwraps megaman.GetInfoResponse wire used by Gateway type 20", () => {
-    const frontImage = `data:image/jpeg;base64,${"A".repeat(1500)}`;
+    const frontImageBase64 = `data:image/jpeg;base64,${"A".repeat(1500)}`;
     const data = encodeGetInfoResponse({
       bag: { userID: "2084595942960222208" },
       playerInfo: {
         userID: "2084595942960222208",
         nickname: "kyc",
-        frontImage,
+        frontImageBase64,
       },
     });
     expect(looksLikeGetInfoResponse(data)).toBe(true);
-    // 若誤當裸 GetPlayerInfoResponse：field1=Bag 會被解成假 playerInfo，frontImage 會丟
+    // 若誤當裸 GetPlayerInfoResponse：field1=Bag 會被解成假 playerInfo，frontImageBase64 會丟
     const wrong = GetPlayerInfoResponseType.toObject(
       GetPlayerInfoResponseType.decode(data),
       { longs: String, defaults: true },
-    ) as { playerInfo?: { frontImage?: string; nickname?: string } };
-    expect(wrong.playerInfo?.frontImage ?? "").toBe("");
+    ) as { playerInfo?: { frontImageBase64?: string; nickname?: string } };
+    expect(wrong.playerInfo?.frontImageBase64 ?? "").toBe("");
 
     const decoded = decodeGetPlayerInfoResponseBytes(data);
     expect(decoded.playerInfo?.nickname).toBe("kyc");
-    expect(decoded.playerInfo?.frontImage).toBe(frontImage);
+    expect(decoded.playerInfo?.frontImageBase64).toBe(frontImageBase64);
     expect(hasPlayerFrontImageFromGetPlayerInfo(decoded)).toBe(true);
 
     const logged = decodeGetPlayerInfoResponseForDevLog(data);
@@ -71,9 +71,9 @@ describe("playerInfoWire", () => {
   });
 
   it("still unwraps GetInfoResponse when trailing unknown fields follow field2", () => {
-    const frontImage = `data:image/jpeg;base64,${"C".repeat(1500)}`;
+    const frontImageBase64 = `data:image/jpeg;base64,${"C".repeat(1500)}`;
     const base = encodeGetInfoResponse({
-      playerInfo: { userID: "9", nickname: "trail", frontImage },
+      playerInfo: { userID: "9", nickname: "trail", frontImageBase64 },
     });
     // 附加假的 field3 length-delimited，模擬 topSenders 等未建模欄位
     const junk = new Uint8Array([0x1a, 0x04, 0x08, 0x01, 0x10, 0x02]);
@@ -83,7 +83,7 @@ describe("playerInfoWire", () => {
 
     const decoded = decodeGetPlayerInfoResponseBytes(data);
     expect(decoded.playerInfo?.nickname).toBe("trail");
-    expect(decoded.playerInfo?.frontImage).toBe(frontImage);
+    expect(decoded.playerInfo?.frontImageBase64).toBe(frontImageBase64);
   });
 
   it("encodes GetPlayerInfoRequest with userID", () => {
@@ -98,7 +98,7 @@ describe("playerInfoWire", () => {
     const data = encodeGetPlayerInfoResponse({
       userID: "12345",
       nickname: "ruby",
-      frontImage: "https://cdn/id-front.jpg",
+      frontImageBase64: "aGVsbG8=",
     });
     const decoded = decodeGetPlayerInfoResponseForDevLog(data);
     expect(decoded).toMatchObject({
@@ -106,27 +106,28 @@ describe("playerInfoWire", () => {
       playerInfo: {
         userID: "12345",
         nickname: "ruby",
-        frontImage: "https://cdn/id-front.jpg",
+        frontImageBase64: "aGVsbG8=",
       },
     });
     expect(decoded).not.toHaveProperty("hexPreview");
   });
 
-  it("dev-log response previews oversized frontImage", () => {
-    const frontImage = "A".repeat(200);
-    const data = encodeGetPlayerInfoResponse({ frontImage });
+  it("dev-log response previews oversized frontImageBase64", () => {
+    const frontImageBase64 = "A".repeat(200);
+    const data = encodeGetPlayerInfoResponse({ frontImageBase64 });
     const decoded = decodeGetPlayerInfoResponseForDevLog(data);
-    const preview = (decoded.playerInfo as { frontImage?: string })?.frontImage;
+    const preview = (decoded.playerInfo as { frontImageBase64?: string })
+      ?.frontImageBase64;
     expect(preview).toMatch(/^A{120}…\(len=200\)$/);
   });
 
-  it("treats socialIDPic1 as KYC image present", () => {
+  it("treats empty frontImageBase64 as KYC image absent", () => {
     const data = encodeGetPlayerInfoResponse({
       socialIDPic1: "https://cdn/id.png",
     });
     expect(
       hasPlayerFrontImageFromGetPlayerInfo(decodeGetPlayerInfoResponseBytes(data)),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
@@ -135,7 +136,7 @@ describe("decodeGatewayResponseDataForDevLog GET_PLAYER_INFO", () => {
     const data = encodeGetPlayerInfoResponse({
       userID: "99",
       nickname: "kyc",
-      frontImage: "https://cdn/front.png",
+      frontImageBase64: "aGVsbG8=",
     });
     const decoded = decodeGatewayResponseDataForDevLog(
       GATEWAY_API_GET_PLAYER_INFO,
@@ -150,16 +151,16 @@ describe("decodeGatewayResponseDataForDevLog GET_PLAYER_INFO", () => {
         playerInfo: {
           userID: "99",
           nickname: "kyc",
-          frontImage: "https://cdn/front.png",
+          frontImageBase64: "aGVsbG8=",
         },
       },
     });
   });
 
   it("decodes GetInfoResponse-shaped type 20 body", () => {
-    const frontImage = `x${"B".repeat(1200)}`;
+    const frontImageBase64 = `x${"B".repeat(1200)}`;
     const data = encodeGetInfoResponse({
-      playerInfo: { userID: "1", frontImage },
+      playerInfo: { userID: "1", frontImageBase64 },
     });
     const decoded = decodeGatewayResponseDataForDevLog(
       GATEWAY_API_GET_PLAYER_INFO,

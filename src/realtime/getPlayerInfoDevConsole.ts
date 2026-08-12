@@ -89,13 +89,9 @@ export function bindGetPlayerInfoDevConsole(params: {
         dataByteLength: raw.byteLength,
         decodeError,
         playerInfoKeys: playerInfo ? Object.keys(playerInfo) : [],
-        frontImageLen:
-          typeof playerInfo?.frontImage === "string"
-            ? playerInfo.frontImage.length
-            : 0,
-        socialIDPic1Len:
-          typeof playerInfo?.socialIDPic1 === "string"
-            ? playerInfo.socialIDPic1.length
+        frontImageBase64Len:
+          typeof playerInfo?.frontImageBase64 === "string"
+            ? playerInfo.frontImageBase64.length
             : 0,
         decoded,
       };

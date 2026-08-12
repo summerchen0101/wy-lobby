@@ -1,4 +1,4 @@
-import { GATEWAY_API_GET_PLAYER_INFO, GATEWAY_API_LOBBY_GET } from "../../realtime/gatewayApi";
+import { GATEWAY_API_LOBBY_GET } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import type { GatewayWsRequestFn } from "../../realtime/gatewayWs";
 import { translateGatewayError } from "../../i18n/apiErrorMessage";
@@ -8,11 +8,6 @@ import {
   type LobbyGetDecoded,
   type RedeemPlayerBindingState,
 } from "../../realtime/lobbyDecode";
-import {
-  decodeGetPlayerInfoResponseBytes,
-  encodeGetPlayerInfoRequestBytes,
-  hasPlayerFrontImageFromGetPlayerInfo,
-} from "../../realtime/playerInfoWire";
 import type { RedeemBindingPrefill } from "./RedeemProtectAccountView";
 
 export type RedeemBindingNextStep =
@@ -93,26 +88,13 @@ export async function fetchRedeemPlayerBindingFromGateway(
   }
 }
 
-/** 提領 KYC：以 GET_PLAYER_INFO (20) 讀取 playerInfo.frontImage（與 App 一致；勿用 LOBBY_GET）。 */
+/** 提領 KYC：以 LOBBY_GET (11) 讀取 playerInfo.frontImageBase64（對齊 model.proto）。 */
 export async function fetchPlayerKycFrontImageFromGateway(
   request: GatewayWsRequestFn,
-  userID: string,
 ): Promise<boolean> {
-  const uid = userID.trim();
-  if (!uid || !/^\d+$/.test(uid)) return false;
   try {
-    const r = await request({
-      type: GATEWAY_API_GET_PLAYER_INFO,
-      data: encodeGetPlayerInfoRequestBytes(uid),
-      debugLabel: "GET_PLAYER_INFO_REDEEM_KYC",
-    });
-    const code = String(r.code ?? "");
-    if (!isGatewaySuccessCode(code)) return false;
-    const raw = r.data;
-    if (!(raw instanceof Uint8Array) || raw.byteLength === 0) return false;
-    return hasPlayerFrontImageFromGetPlayerInfo(
-      decodeGetPlayerInfoResponseBytes(raw),
-    );
+    const binding = await fetchRedeemPlayerBindingFromGateway(request);
+    return binding.hasFrontImage;
   } catch {
     return false;
   }

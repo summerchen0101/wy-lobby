@@ -219,18 +219,15 @@ export function decodeGetPlayerInfoResponseForDevLog(
   return previewLongStrings(wrapped) as Record<string, unknown>;
 }
 
-/** KYC 證件已上傳（frontImage 或 socialIDPic1 有值）。 */
+/** KYC 證件已上傳（playerInfo.frontImageBase64；對齊 model.proto field 103）。 */
 export function hasPlayerFrontImageFromGetPlayerInfo(
   decoded:
-    | { playerInfo?: { frontImage?: unknown; socialIDPic1?: unknown } }
+    | { playerInfo?: { frontImageBase64?: unknown } }
     | null
     | undefined,
 ): boolean {
   const p = decoded?.playerInfo;
   if (!p || typeof p !== "object") return false;
-  for (const key of ["frontImage", "socialIDPic1"] as const) {
-    const raw = p[key];
-    if (typeof raw === "string" && raw.trim().length > 0) return true;
-  }
-  return false;
+  const raw = p.frontImageBase64;
+  return typeof raw === "string" && raw.trim().length > 0;
 }

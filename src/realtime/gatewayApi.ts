@@ -16,7 +16,7 @@ export const GATEWAY_API_SERVER_LOGIN = 4
 export const GATEWAY_API_LOBBY_GET = 11
 /** 取得錢包與乞丐紅包補貼額度；body 為 megaman.WalletGetRequest；回應 megaman.WalletGetResponse */
 export const GATEWAY_API_WALLET_GET = 12
-/** 取得完整玩家資訊（含 frontImage）；body 為 playerinfo.GetPlayerInfoRequest；回應常為 megaman.GetInfoResponse（內層 GetPlayerInfoResponse）或裸 GetPlayerInfoResponse */
+/** 取得完整玩家資訊；body 為 playerinfo.GetPlayerInfoRequest；回應常為 megaman.GetInfoResponse（內層 GetPlayerInfoResponse）或裸 GetPlayerInfoResponse。提領 KYC 請用 LOBBY_GET(11) 的 frontImageBase64。 */
 export const GATEWAY_API_GET_PLAYER_INFO = 20
 /** 伺服器主動推播：ApiType SLOT_JACKPOT_INFO_PUSH(14)；body 常以 megaman.ListJackPotResp（與 141 相同），相容舊版 megaman.SlotJackPotInfo */
 export const GATEWAY_API_SLOT_JACKPOT_PUSH = 14

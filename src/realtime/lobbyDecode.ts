@@ -485,13 +485,13 @@ export function lobbyDecodedPlayerToUserPatch(
 export type RedeemPlayerBindingState = {
   hasCellPhone: boolean;
   hasAddress: boolean;
-  /** LOBBY_GET 子集可能帶 frontImage；提領 KYC 請用 GET_PLAYER_INFO (20)。 */
+  /** LOBBY_GET (11) playerInfo.frontImageBase64（對齊 model.proto field 103）。 */
   hasFrontImage: boolean;
   /** 後端 minTxWdraw 原始單位；未提供時 undefined */
   minTxWdrawRaw: number | undefined;
 };
 
-/** 提現前綁定閘道：依 LOBBY_GET playerInfo.cellPhone / address。 */
+/** 提現前綁定閘道：依 LOBBY_GET playerInfo.cellPhone / address / frontImageBase64。 */
 export function redeemPlayerBindingFromLobby(
   lobbyGet: LobbyGetDecoded | null | undefined,
 ): RedeemPlayerBindingState {
@@ -510,13 +510,13 @@ export function redeemPlayerBindingFromLobby(
     typeof addressRaw === "string" && addressRaw.trim()
       ? addressRaw.trim()
       : "";
-  const frontImageRaw =
+  const frontImageBase64Raw =
     p && typeof p === "object"
-      ? (p as { frontImage?: unknown }).frontImage
+      ? (p as { frontImageBase64?: unknown }).frontImageBase64
       : undefined;
-  const frontImage =
-    typeof frontImageRaw === "string" && frontImageRaw.trim()
-      ? frontImageRaw.trim()
+  const frontImageBase64 =
+    typeof frontImageBase64Raw === "string" && frontImageBase64Raw.trim()
+      ? frontImageBase64Raw.trim()
       : "";
   const minTxWdrawRaw = numFromWire(
     p && typeof p === "object"
@@ -526,7 +526,7 @@ export function redeemPlayerBindingFromLobby(
   return {
     hasCellPhone: cellPhone.length > 0,
     hasAddress: address.length > 0,
-    hasFrontImage: frontImage.length > 0,
+    hasFrontImage: frontImageBase64.length > 0,
     minTxWdrawRaw:
       minTxWdrawRaw !== undefined ? Math.floor(minTxWdrawRaw) : undefined,
   };

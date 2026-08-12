@@ -264,9 +264,18 @@ message PlayerInfo {
   uint64 depositAmountSC = 94;
   uint64 withdrawAmountSC = 95;
   uint64 depositAmountGC = 96;
-  // Alpha／提領擴充（官方 model.proto 可能尚未合入）
-  int64 minTxWdraw = 97;
-  string frontImage = 98;
+  // 對齊 proto/playerinfo/model.proto PlayerInfo（97+）；KYC 以 frontImageBase64 判斷
+  int32 minTxWdraw = 97;
+  string middleName = 98;
+  string addressLine1 = 99;
+  string documentType = 100;
+  string documentNumber = 101;
+  string frontImageContentType = 102;
+  string frontImageBase64 = 103;
+  string backImageContentType = 104;
+  string backImageBase64 = 105;
+  string depositAmount = 106;
+  string ssn = 107;
 }
 
 // 對齊 proto/backpack/backpack.proto GoodState（頭像列表用）

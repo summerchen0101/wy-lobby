@@ -115,30 +115,25 @@ describe("fetchRedeemPlayerBindingFromGateway", () => {
 });
 
 describe("fetchPlayerKycFrontImageFromGateway", () => {
-  function encodeGetPlayerInfo(playerInfo: Record<string, unknown>): Uint8Array {
-    const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
-    const GetPlayerInfoResponseType = root.lookupType("megaman.GetPlayerInfoResponse");
-    const msg = GetPlayerInfoResponseType.create({ playerInfo });
-    return Uint8Array.from(GetPlayerInfoResponseType.encode(msg).finish());
-  }
-
-  it("returns true when GET_PLAYER_INFO has frontImage", async () => {
-    const data = encodeGetPlayerInfo({ frontImage: "https://cdn/id-front.jpg" });
+  it("returns true when LOBBY_GET has frontImageBase64", async () => {
+    const data = encodeLobbyGet({
+      frontImageBase64: "aGVsbG8=",
+    });
     const request = (async (opts) => {
-      expect(opts.type).toBe(20);
+      expect(opts.type).toBe(11);
       return { code: "200", data };
     }) as GatewayWsRequestFn;
 
-    await expect(
-      fetchPlayerKycFrontImageFromGateway(request, "12345"),
-    ).resolves.toBe(true);
+    await expect(fetchPlayerKycFrontImageFromGateway(request)).resolves.toBe(
+      true,
+    );
   });
 
-  it("returns false when frontImage is empty", async () => {
-    const data = encodeGetPlayerInfo({ frontImage: "" });
+  it("returns false when frontImageBase64 is empty", async () => {
+    const data = encodeLobbyGet({ frontImageBase64: "" });
     const request = (async () => ({ code: "200", data })) as GatewayWsRequestFn;
-    await expect(
-      fetchPlayerKycFrontImageFromGateway(request, "99"),
-    ).resolves.toBe(false);
+    await expect(fetchPlayerKycFrontImageFromGateway(request)).resolves.toBe(
+      false,
+    );
   });
 });

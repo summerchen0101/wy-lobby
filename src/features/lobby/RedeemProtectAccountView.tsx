@@ -209,14 +209,13 @@ export function RedeemProtectAccountView({
   const finalizeBindingSuccess = useCallback(
     async (fullAddress: string, boundPhone: string) => {
       const req = requestRef.current;
-      const uid = user?.id?.trim();
       try {
         if (boundPhone) mergeUser({ phone: boundPhone });
         if (fullAddress) mergeUser({ address: fullAddress });
         await refreshLobbyGet();
         const hasFrontImage =
-          req && gatewayRequestReady && uid && /^\d+$/.test(uid)
-            ? await fetchPlayerKycFrontImageFromGateway(req, uid)
+          req && gatewayRequestReady
+            ? await fetchPlayerKycFrontImageFromGateway(req)
             : false;
         if (hasFrontImage) {
           onBindingComplete("verified");
@@ -232,7 +231,6 @@ export function RedeemProtectAccountView({
       refreshLobbyGet,
       requestRef,
       gatewayRequestReady,
-      user?.id,
       onBindingComplete,
     ],
   );
