@@ -95,6 +95,19 @@ export function buildAppMetaForAuthRequest(): AppMetaPayload {
   return meta;
 }
 
+/** UTF-8 JSON → standard Base64（供 OAuth redirect query `app_meta`）。 */
+export function encodeAppMetaBase64(
+  meta: AppMetaPayload = buildAppMetaForAuthRequest(),
+): string {
+  const json = JSON.stringify(meta);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
 export const LOGIN_V1_TYPE = 1;
 
 export function nicknameFromEmail(email: string): string {

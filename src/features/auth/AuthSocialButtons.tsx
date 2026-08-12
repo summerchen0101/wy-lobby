@@ -2,7 +2,12 @@ import { useCallback, useRef, useState } from "react";
 import AppleLogin from "react-apple-login";
 import { FaApple } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
-import { fetchAppleOAuthState, fetchOAuthLink } from "../../lib/api/oauth";
+import {
+  appendAppMetaToOAuthUrl,
+  buildAppleAuthRedirectUri,
+  fetchAppleOAuthState,
+  fetchOAuthLink,
+} from "../../lib/api/oauth";
 import { ApiError } from "../../lib/api/client";
 import { appleOAuthClientId, getApiBase } from "../../lib/env";
 import { buildOAuthBackUrl } from "../../lib/oauth/backUrl";
@@ -21,10 +26,7 @@ export function AuthSocialButtons({ mode, searchParams, onError }: Props) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const appleTriggerRef = useRef<HTMLDivElement>(null);
 
-  const apiBase = getApiBase();
-  const appleRedirectUri = apiBase
-    ? `${apiBase}/api/v1/apple/auth`
-    : "/api/v1/apple/auth";
+  const appleRedirectUri = buildAppleAuthRedirectUri(getApiBase());
 
   const label = mode === "signin" ? w(4) : w(19);
   const appleAria =
@@ -38,7 +40,7 @@ export function AuthSocialButtons({ mode, searchParams, onError }: Props) {
     try {
       const backUrl = buildOAuthBackUrl(searchParams);
       const url = await fetchOAuthLink("google", backUrl);
-      window.location.assign(url);
+      window.location.assign(appendAppMetaToOAuthUrl(url));
     } catch (err) {
       const msg =
         err instanceof ApiError
