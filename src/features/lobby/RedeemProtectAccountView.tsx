@@ -9,7 +9,6 @@ import {
 } from "react";
 import { IoChevronBack } from "react-icons/io5";
 import { Plus } from "lucide-react";
-import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import {
   readImageFileAsBase64,
@@ -18,10 +17,9 @@ import {
 import { GATEWAY_API_MEGA_ACCOUNT_BINDING } from "../../realtime/gatewayApi";
 import { isGatewaySuccessCode } from "../../realtime/gatewayWire";
 import {
-  fetchRedeemPlayerBindingFromGateway,
+  fetchPlayerKycFrontImageFromGateway,
   translateRedeemBindingGatewayError,
 } from "./redeemBindingGate";
-import { redeemPlayerBindingFromLobby } from "../../realtime/lobbyDecode";
 import {
   decodeMegaAccountBindingResponseBytes,
   encodeMegaAccountBindingRequestBytes,
@@ -59,7 +57,7 @@ type Props = {
   open: boolean;
   mode: RedeemBindingMode;
   onClose: () => void;
-  onBound: () => void;
+  onBindingComplete: (result: "verified" | "failed") => void;
   bindingPrefill?: RedeemBindingPrefill;
 };
 
@@ -102,11 +100,10 @@ export function RedeemProtectAccountView({
   open,
   mode,
   onClose,
-  onBound,
+  onBindingComplete,
   bindingPrefill,
 }: Props) {
   const w = useWordData();
-  const { show } = useAlert();
   const { user, mergeUser } = useAuth();
   const { requestRef, gatewayRequestReady, refreshLobbyGet, lobbyGet } =
     useGatewayLobby();
@@ -209,33 +206,33 @@ export function RedeemProtectAccountView({
     setAddress1((prev) => (prev.trim() ? prev : prefillAddress));
   }, [open, bindingPrefill, user, lobbyGet]);
 
-  const fetchBindingState = useCallback(async () => {
-    const req = requestRef.current;
-    if (!req || !gatewayRequestReady) {
-      return redeemPlayerBindingFromLobby(null);
-    }
-    return fetchRedeemPlayerBindingFromGateway(req);
-  }, [requestRef, gatewayRequestReady]);
-
   const finalizeBindingSuccess = useCallback(
     async (fullAddress: string, boundPhone: string) => {
+      const req = requestRef.current;
       try {
         if (boundPhone) mergeUser({ phone: boundPhone });
         if (fullAddress) mergeUser({ address: fullAddress });
         await refreshLobbyGet();
-        const binding = await fetchBindingState();
-        if (binding.hasFrontImage) {
-          onBound();
-          show(w(1209), { variant: "success" });
+        const hasFrontImage =
+          req && gatewayRequestReady
+            ? await fetchPlayerKycFrontImageFromGateway(req)
+            : false;
+        if (hasFrontImage) {
+          onBindingComplete("verified");
           return;
         }
-        show(w(510512), { variant: "info" });
-        onClose();
+        onBindingComplete("failed");
       } finally {
         setBusy(false);
       }
     },
-    [mergeUser, refreshLobbyGet, fetchBindingState, onBound, show, onClose, w],
+    [
+      mergeUser,
+      refreshLobbyGet,
+      requestRef,
+      gatewayRequestReady,
+      onBindingComplete,
+    ],
   );
 
   const validateAddress = useCallback((): boolean => {
@@ -469,12 +466,6 @@ export function RedeemProtectAccountView({
   };
 
   const handleHeaderBack = () => {
-    if (step === "sms") {
-      setStep("idPhotos");
-      setError(null);
-      setBusy(false);
-      return;
-    }
     if (step === "idPhotos") {
       setStep("profile");
       setError(null);
@@ -913,15 +904,17 @@ export function RedeemProtectAccountView({
   return (
     <>
       <header className="app-modal__head-row shop-checkout__head--protect">
-        <button
-          type="button"
-          className="app-modal__head-btn"
-          onClick={handleHeaderBack}
-          aria-label={
-            step === "profile" ? "Close" : "Back"
-          }>
-          <BackIcon />
-        </button>
+        {step === "sms" ? (
+          <span className="app-modal__head-spacer" aria-hidden />
+        ) : (
+          <button
+            type="button"
+            className="app-modal__head-btn"
+            onClick={handleHeaderBack}
+            aria-label={step === "profile" ? "Close" : "Back"}>
+            <BackIcon />
+          </button>
+        )}
         <h2
           className="app-modal__title--abs-center shop-checkout__title"
           id="redeem-protect-dialog-title">

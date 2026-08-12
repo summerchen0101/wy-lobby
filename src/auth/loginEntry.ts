@@ -1,6 +1,9 @@
 /** 未登入大廳首頁。強制登出／session 失效時導向此處，不帶 `auth=login`（不自動開 login popup）。 */
 export const AUTH_LOGIN_ENTRY_PATH = "/";
 
+/** 清 session 後需要立刻再開登入彈窗（LandingPage 讀 `auth=login`）。 */
+export const AUTH_LOGIN_PROMPT_PATH = "/?auth=login";
+
 /** 登入成功後預設進大廳（`/`），非基本資料頁。 */
 export const POST_LOGIN_LOBBY_PATH = "/";
 

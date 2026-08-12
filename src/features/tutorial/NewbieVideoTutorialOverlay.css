@@ -85,6 +85,19 @@
   z-index: 1;
 }
 
+/* Block decoded behind-clip frames until the first clip has painted. */
+.newbie-video-tutorial--booting .newbie-video-tutorial__video--mobile-behind {
+  opacity: 0;
+}
+
+.newbie-video-tutorial__boot-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #000;
+  pointer-events: none;
+}
+
 .newbie-video-tutorial__stack {
   position: relative;
   width: 100%;

@@ -6,6 +6,7 @@ import {
   GATEWAY_API_CREATE_WITHDRAW_ORDER,
   GATEWAY_API_DELETE_ACCOUNT,
   GATEWAY_API_GET_ACTIVITY,
+  GATEWAY_API_GET_PLAYER_INFO,
   GATEWAY_API_GET_REFERRAL_INFO,
   GATEWAY_API_LIST_ACTIVITY,
   GATEWAY_API_LIST_PRODUCTS,
@@ -36,6 +37,7 @@ import {
 } from './activityLobbyWire'
 import { decodeDeletePlayerInfoRequestForDevLog } from './deleteAccountWire'
 import { decodeWalletGetRequestForDevLog } from './walletGetLobbyWire'
+import { decodeGetPlayerInfoRequestForDevLog } from './playerInfoWire'
 
 const HEX_MAX = 48
 
@@ -112,6 +114,14 @@ export function decodeGatewayRequestDataForDevLog(
   if (apiType === GATEWAY_API_WALLET_GET) {
     try {
       return decodeWalletGetRequestForDevLog(raw)
+    } catch (e) {
+      return fallbackHex(raw, e)
+    }
+  }
+
+  if (apiType === GATEWAY_API_GET_PLAYER_INFO) {
+    try {
+      return decodeGetPlayerInfoRequestForDevLog(raw)
     } catch (e) {
       return fallbackHex(raw, e)
     }

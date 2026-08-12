@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { IoChevronBack } from "react-icons/io5";
+import { BindingResultView } from "../../components/binding/BindingResultView";
 import { useWordData } from "../../wordData/useWordData";
 import "./ShopCheckout.css";
 import { ProtectAccountView } from "./ProtectAccountView";
@@ -35,7 +36,6 @@ type Props = {
   bindingPrefill?: ShopBindingPrefill;
   onClose: () => void;
   onBackFromProtect: () => void;
-  onBackToProtectForm: () => void;
   onBindingSubmit: (payload: ShopBindingFormPayload) => Promise<void>;
   onBindingSuccessConfirm: () => void;
   onOpenPaymentPage: (url: string) => boolean;
@@ -153,19 +153,10 @@ function PaymentFrameView({
 function BindingSuccessView({ onConfirm }: { onConfirm: () => void }) {
   const w = useWordData();
   return (
-    <div
-      className="shop-checkout__summary-body shop-checkout__binding-success-body"
-      role="status">
-      <p className="shop-checkout__binding-success-text">
-        {w(SHOP_WORD_BINDING_SUCCESS)}
-      </p>
-      <button
-        type="button"
-        className="shop-checkout__submit shop-checkout__submit--blue"
-        onClick={onConfirm}>
-        {w(57)}
-      </button>
-    </div>
+    <BindingResultView
+      message={w(SHOP_WORD_BINDING_SUCCESS)}
+      onConfirm={onConfirm}
+    />
   );
 }
 
@@ -229,7 +220,6 @@ export function ShopCheckoutOverlay({
   bindingPrefill,
   onClose,
   onBackFromProtect,
-  onBackToProtectForm,
   onBindingSubmit,
   onBindingSuccessConfirm,
   onOpenPaymentPage,
@@ -275,7 +265,6 @@ export function ShopCheckoutOverlay({
             protectNeedSms={protectNeedSms}
             bindingPrefill={bindingPrefill}
             onClose={onBackFromProtect}
-            onBackToProtectForm={onBackToProtectForm}
             onSubmit={onBindingSubmit}
           />
         ) : step === "bindingSuccess" ? (

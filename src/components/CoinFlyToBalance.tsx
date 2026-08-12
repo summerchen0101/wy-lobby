@@ -19,6 +19,8 @@ type Props = {
   active: boolean;
   fromRect: DOMRect | null;
   onComplete: () => void;
+  /** 疊在 VIP 升級彈窗（modal-z-index + 30）之上。 */
+  elevated?: boolean;
 };
 
 function randomBetween(min: number, max: number): number {
@@ -35,7 +37,7 @@ function createCoinMotion(): CoinMotion {
   };
 }
 
-export function CoinFlyToBalance({ active, fromRect, onComplete }: Props) {
+export function CoinFlyToBalance({ active, fromRect, onComplete, elevated }: Props) {
   const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
@@ -51,7 +53,8 @@ export function CoinFlyToBalance({ active, fromRect, onComplete }: Props) {
     };
 
     const layer = document.createElement("div");
-    layer.className = "coin-fly-layer";
+    layer.className =
+      "coin-fly-layer" + (elevated ? " coin-fly-layer--elevated" : "");
     document.body.appendChild(layer);
 
     const coins: Array<{ el: HTMLImageElement; motion: CoinMotion }> = [];
@@ -113,7 +116,7 @@ export function CoinFlyToBalance({ active, fromRect, onComplete }: Props) {
       cancelAnimationFrame(raf);
       layer.remove();
     };
-  }, [active, fromRect]);
+  }, [active, fromRect, elevated]);
 
   return null;
 }

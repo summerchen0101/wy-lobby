@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  fetchPlayerKycFrontImageFromGateway,
   fetchRedeemPlayerBindingFromGateway,
   redeemBindingPrefillFromLobby,
   resolveRedeemBindingNextStep,
@@ -110,5 +111,29 @@ describe("fetchRedeemPlayerBindingFromGateway", () => {
     const binding = await fetchRedeemPlayerBindingFromGateway(request);
     expect(binding.hasAddress).toBe(false);
     expect(binding.hasCellPhone).toBe(false);
+  });
+});
+
+describe("fetchPlayerKycFrontImageFromGateway", () => {
+  it("returns true when LOBBY_GET has frontImageBase64", async () => {
+    const data = encodeLobbyGet({
+      frontImageBase64: "aGVsbG8=",
+    });
+    const request = (async (opts) => {
+      expect(opts.type).toBe(11);
+      return { code: "200", data };
+    }) as GatewayWsRequestFn;
+
+    await expect(fetchPlayerKycFrontImageFromGateway(request)).resolves.toBe(
+      true,
+    );
+  });
+
+  it("returns false when frontImageBase64 is empty", async () => {
+    const data = encodeLobbyGet({ frontImageBase64: "" });
+    const request = (async () => ({ code: "200", data })) as GatewayWsRequestFn;
+    await expect(fetchPlayerKycFrontImageFromGateway(request)).resolves.toBe(
+      false,
+    );
   });
 });

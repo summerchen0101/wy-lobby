@@ -19,6 +19,11 @@ import {
   isTutorialOverlayOpen,
   TUTORIAL_OVERLAY_STATE_EVENT,
 } from "../tutorial/tutorialOverlayState";
+import {
+  isWelcomeGiftOverlayOpen,
+  wasWelcomeGiftClaimed,
+  WELCOME_GIFT_STATE_EVENT,
+} from "../welcomeGift/welcomeGiftState";
 import { useDailyLoginActivity } from "./dailyLoginContext";
 import { shouldAutoPopupDailyLogin } from "./dailyLoginLogic";
 import {
@@ -36,9 +41,17 @@ function isDailyLoginAutoPopupBlockedRoute(pathname: string): boolean {
 
 function isNewbieTutorialBlockingDailyLogin(
   lobbyGet: LobbyGetDecoded | null | undefined,
+  userId: string,
 ): boolean {
   if (isNewbieTutorialCompletedThisSession()) return false;
   if (isTutorialOverlayOpen()) return true;
+  if (isWelcomeGiftOverlayOpen()) return true;
+  if (
+    shouldShowNoviceTeachingGeneralTutorial(lobbyGet) &&
+    !wasWelcomeGiftClaimed(userId)
+  ) {
+    return true;
+  }
   return shouldShowNoviceTeachingGeneralTutorial(lobbyGet);
 }
 
@@ -51,6 +64,7 @@ export function DailyLoginGate() {
   const { viewModel, loading, openModal } = useDailyLoginActivity();
   const [welcomeVoiceGateVersion, setWelcomeVoiceGateVersion] = useState(0);
   const [tutorialOverlayVersion, setTutorialOverlayVersion] = useState(0);
+  const [welcomeGiftStateVersion, setWelcomeGiftStateVersion] = useState(0);
 
   useEffect(() => {
     const sync = () => setWelcomeVoiceGateVersion((v) => v + 1);
@@ -67,6 +81,13 @@ export function DailyLoginGate() {
   }, []);
 
   useEffect(() => {
+    const sync = () => setWelcomeGiftStateVersion((v) => v + 1);
+    window.addEventListener(WELCOME_GIFT_STATE_EVENT, sync);
+    return () =>
+      window.removeEventListener(WELCOME_GIFT_STATE_EVENT, sync);
+  }, []);
+
+  useEffect(() => {
     const userId = user?.id?.trim() ?? "";
     if (!ready || !userId || userId === "0") return;
     if (isLobbySessionEvicted()) return;
@@ -75,7 +96,7 @@ export function DailyLoginGate() {
     if (!isWsLobbyGamesEnabled()) return;
     if (!gatewayRequestReady || needsLobbyHydrationOverlay) return;
     if (!isWelcomeVoiceGateOpen()) return;
-    if (isNewbieTutorialBlockingDailyLogin(lobbyGet)) return;
+    if (isNewbieTutorialBlockingDailyLogin(lobbyGet, userId)) return;
     if (loading || !shouldAutoPopupDailyLogin(viewModel)) return;
     if (wasDailyLoginAutoPopupShown(userId)) return;
 
@@ -92,6 +113,7 @@ export function DailyLoginGate() {
     viewModel,
     welcomeVoiceGateVersion,
     tutorialOverlayVersion,
+    welcomeGiftStateVersion,
     lobbyGet,
     openModal,
   ]);

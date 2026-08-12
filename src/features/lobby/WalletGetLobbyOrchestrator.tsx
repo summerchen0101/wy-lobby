@@ -1,9 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAlert } from "../../components/alert/alertContext";
 import { useAuth } from "../../auth/useAuth";
 import { formatCompactGcAmount } from "../../lib/formatCompactGcAmount";
 import { isWsLobbyGamesEnabled } from "../../lib/env";
+import {
+  consumePendingLobbyWalletGetForce,
+  LOBBY_WALLET_GET_CHECK_EVENT,
+  type LobbyWalletGetCheckDetail,
+} from "../../lib/lobbyWalletGetCheck";
+import {
+  onRewardCoinPileAnimationIdle,
+  isRewardCoinPileAnimationActive,
+} from "../../lib/rewardCoinPileAnimationGuard";
 import {
   BEGGAR_ENVELOPE_CHECK_EVENT,
   consumePendingBeggarEnvelopeCheck,
@@ -129,8 +138,10 @@ export function WalletGetLobbyOrchestrator() {
   const [redeemAmountsWire, setRedeemAmountsWire] = useState<string[]>([]);
 
   const [checkNonce, setCheckNonce] = useState(0);
+  const forceNextCheckRef = useRef(false);
+  const pendingVipBonusesRef = useRef<VipLevelBonusItem[] | null>(null);
 
-  const showVipBonuses = useCallback((bonuses: VipLevelBonusItem[]) => {
+  const openVipBonuses = useCallback((bonuses: VipLevelBonusItem[]) => {
     const pending = filterUnshownBonuses(bonuses);
     if (pending.length === 0) return;
     const fingerprint = vipLevelBonusFingerprint(pending);
@@ -139,6 +150,26 @@ export function WalletGetLobbyOrchestrator() {
     setVipQueue(pending);
     setVipOpen(true);
   }, []);
+
+  const showVipBonuses = useCallback(
+    (bonuses: VipLevelBonusItem[]) => {
+      const pending = filterUnshownBonuses(bonuses);
+      if (pending.length === 0) return;
+      if (isRewardCoinPileAnimationActive()) {
+        pendingVipBonusesRef.current = pending;
+        return;
+      }
+      openVipBonuses(pending);
+    },
+    [openVipBonuses],
+  );
+
+  const flushPendingVipBonuses = useCallback(() => {
+    const pending = pendingVipBonusesRef.current;
+    if (!pending) return;
+    pendingVipBonusesRef.current = null;
+    openVipBonuses(pending);
+  }, [openVipBonuses]);
 
   const showRedeemApprovals = useCallback((list: string[]) => {
     if (list.length === 0) return;
@@ -171,8 +202,11 @@ export function WalletGetLobbyOrchestrator() {
   const runLobbyWalletGetCheck = useCallback(async () => {
     const req = requestRef.current;
     if (!req) return;
+    const force =
+      forceNextCheckRef.current || consumePendingLobbyWalletGetForce();
+    forceNextCheckRef.current = false;
     try {
-      const extras = await fetchWalletGetLobbyExtras(req);
+      const extras = await fetchWalletGetLobbyExtras(req, { force });
       showVipBonuses(extras.vipLevelBonusList);
       showRedeemApprovals(extras.redeemSCList);
       if (consumePendingBeggarEnvelopeCheck()) {
@@ -197,6 +231,25 @@ export function WalletGetLobbyOrchestrator() {
     return () =>
       window.removeEventListener(BEGGAR_ENVELOPE_CHECK_EVENT, onLobbyRecheck);
   }, [canFetch]);
+
+  useEffect(() => {
+    const onWalletGetCheck = (e: Event) => {
+      if (!canFetch()) return;
+      const detail = (e as CustomEvent<LobbyWalletGetCheckDetail>).detail;
+      forceNextCheckRef.current = detail?.force === true;
+      setCheckNonce((n) => n + 1);
+    };
+    window.addEventListener(LOBBY_WALLET_GET_CHECK_EVENT, onWalletGetCheck);
+    return () =>
+      window.removeEventListener(
+        LOBBY_WALLET_GET_CHECK_EVENT,
+        onWalletGetCheck,
+      );
+  }, [canFetch]);
+
+  useEffect(() => onRewardCoinPileAnimationIdle(flushPendingVipBonuses), [
+    flushPendingVipBonuses,
+  ]);
 
   useEffect(() => {
     const onWithdrawReturn = () => {

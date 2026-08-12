@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/useAuth";
 import { useAlert } from "../../components/alert/alertContext";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
 import { isThirdPartyPaymentEnabled } from "../../lib/env";
+import { scheduleLobbyWalletGetAfterShopReward } from "../../lib/lobbyWalletGetCheck";
 import { navigateToThirdPartyPayment } from "../../lib/thirdPartyPaymentNavigation";
 import {
   GATEWAY_API_BUY_PRODUCT,
@@ -432,11 +433,6 @@ export function ShopPage() {
     void executeBuyProduct(checkoutPack);
   }, [checkoutPack, executeBuyProduct]);
 
-  const handleBackToProtectForm = useCallback(() => {
-    setProtectNeedSms(false);
-    setBindingError(null);
-  }, []);
-
   const handleLoadingClose = useCallback(() => {
     closeCheckout();
   }, [closeCheckout]);
@@ -466,6 +462,7 @@ export function ShopPage() {
       /* balance refresh best-effort */
     }
     navigate("/");
+    scheduleLobbyWalletGetAfterShopReward();
   }, [refreshLobbyGet, navigate]);
 
   const handleCheckoutClose = useCallback(() => {
@@ -608,7 +605,6 @@ export function ShopPage() {
           }
           onClose={handleCheckoutClose}
           onBackFromProtect={closeCheckout}
-          onBackToProtectForm={handleBackToProtectForm}
           onBindingSubmit={handleBindingSubmit}
           onBindingSuccessConfirm={handleBindingSuccessConfirm}
           onOpenPaymentPage={openThirdPartyPaymentPage}

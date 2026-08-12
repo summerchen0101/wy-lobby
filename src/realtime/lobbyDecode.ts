@@ -28,6 +28,14 @@ export function decodeLobbyGetResponseBytes(data: Uint8Array) {
 
 export type LobbyGetDecoded = ReturnType<typeof decodeLobbyGetResponseBytes>;
 
+/** 已登入大廳就緒：LOBBY_GET 帶了 playerInfo（訪客成功不算）。 */
+export function lobbyGetHasPlayerInfo(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): boolean {
+  const p = lobbyGet?.playerInfo;
+  return Boolean(p && typeof p === "object");
+}
+
 type LobbyGameRow = NonNullable<
   NonNullable<LobbyGetDecoded["games"]>["games"]
 >[number];
@@ -477,13 +485,13 @@ export function lobbyDecodedPlayerToUserPatch(
 export type RedeemPlayerBindingState = {
   hasCellPhone: boolean;
   hasAddress: boolean;
-  /** KYC 證件已上傳（playerInfo.frontImage 有值）。 */
+  /** LOBBY_GET (11) playerInfo.frontImageBase64（對齊 model.proto field 103）。 */
   hasFrontImage: boolean;
   /** 後端 minTxWdraw 原始單位；未提供時 undefined */
   minTxWdrawRaw: number | undefined;
 };
 
-/** 提現前綁定閘道：依 LOBBY_GET playerInfo.cellPhone / address。 */
+/** 提現前綁定閘道：依 LOBBY_GET playerInfo.cellPhone / address / frontImageBase64。 */
 export function redeemPlayerBindingFromLobby(
   lobbyGet: LobbyGetDecoded | null | undefined,
 ): RedeemPlayerBindingState {
@@ -502,13 +510,13 @@ export function redeemPlayerBindingFromLobby(
     typeof addressRaw === "string" && addressRaw.trim()
       ? addressRaw.trim()
       : "";
-  const frontImageRaw =
+  const frontImageBase64Raw =
     p && typeof p === "object"
-      ? (p as { frontImage?: unknown }).frontImage
+      ? (p as { frontImageBase64?: unknown }).frontImageBase64
       : undefined;
-  const frontImage =
-    typeof frontImageRaw === "string" && frontImageRaw.trim()
-      ? frontImageRaw.trim()
+  const frontImageBase64 =
+    typeof frontImageBase64Raw === "string" && frontImageBase64Raw.trim()
+      ? frontImageBase64Raw.trim()
       : "";
   const minTxWdrawRaw = numFromWire(
     p && typeof p === "object"
@@ -518,7 +526,7 @@ export function redeemPlayerBindingFromLobby(
   return {
     hasCellPhone: cellPhone.length > 0,
     hasAddress: address.length > 0,
-    hasFrontImage: frontImage.length > 0,
+    hasFrontImage: frontImageBase64.length > 0,
     minTxWdrawRaw:
       minTxWdrawRaw !== undefined ? Math.floor(minTxWdrawRaw) : undefined,
   };

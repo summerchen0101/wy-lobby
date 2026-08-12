@@ -83,3 +83,13 @@ export function resolveGatewayWsShutdown(
     shouldReconnect: true,
   }
 }
+
+/** 已開過線後非主動關閉：大廳應 cover，且不可再開遊戲。 */
+export function isGatewayWsDisconnectCoverReason(
+  reason: GatewayWsShutdownReason | undefined,
+  handshakeNeverSucceeded?: boolean,
+): boolean {
+  if (reason === 'transport') return true
+  if (reason === 'reconnect_exhausted' && !handshakeNeverSucceeded) return true
+  return false
+}

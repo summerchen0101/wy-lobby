@@ -10,7 +10,8 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { isGatewayWsSuppressedRoute } from "../lib/gatewayWsRoute";
 import { dismissLobbySessionOverlays } from "../lib/dismissLobbySessionOverlays";
-import { usePrimaryAppTab } from "../lib/primaryAppTab";
+import { getOrCreateTabId, usePrimaryAppTab } from "../lib/primaryAppTab";
+import { broadcastSessionEviction } from "../lib/sessionEvictionBroadcast";
 import type { Game } from "../lib/api/types";
 import { useWallet } from "../wallet/walletContext";
 import {
@@ -38,6 +39,8 @@ import {
   type GatewayWsRequestFn,
   type GatewayWsStateMeta,
 } from "./gatewayWs";
+import { isGatewayWsDisconnectCoverReason } from "./gatewayWsShutdown";
+import { GatewayWsDisconnectGate } from "./GatewayWsDisconnectGate";
 import { isGatewaySuccessCode } from "./gatewayWire";
 import { agentDebugPostJson } from "../debug/agentDebugIngest";
 import {
@@ -45,6 +48,7 @@ import {
   type LobbyGetDecoded,
   lobbyDecodedGamesToApiGames,
   lobbyDecodedToUserPatch,
+  lobbyGetHasPlayerInfo,
 } from "./lobbyDecode";
 import { useGatewayWs } from "./useGatewayWs";
 import {
@@ -73,6 +77,7 @@ import {
 import type { ActiveWallet } from "../wallet/walletContext";
 import { wireUInt64Field } from "./wireUint64";
 import { LobbyHydrationGate } from "./LobbyHydrationGate";
+import { bindGetPlayerInfoDevConsole } from "./getPlayerInfoDevConsole";
 import { getAlertApi } from "../components/alert/alertImperative";
 import { translateGatewayError } from "../i18n/apiErrorMessage";
 import { getWordPlain } from "../wordData/getWord";
@@ -82,9 +87,11 @@ import type { ShopPack } from "../features/shop/types";
 import type { RedeemOrdersPrefetch } from "./gatewayLobbyContext";
 
 function hasLobbyHydrationCache(
+  wsAuthScope: boolean,
   lobbyGames: Game[] | null,
   lobbyGet: LobbyGetDecoded | null,
 ): boolean {
+  if (wsAuthScope) return lobbyGetHasPlayerInfo(lobbyGet);
   return lobbyGames !== null || lobbyGet !== null;
 }
 
@@ -94,6 +101,8 @@ const LOBBY_WS_TIMEOUT_USER_MSG =
 const LOBBY_WS_SOCKET_ERROR_MSG = "WebSocket connection error";
 const LOBBY_GET_TIMEOUT_RETRY_DELAY_MS = 1_500;
 const WS_SOCKET_ERROR_DEBOUNCE_MS = 2_000;
+/** 登入後第一次大廳 hydration：超過此時限仍無 playerInfo → 連線失敗並重開登入。 */
+const LOGIN_HYDRATION_DEADLINE_MS = 10_000;
 
 function lobbyErrorMessageFromCaught(e: unknown): string {
   if (isGatewayWsRequestTimeoutError(e)) {
@@ -243,6 +252,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   >(null);
   const [lobbyGet, setLobbyGet] = useState<LobbyGetDecoded | null>(null);
   const [gatewayRequestReady, setGatewayRequestReady] = useState(false);
+  const [gatewayWsDisconnected, setGatewayWsDisconnected] = useState(false);
   const [shopPacks, setShopPacks] = useState<ShopPack[] | null>(null);
   const [redeemOrdersPrefetch, setRedeemOrdersPrefetch] =
     useState<RedeemOrdersPrefetch | null>(null);
@@ -272,6 +282,8 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
   const wsSessionRecoveryDoneRef = useRef(false);
   /** 避免 `USER_KICK_BEFORE` 連續觸發多次 alert + logout */
   const userKickLockRef = useRef(false);
+  /** 登入後第一次 hydration 失敗只提示一次 */
+  const loginHydrationFailedRef = useRef(false);
   /** 本次 Gateway WS `onOpen` 時間戳（毫秒）；換 token / 新一輪連線重置 */
   const gatewayWsSessionStartAtMsRef = useRef(0);
   /** 同一次連線週期內 `reconnect_exhausted` 只通知一次 */
@@ -312,9 +324,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     wsSessionRefreshAttemptedRef.current = false;
     wsSessionRecoveryDoneRef.current = false;
     userKickLockRef.current = false;
+    loginHydrationFailedRef.current = false;
     gatewayWsSessionStartAtMsRef.current = 0;
     wsReconnectExhaustedNotifiedRef.current = false;
     lastWsClosedMetaRef.current = undefined;
+    setGatewayWsDisconnected(false);
   }, [wsAuthScope]);
 
   useEffect(() => {
@@ -330,7 +344,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     if (!gateActive) return;
     if (!wsAuthScope) return;
     if (
-      hasLobbyHydrationCache(lobbyGamesRef.current, lobbyGetRef.current)
+      hasLobbyHydrationCache(
+        wsAuthScope,
+        lobbyGamesRef.current,
+        lobbyGetRef.current,
+      )
     ) {
       setLobbyWsBootstrapDone(true);
       return;
@@ -366,6 +384,42 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  const failLoginHydration = useCallback(() => {
+    if (loginHydrationFailedRef.current || userKickLockRef.current) return;
+    if (!sessionTokenRef.current) return;
+    loginHydrationFailedRef.current = true;
+    setGatewayWsDisconnected(false);
+    dismissLobbySessionOverlays();
+    const text =
+      getWordPlain(4006) || "Connection failed. Please log in again.";
+    const api = getAlertApi();
+    if (api) {
+      api.showBlockingAlert(text, {
+        onConfirm: () => logout({ promptLogin: true }),
+      });
+    } else {
+      logout({ promptLogin: true });
+    }
+  }, [logout]);
+
+  useEffect(() => {
+    if (!gateActive || !wsAuthScope) return;
+    if (lobbyWsBootstrapDone) return;
+    if (
+      hasLobbyHydrationCache(
+        wsAuthScope,
+        lobbyGamesRef.current,
+        lobbyGetRef.current,
+      )
+    ) {
+      return;
+    }
+    const id = window.setTimeout(() => {
+      failLoginHydration();
+    }, LOGIN_HYDRATION_DEADLINE_MS);
+    return () => window.clearTimeout(id);
+  }, [failLoginHydration, gateActive, lobbyWsBootstrapDone, wsAuthScope]);
 
   const endWsSessionRecovery = useCallback(() => {
     if (wsSessionRecoveryDoneRef.current) return;
@@ -407,6 +461,20 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
 
   const runLobbyGetRequest = useCallback(
     async (request: GatewayWsRequestFn, options?: { bootstrap?: boolean }) => {
+      const finishBootstrap = (ok: boolean) => {
+        if (!options?.bootstrap) return;
+        if (ok) {
+          setLobbyWsBootstrapDone(true);
+          setGatewayWsDisconnected(false);
+          return;
+        }
+        if (sessionTokenRef.current && !userKickLockRef.current) {
+          failLoginHydration();
+          return;
+        }
+        setLobbyWsBootstrapDone(true);
+      };
+
       const executeOnce = async () => {
         const showLoadingOverlay =
           wsLobbyEnabled && lobbyGamesRef.current === null;
@@ -434,6 +502,9 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
                 setLobbyGames(items);
                 setLobbyGet(decoded);
                 if (wsLobbyEnabled) setLobbyError(null);
+                finishBootstrap(
+                  !sessionTokenRef.current || lobbyGetHasPlayerInfo(decoded),
+                );
               } catch (decodeErr) {
                 console.warn("[gateway-ws] LOBBY_GET decode failed", decodeErr);
                 setLobbyGet(null);
@@ -443,13 +514,16 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
                 } else {
                   setLobbyGames(null);
                 }
+                finishBootstrap(false);
               }
             } else if (codeStr === "204") {
               if (wsLobbyEnabled) setLobbyError(null);
+              finishBootstrap(!sessionTokenRef.current);
             } else {
               setLobbyGames([]);
               setLobbyGet(null);
               if (wsLobbyEnabled) setLobbyError(null);
+              finishBootstrap(!sessionTokenRef.current);
             }
           } else {
             if (
@@ -458,6 +532,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
               isGatewaySessionInvalidCode(codeStr)
             ) {
               void handleWsSessionInvalid();
+              finishBootstrap(false);
               return;
             }
             setLobbyGet(null);
@@ -469,10 +544,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
             } else {
               setLobbyGames(null);
             }
+            finishBootstrap(false);
           }
         } finally {
           if (showLoadingOverlay) setLobbyLoading(false);
-          if (options?.bootstrap) setLobbyWsBootstrapDone(true);
         }
       };
 
@@ -480,7 +555,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         await executeOnce();
       } catch (e) {
         let finalError: unknown = e;
-        if (isGatewayWsRequestTimeoutError(e) && wsLobbyEnabled) {
+        if (
+          isGatewayWsRequestTimeoutError(e) &&
+          wsLobbyEnabled &&
+          !options?.bootstrap
+        ) {
           console.warn("[gateway-ws] LOBBY_GET failed", e);
           setLobbyError(LOBBY_WS_TIMEOUT_RETRY_MSG);
           await new Promise((resolve) => {
@@ -503,9 +582,10 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         } else {
           setLobbyGames(null);
         }
+        finishBootstrap(false);
       }
     },
-    [handleWsSessionInvalid, mergeUser, wsLobbyEnabled],
+    [failLoginHydration, handleWsSessionInvalid, mergeUser, wsLobbyEnabled],
   );
 
   /** WS `open` 後有 access token 時送出；訪客跳過。後端不回 response，不阻塞 bootstrap。 */
@@ -620,6 +700,12 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     wsLobbyGetPollMs,
   ]);
 
+  // Dev console：effect 內綁定，避免 render 讀 ref（react-hooks/refs）
+  useEffect(() => {
+    if (!isDevConsoleEnabled()) return;
+    bindGetPlayerInfoDevConsole({ requestRef, userId: user?.id });
+  }, [user?.id]);
+
   const getRequestBasicExtras = useCallback((): Record<string, unknown> => {
     const uid = user?.id;
     if (!uid || !/^\d+$/.test(uid)) {
@@ -701,6 +787,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         }
         wsReconnectExhaustedNotifiedRef.current = false;
         lastWsClosedMetaRef.current = undefined;
+        setGatewayWsDisconnected(false);
       }
 
       if (s !== "open") {
@@ -718,6 +805,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
           if (!skipBootstrapReset && !skipConnectingBootstrapBlock) {
             if (
               !hasLobbyHydrationCache(
+                wsAuthScope,
                 lobbyGamesRef.current,
                 lobbyGetRef.current,
               )
@@ -752,6 +840,15 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         ) {
           void handleWsSessionInvalid();
           return;
+        }
+        if (
+          !userKickLockRef.current &&
+          isGatewayWsDisconnectCoverReason(
+            meta?.shutdownReason,
+            meta?.handshakeNeverSucceeded,
+          )
+        ) {
+          setGatewayWsDisconnected(true);
         }
         if (meta?.shutdownReason === "reconnect_exhausted") {
           if (wsReconnectExhaustedNotifiedRef.current) return;
@@ -799,6 +896,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
         if (userKickLockRef.current) return;
         userKickLockRef.current = true;
         dismissLobbySessionOverlays();
+        broadcastSessionEviction(text, getOrCreateTabId());
         if (gateActive) setLobbyWsBootstrapDone(true);
         const api = getAlertApi();
         if (api) {
@@ -956,7 +1054,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     gateActive &&
     Boolean(token?.trim()) &&
     !lobbyWsBootstrapDone &&
-    !hasLobbyHydrationCache(lobbyGames, lobbyGet);
+    !hasLobbyHydrationCache(wsAuthScope, lobbyGames, lobbyGet);
 
   const value = useMemo<GatewayLobbyContextValue>(
     () => ({
@@ -971,6 +1069,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       subscribePaymentFinish,
       subscribeWithdrawSuccessPush,
       needsLobbyHydrationOverlay,
+      gatewayWsDisconnected,
       shopPacks,
       refreshShopPacks,
       redeemOrdersPrefetch,
@@ -986,6 +1085,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
       subscribePaymentFinish,
       subscribeWithdrawSuccessPush,
       needsLobbyHydrationOverlay,
+      gatewayWsDisconnected,
       shopPacks,
       refreshShopPacks,
       redeemOrdersPrefetch,
@@ -996,6 +1096,7 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     <GatewayLobbyContext.Provider value={value}>
       {children}
       <LobbyHydrationGate />
+      <GatewayWsDisconnectGate />
     </GatewayLobbyContext.Provider>
   );
 }

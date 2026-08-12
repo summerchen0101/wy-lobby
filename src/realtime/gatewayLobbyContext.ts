@@ -39,6 +39,11 @@ export type GatewayLobbyContextValue = {
   ) => () => void;
   /** 首轮 WebSocket LOBBY_GET bootstrap 未定前為 true（全屏閘門用） */
   needsLobbyHydrationOverlay: boolean;
+  /**
+   * 已登入且 Gateway WS 曾連上後又意外斷線（收不到 USER_KICK_BEFORE 的競態也走這裡）。
+   * 此時應全螢幕 cover，且不可開啟遊戲。
+   */
+  gatewayWsDisconnected: boolean;
   /** 商店品項；進入 /shop 時載入，null 表示尚未載入 */
   shopPacks: ShopPack[] | null;
   /** 載入或刷新商店品項 */

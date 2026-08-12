@@ -21,6 +21,8 @@ import {
   markNewbieTutorialCompletedThisSession,
   syncNewbieTutorialSessionUser,
 } from "./tutorialOverlayState";
+import { wasWelcomeGiftClaimed } from "../welcomeGift/welcomeGiftState";
+import { subscribeWelcomeBonusClaimFinished } from "./welcomeBonusTutorialBridge";
 import { NewbieVideoTutorialOverlay } from "./NewbieVideoTutorialOverlay";
 import { submitNoviceTeachingGeneralDone } from "./submitNoviceTeachingGeneralDone";
 
@@ -36,6 +38,7 @@ export function NewbieTutorialGate() {
   } = useGatewayLobby();
   const [open, setOpen] = useState(false);
   const [welcomeVoiceGateVersion, setWelcomeVoiceGateVersion] = useState(0);
+  const [welcomeGiftClaimVersion, setWelcomeGiftClaimVersion] = useState(0);
   const [completedLocally, setCompletedLocally] = useState(false);
   const wasOpenRef = useRef(false);
 
@@ -59,6 +62,11 @@ export function NewbieTutorialGate() {
   }, []);
 
   useEffect(() => {
+    const sync = () => setWelcomeGiftClaimVersion((v) => v + 1);
+    return subscribeWelcomeBonusClaimFinished(sync);
+  }, []);
+
+  useEffect(() => {
     const onDismiss = () => setOpen(false);
     window.addEventListener(LOBBY_SESSION_OVERLAYS_DISMISS_EVENT, onDismiss);
     return () =>
@@ -72,6 +80,7 @@ export function NewbieTutorialGate() {
   }, [completedLocally, lobbyGet]);
 
   useLayoutEffect(() => {
+    const userId = user?.id?.trim() ?? "";
     if (!ready || !user) {
       setOpen(false);
       return;
@@ -97,6 +106,10 @@ export function NewbieTutorialGate() {
       setOpen(false);
       return;
     }
+    if (!wasWelcomeGiftClaimed(userId)) {
+      setOpen(false);
+      return;
+    }
     setOpen(true);
   }, [
     ready,
@@ -104,6 +117,7 @@ export function NewbieTutorialGate() {
     geoStatus,
     needsLobbyHydrationOverlay,
     welcomeVoiceGateVersion,
+    welcomeGiftClaimVersion,
     completedLocally,
     lobbyGet,
   ]);

@@ -9,7 +9,7 @@ const SECONDARY_TAB_CLOSE_BLOCKED_MS = 150;
 
 type TabLease = { tabId: string; at: number };
 
-function getOrCreateTabId(): string {
+export function getOrCreateTabId(): string {
   if (typeof sessionStorage === "undefined") return "ssr";
   let id = sessionStorage.getItem(TAB_ID_KEY);
   if (!id) {

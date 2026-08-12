@@ -87,3 +87,15 @@ export async function fetchRedeemPlayerBindingFromGateway(
     return redeemPlayerBindingFromLobby(null);
   }
 }
+
+/** 提領 KYC：以 LOBBY_GET (11) 讀取 playerInfo.frontImageBase64（對齊 model.proto）。 */
+export async function fetchPlayerKycFrontImageFromGateway(
+  request: GatewayWsRequestFn,
+): Promise<boolean> {
+  try {
+    const binding = await fetchRedeemPlayerBindingFromGateway(request);
+    return binding.hasFrontImage;
+  } catch {
+    return false;
+  }
+}

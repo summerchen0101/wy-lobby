@@ -9,6 +9,7 @@ import { AlertProvider } from "./components/alert/AlertProvider";
 import { LoadingOverlayProvider } from "./components/loading/LoadingOverlayProvider";
 import { ForceUpdateGate } from "./components/ForceUpdateGate";
 import { SecondaryTabGate } from "./components/SecondaryTabGate";
+import { SessionEvictionListener } from "./components/session/SessionEvictionListener";
 import { FullScreenLoadingOverlay } from "./components/loading/FullScreenLoadingOverlay";
 import { LobbyBgmOrchestrator } from "./components/LobbyBgmOrchestrator";
 import { LobbyLoginWelcomeOrchestrator } from "./components/LobbyLoginWelcomeOrchestrator";
@@ -16,6 +17,7 @@ import { LobbyUiSoundRoot } from "./components/LobbyUiSoundRoot";
 import { GameShellProvider } from "./components/GameShellProvider";
 import { IosInstallGuide } from "./components/IosInstallGuide";
 import { NewbieTutorialGate } from "./features/tutorial/NewbieTutorialGate";
+import { WelcomeGiftGate } from "./features/welcomeGift/WelcomeGiftGate";
 import { WalletGetLobbyOrchestrator } from "./features/lobby/WalletGetLobbyOrchestrator";
 import { DailyLoginGate } from "./features/dailyLogin/DailyLoginGate";
 import { DailyLoginModalHost } from "./features/dailyLogin/DailyLoginModalHost";
@@ -110,6 +112,7 @@ export default function App() {
         <LoadingOverlayProvider>
           <WalletProvider>
             <AlertProvider>
+              <SessionEvictionListener />
               <OAuthReturnHandler />
               <GatewayLobbyProvider>
                 <DailyLoginProvider>
@@ -122,6 +125,7 @@ export default function App() {
                       <ZendeskLoader />
                       <PwaInstallBanner />
                       <IosInstallGuide />
+                      <WelcomeGiftGate />
                       <NewbieTutorialGate />
                       <WalletGetLobbyOrchestrator />
                       <DailyLoginGate />

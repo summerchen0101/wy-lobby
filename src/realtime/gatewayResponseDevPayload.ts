@@ -7,6 +7,7 @@ import {
   GATEWAY_API_AMOE_INVALID_PUSH,
   GATEWAY_API_GENERATE_AMOE_CODE,
   GATEWAY_API_GET_ACTIVITY,
+  GATEWAY_API_GET_PLAYER_INFO,
   GATEWAY_API_GET_REFERRAL_INFO,
   GATEWAY_API_GET_THIRD_PARTY_GAME_INFO,
   GATEWAY_API_GET_JACKPOT_INFO,
@@ -69,6 +70,7 @@ import {
   decodeListActivitiesResponseBytes,
 } from "./activityLobbyWire";
 import { decodeWalletGetResponseForDevLog } from "./walletGetLobbyWire";
+import { decodeGetPlayerInfoResponseForDevLog } from "./playerInfoWire";
 
 const HEX_MAX = 48;
 
@@ -175,6 +177,14 @@ export function decodeGatewayResponseDataForDevLog(
       try {
         const data = decodeWalletGetResponseForDevLog(raw);
         return { kind: "WALLET_GET", data };
+      } catch (e) {
+        return fallbackHex(raw, e);
+      }
+    }
+    if (type === GATEWAY_API_GET_PLAYER_INFO) {
+      try {
+        const data = decodeGetPlayerInfoResponseForDevLog(raw);
+        return { kind: "GET_PLAYER_INFO", data };
       } catch (e) {
         return fallbackHex(raw, e);
       }

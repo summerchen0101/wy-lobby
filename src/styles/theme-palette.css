@@ -96,6 +96,8 @@
   --loading-overlay-z-index: 5500;
   /* Toast / global alert 需蓋在一般 modal 之上 */
   --alert-z-index: 6000;
+  /* 高於 game-overlay 關閉鈕／iOS hint（10003）與 force-update（10000） */
+  --session-blocking-z-index: 10200;
   --modal-radius: 1.1rem;
   --modal-shadow: 0 1.5rem 3rem rgb(0 0 0 / 55%);
   --modal-panel-bg: var(--color-elevated);

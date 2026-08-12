@@ -18,6 +18,8 @@ import {
   logGameOverlayOpened,
   logPerfMemorySnapshot,
 } from '../lib/gameShellTelemetry'
+import { useAuth } from '../auth/useAuth'
+import { isWsLobbyGamesEnabled } from '../lib/env'
 import { useGatewayLobby } from '../realtime/useGatewayLobby'
 import { useGeoAllowed } from '../features/geo/geoContext'
 import { GameOverlay } from './GameOverlay'
@@ -31,13 +33,24 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const geoAllowed = useGeoAllowed()
-  const { refreshLobbyGet } = useGatewayLobby()
+  const { token } = useAuth()
+  const {
+    refreshLobbyGet,
+    gatewayRequestReady,
+    gatewayWsDisconnected,
+    needsLobbyHydrationOverlay,
+  } = useGatewayLobby()
   const [overlay, setOverlay] = useState<{
     url: string
     widthPercent: number
     heightPercent: number
     isPayment: boolean
   } | null>(null)
+
+  useEffect(() => {
+    if (!gatewayWsDisconnected) return
+    setOverlay(null)
+  }, [gatewayWsDisconnected])
 
   useEffect(() => {
     const origin = window.location.origin
@@ -60,6 +73,18 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
   const open = useCallback((o: OpenShellOptions) => {
     if (!geoAllowed) {
       console.warn('[GameShell] blocked by geo gate')
+      return
+    }
+    if (gatewayWsDisconnected) {
+      console.warn('[GameShell] blocked: gateway ws disconnected')
+      return
+    }
+    if (
+      Boolean(token?.trim()) &&
+      isWsLobbyGamesEnabled() &&
+      (!gatewayRequestReady || needsLobbyHydrationOverlay)
+    ) {
+      console.warn('[GameShell] blocked: gateway ws not ready')
       return
     }
     if (!o.url) {
@@ -132,7 +157,14 @@ export function GameShellProvider({ children }: { children: ReactNode }) {
       return
     }
     navigate(`/play?${q}`)
-  }, [geoAllowed, navigate])
+  }, [
+    geoAllowed,
+    gatewayWsDisconnected,
+    gatewayRequestReady,
+    needsLobbyHydrationOverlay,
+    token,
+    navigate,
+  ])
 
   const close = useCallback(() => {
     // #region agent log

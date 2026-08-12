@@ -51,7 +51,7 @@
 
 /* 阻擋式「確定」對話框：高於 toast，全螢幕擋点击；行為對齊原生 alert */
 .alert-blocking-overlay {
-  z-index: calc(var(--alert-z-index, 6000) + 200);
+  z-index: var(--session-blocking-z-index, 10200);
 }
 
 .alert-blocking-modal {

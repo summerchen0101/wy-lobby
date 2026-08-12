@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useId, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { Check, Gift, Lock, X } from "lucide-react";
-import { CoinFlyToBalance } from "../../components/CoinFlyToBalance";
+import { RewardCoinPileAnimation } from "../../components/RewardCoinPileAnimation";
 import { InfoPopover } from "../../components/InfoPopover";
 import { CURRENCY_ICON_GC, CURRENCY_ICON_SC } from "../../lib/currencyIcons";
 import { formatCompactGcAmount } from "../../lib/formatCompactGcAmount";
@@ -83,14 +83,12 @@ function DayCell({
   claiming,
   disabled,
   onTap,
-  registerCellRef,
 }: {
   day: DayViewModel;
   featured?: boolean;
   claiming?: boolean;
   disabled?: boolean;
   onTap?: () => void;
-  registerCellRef?: (dayNumber: number, el: HTMLLIElement | null) => void;
 }) {
   const gcReward = day.rewards.find((r) => r.wallet === "GC");
   const scReward = day.rewards.find((r) => r.wallet === "SC");
@@ -107,7 +105,6 @@ function DayCell({
 
   return (
     <li
-      ref={(el) => registerCellRef?.(day.dayNumber, el)}
       className={
         "daily-login-modal__day" +
         dayStatusClass(day.status) +
@@ -244,7 +241,7 @@ function MilestoneRewardHint({
 }: {
   reward: CreditRewardViewModel;
   disabled?: boolean;
-  onClaimCredit?: (threshold: number, rect: DOMRect) => void;
+  onClaimCredit?: (threshold: number) => void;
 }) {
   const gcReward = reward.rewards.find((r) => r.wallet === "GC");
   const scReward = reward.rewards.find((r) => r.wallet === "SC");
@@ -288,10 +285,7 @@ function MilestoneRewardHint({
           className="daily-login-modal__milestone-hint-claim"
           onClick={(e) => {
             e.stopPropagation();
-            onClaimCredit(
-              reward.requiredCreditAmount,
-              (e.currentTarget as HTMLElement).getBoundingClientRect(),
-            );
+            onClaimCredit(reward.requiredCreditAmount);
           }}
         >
           Collect
@@ -349,7 +343,7 @@ function ProgressMilestone({
   achievedCreditAmount: number;
   maxRequired: number;
   disabled?: boolean;
-  onClaimCredit?: (threshold: number, rect: DOMRect) => void;
+  onClaimCredit?: (threshold: number) => void;
 }) {
   const reached = achievedCreditAmount >= reward.requiredCreditAmount;
   const positionStyle = scaledAxisPositionStyle(
@@ -384,49 +378,23 @@ function ProgressMilestone({
 
 export function DailyLoginModal({ open }: Props) {
   const titleId = useId();
-  const [flyFromRect, setFlyFromRect] = useState<DOMRect | null>(null);
-  const dayCellRefs = useRef(new Map<number, HTMLLIElement>());
   const {
     viewModel,
     loading,
     error,
     claiming,
     flying,
+    rewardAnimLabels,
     claimCreditReward,
     onFlyComplete,
     canDismissModal,
     handlePrimaryAction,
   } = useDailyLoginActivity();
 
-  const registerDayCellRef = useCallback(
-    (dayNumber: number, el: HTMLLIElement | null) => {
-      if (el) dayCellRefs.current.set(dayNumber, el);
-      else dayCellRefs.current.delete(dayNumber);
-    },
-    [],
-  );
-
-  const resolveCollectableDayFlyRect = useCallback((): DOMRect | null => {
-    if (!viewModel) return null;
-    const collectable = findCollectableDay(viewModel);
-    if (!collectable) return null;
-    return (
-      dayCellRefs.current.get(collectable.dayNumber)?.getBoundingClientRect() ??
-      null
-    );
-  }, [viewModel]);
-
   const beginPrimaryAction = useCallback(() => {
     if (claiming || flying) return;
-    const flyRect = resolveCollectableDayFlyRect();
-    if (flyRect) setFlyFromRect(flyRect);
-    handlePrimaryAction(flyRect);
-  }, [
-    claiming,
-    flying,
-    resolveCollectableDayFlyRect,
-    handlePrimaryAction,
-  ]);
+    handlePrimaryAction();
+  }, [claiming, flying, handlePrimaryAction]);
 
   const handleClose = useCallback(() => {
     beginPrimaryAction();
@@ -437,10 +405,9 @@ export function DailyLoginModal({ open }: Props) {
   }, [beginPrimaryAction]);
 
   const handleClaimCredit = useCallback(
-    (threshold: number, rect: DOMRect) => {
+    (threshold: number) => {
       if (claiming || flying) return;
-      setFlyFromRect(rect);
-      void claimCreditReward(threshold, rect);
+      void claimCreditReward(threshold);
     },
     [claimCreditReward, claiming, flying],
   );
@@ -554,7 +521,6 @@ export function DailyLoginModal({ open }: Props) {
                     claiming={claimingDayNumber === day.dayNumber}
                     disabled={interactionDisabled}
                     onTap={handleDayTap}
-                    registerCellRef={registerDayCellRef}
                   />
                 ))}
               </ul>
@@ -567,7 +533,6 @@ export function DailyLoginModal({ open }: Props) {
                     claiming={claimingDayNumber === day7.dayNumber}
                     disabled={interactionDisabled}
                     onTap={handleDayTap}
-                    registerCellRef={registerDayCellRef}
                   />
                 ) : null}
               </ul>
@@ -596,11 +561,13 @@ export function DailyLoginModal({ open }: Props) {
         </button>
       </div>
 
-      <CoinFlyToBalance
-        active={flying}
-        fromRect={flyFromRect}
-        onComplete={onFlyComplete}
-      />
+      {flying && rewardAnimLabels ? (
+        <RewardCoinPileAnimation
+          gcLabel={rewardAnimLabels.gcLabel}
+          scLabel={rewardAnimLabels.scLabel}
+          onComplete={onFlyComplete}
+        />
+      ) : null}
     </>,
     document.body,
   );
