@@ -335,6 +335,18 @@ export default {
             "SC": 2
           }
         },
+        "TriPartyAccount": {
+          "fields": {
+            "type": {
+              "type": "int32",
+              "id": 1
+            },
+            "uid": {
+              "type": "string",
+              "id": 2
+            }
+          }
+        },
         "PlayerInfo": {
           "fields": {
             "userID": {
@@ -369,9 +381,25 @@ export default {
               "type": "uint64",
               "id": 8
             },
+            "autobiography": {
+              "type": "string",
+              "id": 9
+            },
             "avatarID": {
               "type": "uint64",
               "id": 10
+            },
+            "avatarURL": {
+              "type": "string",
+              "id": 11
+            },
+            "isFake": {
+              "type": "YesNo",
+              "id": 12
+            },
+            "pvpWinCnts": {
+              "type": "uint32",
+              "id": 13
             },
             "vipCurrentLevelExp": {
               "type": "uint64",
@@ -381,13 +409,105 @@ export default {
               "type": "uint64",
               "id": 15
             },
+            "currentLevelExpRequired": {
+              "type": "uint64",
+              "id": 16
+            },
+            "vipTimeout": {
+              "type": "uint64",
+              "id": 17
+            },
+            "megaLevel": {
+              "type": "uint32",
+              "id": 18
+            },
+            "megaGain": {
+              "type": "uint32",
+              "id": 19
+            },
+            "megaPoint": {
+              "type": "uint32",
+              "id": 20
+            },
+            "versionName": {
+              "type": "string",
+              "id": 21
+            },
+            "secondPassword": {
+              "type": "string",
+              "id": 22
+            },
+            "skinID": {
+              "type": "uint64",
+              "id": 23
+            },
+            "isOnline": {
+              "type": "YesNo",
+              "id": 24
+            },
+            "currentLevelExp": {
+              "type": "uint64",
+              "id": 25
+            },
             "cellPhone": {
               "type": "string",
               "id": 26
             },
+            "angleID": {
+              "type": "uint64",
+              "id": 27
+            },
+            "lastLoginAtMs": {
+              "type": "int64",
+              "id": 28
+            },
+            "isShowMoney": {
+              "type": "YesNo",
+              "id": 29
+            },
+            "gain": {
+              "type": "uint64",
+              "id": 30
+            },
+            "rtp": {
+              "type": "float",
+              "id": 31
+            },
+            "realName": {
+              "type": "string",
+              "id": 32
+            },
+            "contactPhone": {
+              "type": "string",
+              "id": 33
+            },
+            "socialID": {
+              "type": "string",
+              "id": 34
+            },
+            "birthDay": {
+              "type": "string",
+              "id": 35
+            },
+            "zipCode": {
+              "type": "string",
+              "id": 36
+            },
             "address": {
               "type": "string",
               "id": 37
+            },
+            "roleID": {
+              "type": "uint64",
+              "id": 38
+            },
+            "guildID": {
+              "type": "string",
+              "id": 39
+            },
+            "activity": {
+              "type": "int64",
+              "id": 40
             },
             "vipCurrentLevelBetExp": {
               "type": "uint64",
@@ -397,13 +517,190 @@ export default {
               "type": "uint64",
               "id": 42
             },
-            "walletType": {
-              "type": "WalletType",
-              "id": 85
+            "vipBetExp": {
+              "type": "uint64",
+              "id": 43
+            },
+            "playerRTPGear": {
+              "type": "uint32",
+              "id": 44
+            },
+            "isActivityRelation": {
+              "type": "YesNo",
+              "id": 47
+            },
+            "nickNameRemainingTimes": {
+              "type": "int64",
+              "id": 48
+            },
+            "socialIDPic1": {
+              "type": "string",
+              "id": 49
+            },
+            "socialIDPic2": {
+              "type": "string",
+              "id": 50
+            },
+            "triPartyAccounts": {
+              "rule": "repeated",
+              "type": "TriPartyAccount",
+              "id": 51
+            },
+            "cellPhoneValidatedAtMs": {
+              "type": "int64",
+              "id": 52
             },
             "noviceTeaching": {
               "type": "NoviceTeaching",
               "id": 53
+            },
+            "guildName": {
+              "type": "string",
+              "id": 54
+            },
+            "redEvenlopSendAmount": {
+              "type": "uint64",
+              "id": 55
+            },
+            "redEvenlopRecvAmount": {
+              "type": "uint64",
+              "id": 56
+            },
+            "bet": {
+              "type": "uint64",
+              "id": 57
+            },
+            "isCellPhone": {
+              "type": "YesNo",
+              "id": 58
+            },
+            "playerRTPGearLockUntilAmountStep": {
+              "type": "int64",
+              "id": 62
+            },
+            "playerRTPGearLockUntilAmountEndTime": {
+              "type": "int64",
+              "id": 63
+            },
+            "guildReferrerID": {
+              "type": "uint64",
+              "id": 64
+            },
+            "guildReferrerName": {
+              "type": "string",
+              "id": 65
+            },
+            "comment": {
+              "type": "string",
+              "id": 66
+            },
+            "guildInviteLimit": {
+              "type": "int64",
+              "id": 67
+            },
+            "isAdAccount": {
+              "type": "YesNo",
+              "id": 68
+            },
+            "isCreateFreeGuild": {
+              "type": "YesNo",
+              "id": 69
+            },
+            "referrerCode": {
+              "type": "StringValue",
+              "id": 72
+            },
+            "referalUserID": {
+              "type": "UInt64Value",
+              "id": 73
+            },
+            "bindAtMs": {
+              "type": "UInt64Value",
+              "id": 74
+            },
+            "updatePlayerPromotionTaskProgressAtMs": {
+              "type": "Int64Value",
+              "id": 75
+            },
+            "mediaSource": {
+              "type": "StringValue",
+              "id": 76
+            },
+            "auctionBuyAmount": {
+              "type": "uint64",
+              "id": 77
+            },
+            "auctionSellAmount": {
+              "type": "uint64",
+              "id": 78
+            },
+            "guildApplyTime": {
+              "type": "int64",
+              "id": 79
+            },
+            "richDaddyLikeTimes": {
+              "type": "uint64",
+              "id": 81
+            },
+            "playerRTPGearGC": {
+              "type": "uint32",
+              "id": 82
+            },
+            "playerRTPGearGCLockUntilAmountStep": {
+              "type": "int64",
+              "id": 83
+            },
+            "playerRTPGearGCLockUntilAmountEndTime": {
+              "type": "int64",
+              "id": 84
+            },
+            "walletType": {
+              "type": "WalletType",
+              "id": 85
+            },
+            "firstName": {
+              "type": "string",
+              "id": 86
+            },
+            "lastName": {
+              "type": "string",
+              "id": 87
+            },
+            "country": {
+              "type": "string",
+              "id": 88
+            },
+            "city": {
+              "type": "string",
+              "id": 89
+            },
+            "state": {
+              "type": "string",
+              "id": 90
+            },
+            "zip": {
+              "type": "string",
+              "id": 91
+            },
+            "language": {
+              "type": "string",
+              "id": 92
+            },
+            "ip": {
+              "type": "string",
+              "id": 93
+            },
+            "depositAmountSC": {
+              "type": "uint64",
+              "id": 94
+            },
+            "withdrawAmountSC": {
+              "type": "uint64",
+              "id": 95
+            },
+            "depositAmountGC": {
+              "type": "uint64",
+              "id": 96
             },
             "minTxWdraw": {
               "type": "int64",
@@ -496,11 +793,87 @@ export default {
             }
           }
         },
+        "GetInfoResponse": {
+          "fields": {
+            "bag": {
+              "type": "Bag",
+              "id": 1
+            },
+            "playerInfo": {
+              "type": "GetPlayerInfoResponse",
+              "id": 2
+            },
+            "chipCnts": {
+              "type": "uint64",
+              "id": 5
+            },
+            "bagGC": {
+              "type": "Bag",
+              "id": 6
+            }
+          }
+        },
         "NoviceTeaching": {
           "fields": {
             "general": {
               "type": "int64",
               "id": 1
+            },
+            "isFishing": {
+              "type": "int64",
+              "id": 2
+            },
+            "isMahjong": {
+              "type": "int64",
+              "id": 3
+            },
+            "isBlackJack": {
+              "type": "int64",
+              "id": 4
+            },
+            "isNiuniu": {
+              "type": "int64",
+              "id": 5
+            },
+            "isScratchOff": {
+              "type": "int64",
+              "id": 6
+            },
+            "spinData": {
+              "type": "bytes",
+              "id": 7
+            },
+            "winCoin": {
+              "type": "int64",
+              "id": 8
+            },
+            "initAmount": {
+              "type": "int64",
+              "id": 9
+            },
+            "userID": {
+              "type": "uint64",
+              "id": 10
+            },
+            "isBackPack": {
+              "type": "int64",
+              "id": 11
+            },
+            "isRelation": {
+              "type": "int64",
+              "id": 12
+            },
+            "isMessage": {
+              "type": "int64",
+              "id": 13
+            },
+            "isSpin": {
+              "type": "int64",
+              "id": 14
+            },
+            "isPromotion": {
+              "type": "int64",
+              "id": 15
             }
           }
         },
@@ -1416,6 +1789,22 @@ export default {
           "fields": {
             "value": {
               "type": "string",
+              "id": 1
+            }
+          }
+        },
+        "UInt64Value": {
+          "fields": {
+            "value": {
+              "type": "uint64",
+              "id": 1
+            }
+          }
+        },
+        "Int64Value": {
+          "fields": {
+            "value": {
+              "type": "int64",
               "id": 1
             }
           }

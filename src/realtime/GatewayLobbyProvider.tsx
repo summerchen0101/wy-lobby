@@ -77,6 +77,7 @@ import {
 import type { ActiveWallet } from "../wallet/walletContext";
 import { wireUInt64Field } from "./wireUint64";
 import { LobbyHydrationGate } from "./LobbyHydrationGate";
+import { bindGetPlayerInfoDevConsole } from "./getPlayerInfoDevConsole";
 import { getAlertApi } from "../components/alert/alertImperative";
 import { translateGatewayError } from "../i18n/apiErrorMessage";
 import { getWordPlain } from "../wordData/getWord";
@@ -698,6 +699,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     shouldRunLobbyGetOnOpen,
     wsLobbyGetPollMs,
   ]);
+
+  // Dev console：每次 render 覆寫／更新 ref，避免 HMR 殘留舊 __ffgtGetPlayerInfo
+  if (isDevConsoleEnabled()) {
+    bindGetPlayerInfoDevConsole({ requestRef, userId: user?.id });
+  }
 
   const getRequestBasicExtras = useCallback((): Record<string, unknown> => {
     const uid = user?.id;

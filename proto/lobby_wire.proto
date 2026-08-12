@@ -169,6 +169,12 @@ enum WalletType {
   SC = 2;
 }
 
+// 對齊 proto/playerinfo/model.proto PlayerInfo（含 KYC 用欄位）；LOBBY_GET 只用子集。
+message TriPartyAccount {
+  int32 type = 1;
+  string uid = 2;
+}
+
 message PlayerInfo {
   uint64 userID = 1;
   string nickname = 2;
@@ -178,15 +184,87 @@ message PlayerInfo {
   uint64 vipExp = 6;
   uint64 level = 7;
   uint64 exp = 8;
+  string autobiography = 9;
   uint64 avatarID = 10;
+  string avatarURL = 11;
+  YesNo isFake = 12;
+  uint32 pvpWinCnts = 13;
   uint64 vipCurrentLevelExp = 14;
   uint64 vipCurrentLevelExpRequired = 15;
+  uint64 currentLevelExpRequired = 16;
+  uint64 vipTimeout = 17;
+  uint32 megaLevel = 18;
+  uint32 megaGain = 19;
+  uint32 megaPoint = 20;
+  string versionName = 21;
+  string secondPassword = 22;
+  uint64 skinID = 23;
+  YesNo isOnline = 24;
+  uint64 currentLevelExp = 25;
   string cellPhone = 26;
+  uint64 angleID = 27;
+  int64 lastLoginAtMs = 28;
+  YesNo isShowMoney = 29;
+  uint64 gain = 30;
+  float rtp = 31;
+  string realName = 32;
+  string contactPhone = 33;
+  string socialID = 34;
+  string birthDay = 35;
+  string zipCode = 36;
   string address = 37;
+  uint64 roleID = 38;
+  string guildID = 39;
+  int64 activity = 40;
   uint64 vipCurrentLevelBetExp = 41;
   uint64 vipCurrentLevelBetExpRequired = 42;
-  WalletType walletType = 85;
+  uint64 vipBetExp = 43;
+  uint32 playerRTPGear = 44;
+  YesNo isActivityRelation = 47;
+  int64 nickNameRemainingTimes = 48;
+  string socialIDPic1 = 49;
+  string socialIDPic2 = 50;
+  repeated TriPartyAccount triPartyAccounts = 51;
+  int64 cellPhoneValidatedAtMs = 52;
   NoviceTeaching noviceTeaching = 53;
+  string guildName = 54;
+  uint64 redEvenlopSendAmount = 55;
+  uint64 redEvenlopRecvAmount = 56;
+  uint64 bet = 57;
+  YesNo isCellPhone = 58;
+  int64 playerRTPGearLockUntilAmountStep = 62;
+  int64 playerRTPGearLockUntilAmountEndTime = 63;
+  uint64 guildReferrerID = 64;
+  string guildReferrerName = 65;
+  string comment = 66;
+  int64 guildInviteLimit = 67;
+  YesNo isAdAccount = 68;
+  YesNo isCreateFreeGuild = 69;
+  StringValue referrerCode = 72;
+  UInt64Value referalUserID = 73;
+  UInt64Value bindAtMs = 74;
+  Int64Value updatePlayerPromotionTaskProgressAtMs = 75;
+  StringValue mediaSource = 76;
+  uint64 auctionBuyAmount = 77;
+  uint64 auctionSellAmount = 78;
+  int64 guildApplyTime = 79;
+  uint64 richDaddyLikeTimes = 81;
+  uint32 playerRTPGearGC = 82;
+  int64 playerRTPGearGCLockUntilAmountStep = 83;
+  int64 playerRTPGearGCLockUntilAmountEndTime = 84;
+  WalletType walletType = 85;
+  string firstName = 86;
+  string lastName = 87;
+  string country = 88;
+  string city = 89;
+  string state = 90;
+  string zip = 91;
+  string language = 92;
+  string ip = 93;
+  uint64 depositAmountSC = 94;
+  uint64 withdrawAmountSC = 95;
+  uint64 depositAmountGC = 96;
+  // Alpha／提領擴充（官方 model.proto 可能尚未合入）
   int64 minTxWdraw = 97;
   string frontImage = 98;
 }
@@ -216,7 +294,7 @@ message UpdatePlayerCurrentAvatarRequest {
   YesNo isFBAvatar = 3;
 }
 
-// 對齊 proto/playerinfo/playerinfo.proto GetPlayerInfoRequest / GetPlayerInfoResponse（Gateway GET_PLAYER_INFO=20）
+// 對齊 proto/playerinfo/playerinfo.proto GetPlayerInfoRequest / GetPlayerInfoResponse
 message GetPlayerInfoRequest {
   uint64 userID = 1;
   YesNo isFake = 2;
@@ -229,9 +307,32 @@ message GetPlayerInfoResponse {
   PlayerInfo playerInfo = 1;
 }
 
+// Gateway GET_PLAYER_INFO=20 實測回傳常為 megaman.GetInfoResponse（bag + nested GetPlayerInfoResponse），
+// 而非裸的 GetPlayerInfoResponse。對齊 proto/megaman/playerinfo.proto GetInfoResponse 前段。
+message GetInfoResponse {
+  Bag bag = 1;
+  GetPlayerInfoResponse playerInfo = 2;
+  uint64 chipCnts = 5;
+  Bag bagGC = 6;
+}
+
 // 對齊 proto/megaman/playerinfo.proto UpdateNoviceTeaching / proto/playerinfo/model.proto NoviceTeaching
 message NoviceTeaching {
   int64 general = 1;
+  int64 isFishing = 2;
+  int64 isMahjong = 3;
+  int64 isBlackJack = 4;
+  int64 isNiuniu = 5;
+  int64 isScratchOff = 6;
+  bytes spinData = 7;
+  int64 winCoin = 8;
+  int64 initAmount = 9;
+  uint64 userID = 10;
+  int64 isBackPack = 11;
+  int64 isRelation = 12;
+  int64 isMessage = 13;
+  int64 isSpin = 14;
+  int64 isPromotion = 15;
 }
 
 message UpdateNoviceTeaching {
@@ -603,9 +704,17 @@ message CancelRedeemOrderReq {
 message CancelRedeemOrderResp {}
 
 // --- Referral — 對齊 proto/megaman/activity.proto；Gateway GetReferralInfo=540, ClaimReferralReward=541 ---
-// google.protobuf.StringValue 二進位相容（field 1 = value）
+// google.protobuf.StringValue / UInt64Value / Int64Value 二進位相容（field 1 = value）
 message StringValue {
   string value = 1;
+}
+
+message UInt64Value {
+  uint64 value = 1;
+}
+
+message Int64Value {
+  int64 value = 1;
 }
 
 message ReferralReward {
