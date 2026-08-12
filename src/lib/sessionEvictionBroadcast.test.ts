@@ -14,7 +14,6 @@ describe("sessionEvictionBroadcast", () => {
     vi.stubGlobal(
       "BroadcastChannel",
       class {
-        constructor(public name: string) {}
         postMessage(data: unknown) {
           posted.push(data);
         }
