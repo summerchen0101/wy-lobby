@@ -1,10 +1,10 @@
+import { encodeAppMetaBase64 } from "../appMeta";
 import { apiRequest } from "./client";
 import { getApiPaths } from "./paths";
+import type { OAuthLinkChannel } from "./paths";
 
 /** 對齊 official `YesNo.No`：由前端自行導向 OAuth URL */
 export const OAUTH_AUTO_REDIRECT_NO = 2;
-
-import type { OAuthLinkChannel } from "./paths";
 
 export type OAuthChannel = OAuthLinkChannel;
 
@@ -43,6 +43,24 @@ export async function fetchOAuthLink(
     largeSafeUserIdsInJson: true,
   });
   return parseLinkPayload(raw);
+}
+
+/**
+ * 在 OAuth URL（如 `/google/link` 回傳值、`/apple/auth` redirect）上附加
+ * `app_meta`（JSON → Base64）。相對路徑以目前 origin 為 base。
+ */
+export function appendAppMetaToOAuthUrl(oauthUrl: string): string {
+  const base =
+    typeof window !== "undefined" ? window.location.href : "http://local/";
+  const url = new URL(oauthUrl, base);
+  url.searchParams.set("app_meta", encodeAppMetaBase64());
+  return url.toString();
+}
+
+/** Apple Sign In `redirectURI` → `…/api/v1/apple/auth?app_meta=…` */
+export function buildAppleAuthRedirectUri(apiBase: string): string {
+  const path = "/api/v1/apple/auth";
+  return appendAppMetaToOAuthUrl(apiBase ? `${apiBase}${path}` : path);
 }
 
 /** `GET /api/v1/apple/state?backUrl=…` */
