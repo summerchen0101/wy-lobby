@@ -30,7 +30,7 @@ function launchUrlHadToken(url: string): boolean {
 export function GamePlayPage() {
   const navigate = useNavigate();
   const { ready } = useAuth();
-  const { refreshLobbyGet } = useGatewayLobby();
+  const { refreshLobbyGet, gatewayWsDisconnected } = useGatewayLobby();
   const [params] = useSearchParams();
   const k = params.get("k")?.trim();
   const rawUrlParam = params.get("url")?.trim();
@@ -66,6 +66,10 @@ export function GamePlayPage() {
   }, [k, navigate, refreshLobbyGet]);
 
   usePaymentCallbackListener("game", Boolean(frameUrl), handleClose);
+
+  if (gatewayWsDisconnected) {
+    return null;
+  }
 
   if (!frameUrl) {
     return <Navigate to="/" replace />;

@@ -50,3 +50,11 @@
 .secondary-tab-overlay {
   cursor: pointer;
 }
+
+.ws-disconnect-overlay {
+  z-index: var(--session-blocking-z-index, 10200);
+}
+
+.ws-disconnect-overlay__message {
+  white-space: pre-line;
+}

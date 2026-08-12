@@ -8,6 +8,7 @@ import {
   lobbyDecodedGamesToApiGames,
   lobbyThirdPartyListToApiGames,
   decodeLobbyGetResponseBytes,
+  lobbyGetHasPlayerInfo,
   type LobbyGetDecoded,
 } from "./lobbyDecode";
 
@@ -128,6 +129,21 @@ describe("lobbyThirdPartyListToApiGames", () => {
     expect(items[0]?.subtitle).toBe("M2PLAY");
     expect(items[0]?.provider).toBe("M2PLAY");
     expect(items[0]?.thirdPartyLaunch?.platform).toBe("MICROGAMING");
+  });
+});
+
+describe("lobbyGetHasPlayerInfo", () => {
+  it("is false for guest/empty lobby payloads", () => {
+    expect(lobbyGetHasPlayerInfo(null)).toBe(false);
+    expect(lobbyGetHasPlayerInfo({} as LobbyGetDecoded)).toBe(false);
+  });
+
+  it("is true when playerInfo is present", () => {
+    expect(
+      lobbyGetHasPlayerInfo({
+        playerInfo: { userID: "1" },
+      } as unknown as LobbyGetDecoded),
+    ).toBe(true);
   });
 });
 

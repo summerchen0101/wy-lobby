@@ -449,6 +449,9 @@ export function LandingPage() {
     lobbyGet,
     requestRef,
     refreshLobbyGet,
+    gatewayRequestReady,
+    gatewayWsDisconnected,
+    needsLobbyHydrationOverlay,
   } = useGatewayLobby();
   const withdrawMarqueeMessages = useWithdrawSuccessMarquee();
 
@@ -989,6 +992,14 @@ export function LandingPage() {
 
   function onPlayGame(g?: Game) {
     const card = g ?? UNITY_DEMO_LOBBY_GAME;
+    if (
+      user &&
+      (gatewayWsDisconnected ||
+        !gatewayRequestReady ||
+        needsLobbyHydrationOverlay)
+    ) {
+      return;
+    }
 
     const run = async () => {
       let gameToken: string | undefined;

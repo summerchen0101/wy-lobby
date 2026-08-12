@@ -28,6 +28,14 @@ export function decodeLobbyGetResponseBytes(data: Uint8Array) {
 
 export type LobbyGetDecoded = ReturnType<typeof decodeLobbyGetResponseBytes>;
 
+/** 已登入大廳就緒：LOBBY_GET 帶了 playerInfo（訪客成功不算）。 */
+export function lobbyGetHasPlayerInfo(
+  lobbyGet: LobbyGetDecoded | null | undefined,
+): boolean {
+  const p = lobbyGet?.playerInfo;
+  return Boolean(p && typeof p === "object");
+}
+
 type LobbyGameRow = NonNullable<
   NonNullable<LobbyGetDecoded["games"]>["games"]
 >[number];

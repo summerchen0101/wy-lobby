@@ -27,7 +27,7 @@ import { clearStoredSession, getStoredAccessToken, getStoredRefreshToken, persis
 import { setClientVersionRequiredHandler } from "../lib/clientVersionNotify";
 import { ClientVersionError } from "../lib/api/clientVersionError";
 import { useProactiveTokenRefresh } from "./useProactiveTokenRefresh";
-import { AUTH_LOGIN_ENTRY_PATH } from "./loginEntry";
+import { AUTH_LOGIN_ENTRY_PATH, AUTH_LOGIN_PROMPT_PATH } from "./loginEntry";
 import { shouldRefreshStoredSessionOnStartup } from "./sessionStartup";
 import { setOnSessionRefreshFailedHandler } from "./sessionRefreshNotify";
 import { readPersistedUser, writePersistedUser } from "./userPersist";
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback((options?: { promptLogin?: boolean }) => {
     dismissLobbySessionOverlays();
     clearDailyLoginAutoPopupSession();
     clearCachedDailyLoginActivity();
@@ -98,8 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
     setReady(true);
-    // Always guest landing — never `/?auth=login` (no auto login popup).
-    navigate(AUTH_LOGIN_ENTRY_PATH, { replace: true });
+    navigate(
+      options?.promptLogin ? AUTH_LOGIN_PROMPT_PATH : AUTH_LOGIN_ENTRY_PATH,
+      { replace: true },
+    );
   }, [navigate]);
 
   const invalidateSessionToLogin = useCallback(() => {

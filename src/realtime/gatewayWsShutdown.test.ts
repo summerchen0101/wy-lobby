@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   closeReasonIndicatesAuthFailure,
+  isGatewayWsDisconnectCoverReason,
   resolveGatewayWsShutdown,
 } from './gatewayWsShutdown'
 
@@ -79,5 +80,23 @@ describe('resolveGatewayWsShutdown', () => {
     const r = resolveGatewayWsShutdown(base({ closedByUser: true }))
     expect(r.shutdownReason).toBe('client_close')
     expect(r.shouldReconnect).toBe(false)
+  })
+})
+
+describe('isGatewayWsDisconnectCoverReason', () => {
+  it('covers transport and post-open reconnect_exhausted', () => {
+    expect(isGatewayWsDisconnectCoverReason('transport')).toBe(true)
+    expect(isGatewayWsDisconnectCoverReason('reconnect_exhausted', false)).toBe(
+      true,
+    )
+  })
+
+  it('ignores handshake failure, kick logout, and client close', () => {
+    expect(isGatewayWsDisconnectCoverReason('reconnect_exhausted', true)).toBe(
+      false,
+    )
+    expect(isGatewayWsDisconnectCoverReason('auth_rejected')).toBe(false)
+    expect(isGatewayWsDisconnectCoverReason('client_close')).toBe(false)
+    expect(isGatewayWsDisconnectCoverReason(undefined)).toBe(false)
   })
 })
