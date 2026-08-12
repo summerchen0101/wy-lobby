@@ -468,12 +468,6 @@ export function RedeemProtectAccountView({
   };
 
   const handleHeaderBack = () => {
-    if (step === "sms") {
-      setStep("idPhotos");
-      setError(null);
-      setBusy(false);
-      return;
-    }
     if (step === "idPhotos") {
       setStep("profile");
       setError(null);
@@ -912,15 +906,17 @@ export function RedeemProtectAccountView({
   return (
     <>
       <header className="app-modal__head-row shop-checkout__head--protect">
-        <button
-          type="button"
-          className="app-modal__head-btn"
-          onClick={handleHeaderBack}
-          aria-label={
-            step === "profile" ? "Close" : "Back"
-          }>
-          <BackIcon />
-        </button>
+        {step === "sms" ? (
+          <span className="app-modal__head-spacer" aria-hidden />
+        ) : (
+          <button
+            type="button"
+            className="app-modal__head-btn"
+            onClick={handleHeaderBack}
+            aria-label={step === "profile" ? "Close" : "Back"}>
+            <BackIcon />
+          </button>
+        )}
         <h2
           className="app-modal__title--abs-center shop-checkout__title"
           id="redeem-protect-dialog-title">
