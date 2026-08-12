@@ -36,7 +36,6 @@ type Props = {
   bindingPrefill?: ShopBindingPrefill;
   onClose: () => void;
   onBackFromProtect: () => void;
-  onBackToProtectForm: () => void;
   onBindingSubmit: (payload: ShopBindingFormPayload) => Promise<void>;
   onBindingSuccessConfirm: () => void;
   onOpenPaymentPage: (url: string) => boolean;
@@ -221,7 +220,6 @@ export function ShopCheckoutOverlay({
   bindingPrefill,
   onClose,
   onBackFromProtect,
-  onBackToProtectForm,
   onBindingSubmit,
   onBindingSuccessConfirm,
   onOpenPaymentPage,
@@ -267,7 +265,6 @@ export function ShopCheckoutOverlay({
             protectNeedSms={protectNeedSms}
             bindingPrefill={bindingPrefill}
             onClose={onBackFromProtect}
-            onBackToProtectForm={onBackToProtectForm}
             onSubmit={onBindingSubmit}
           />
         ) : step === "bindingSuccess" ? (

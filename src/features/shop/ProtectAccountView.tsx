@@ -6,7 +6,6 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { IoChevronBack } from "react-icons/io5";
 import { sanitizeUsPhoneInput } from "../../lib/usPhoneValidation";
 import { getWord } from "../../wordData/getWord";
 import { useWordData } from "../../wordData/useWordData";
@@ -23,10 +22,6 @@ import type { ShopBindingFormPayload, ShopBindingPrefill } from "./types";
 
 const PHONE_COUNTRY_CODE = "1";
 
-function BackIcon() {
-  return <IoChevronBack className="shop-checkout__back-icon" aria-hidden />;
-}
-
 type Props = {
   bindingBusy: boolean;
   bindingError: string | null;
@@ -34,8 +29,6 @@ type Props = {
   bindingPrefill?: ShopBindingPrefill;
   /** Close the protect / checkout overlay. */
   onClose: () => void;
-  /** From SMS verification: return to the full binding form without leaving checkout. */
-  onBackToProtectForm: () => void;
   onSubmit: (payload: ShopBindingFormPayload) => Promise<void>;
 };
 
@@ -45,7 +38,6 @@ export function ProtectAccountView({
   protectNeedSms,
   bindingPrefill,
   onClose,
-  onBackToProtectForm,
   onSubmit,
 }: Props) {
   const w = useWordData();
@@ -197,17 +189,7 @@ export function ProtectAccountView({
   return (
     <>
       <header className="app-modal__head-row shop-checkout__head--protect">
-        {protectNeedSms ? (
-          <button
-            type="button"
-            className="app-modal__head-btn"
-            onClick={onBackToProtectForm}
-            aria-label="Back to verify details form">
-            <BackIcon />
-          </button>
-        ) : (
-          <span className="app-modal__head-spacer" aria-hidden />
-        )}
+        <span className="app-modal__head-spacer" aria-hidden />
         <h2
           className="app-modal__title--abs-center shop-checkout__title"
           id="shop-checkout-dialog-title">

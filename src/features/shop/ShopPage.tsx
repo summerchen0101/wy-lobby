@@ -433,11 +433,6 @@ export function ShopPage() {
     void executeBuyProduct(checkoutPack);
   }, [checkoutPack, executeBuyProduct]);
 
-  const handleBackToProtectForm = useCallback(() => {
-    setProtectNeedSms(false);
-    setBindingError(null);
-  }, []);
-
   const handleLoadingClose = useCallback(() => {
     closeCheckout();
   }, [closeCheckout]);
@@ -610,7 +605,6 @@ export function ShopPage() {
           }
           onClose={handleCheckoutClose}
           onBackFromProtect={closeCheckout}
-          onBackToProtectForm={handleBackToProtectForm}
           onBindingSubmit={handleBindingSubmit}
           onBindingSuccessConfirm={handleBindingSuccessConfirm}
           onOpenPaymentPage={openThirdPartyPaymentPage}
