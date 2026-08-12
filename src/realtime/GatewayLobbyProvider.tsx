@@ -700,10 +700,11 @@ export function GatewayLobbyProvider({ children }: { children: ReactNode }) {
     wsLobbyGetPollMs,
   ]);
 
-  // Dev console：每次 render 覆寫／更新 ref，避免 HMR 殘留舊 __ffgtGetPlayerInfo
-  if (isDevConsoleEnabled()) {
+  // Dev console：effect 內綁定，避免 render 讀 ref（react-hooks/refs）
+  useEffect(() => {
+    if (!isDevConsoleEnabled()) return;
     bindGetPlayerInfoDevConsole({ requestRef, userId: user?.id });
-  }
+  }, [user?.id]);
 
   const getRequestBasicExtras = useCallback((): Record<string, unknown> => {
     const uid = user?.id;
